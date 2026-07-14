@@ -1,0 +1,15 @@
+{
+  "name": "david-ai-journal",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "build": "node src/build.mjs",
+    "dev": "node src/dev.mjs"
+  },
+  "dependencies": {
+    "gray-matter": "^4.0.3",
+    "markdown-it": "^14.1.0"
+  }
+}

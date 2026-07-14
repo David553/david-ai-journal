@@ -1,0 +1,36 @@
+name: Build and deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production
+  cancel-in-progress: true
+
+jobs:
+  test-build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+        env:
+          SITE_URL: http://${{ secrets.BLOG_HOST }}:8088
+      - name: Configure deployment SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.BLOG_DEPLOY_KEY }}" > ~/.ssh/blog_deploy
+          chmod 600 ~/.ssh/blog_deploy
+          printf '%s\n' "${{ secrets.BLOG_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+      - name: Publish static site
+        run: rsync -az --delete -e "ssh -i ~/.ssh/blog_deploy" dist/ "${{ secrets.BLOG_USER }}@${{ secrets.BLOG_HOST }}:/srv/david-ai-journal/site/"

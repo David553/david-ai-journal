@@ -1,0 +1,15 @@
+services:
+  blog:
+    image: nginx:1.29-alpine
+    container_name: david-ai-journal
+    restart: unless-stopped
+    ports:
+      - "8088:80"
+    volumes:
+      - /srv/david-ai-journal/site:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
