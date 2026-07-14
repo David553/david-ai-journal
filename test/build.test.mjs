@@ -34,6 +34,8 @@ tags: [AI, 写作]
   assert.match(home, /把每天的对话沉淀成可以回看的思想/)
   assert.match(article, /共同编辑/)
   assert.match(article, /返回全部思考/)
+  assert.match(article, /class="prose"/)
+  assert.doesNotMatch(article, /class="prose reveal"/)
   assert.match(feed, /<rss/)
   assert.match(notFound, /页面走丢了/)
 })

@@ -120,7 +120,7 @@ function articlePage(post) {
           <p class="article-deck">${escapeHtml(post.summary)}</p>
         </header>
         <div class="article-rule"><span></span><i></i></div>
-        <div class="prose reveal">${post.html}</div>
+        <div class="prose">${post.html}</div>
         <footer class="article-end"><span>END OF NOTE</span><a href="/">继续阅读 →</a></footer>
       </article>`,
   })
