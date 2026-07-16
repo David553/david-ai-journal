@@ -34,4 +34,5 @@ jobs:
           printf '%s\n' "${{ secrets.BLOG_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
       - name: Publish static site
         timeout-minutes: 3
-        run: rsync -az --delete --timeout=60 -e "ssh -i ~/.ssh/blog_deploy -o BatchMode=yes -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4" dist/ "${{ secrets.BLOG_USER }}@${{ secrets.BLOG_HOST }}:/srv/david-ai-journal/site/"
+        run: |
+          tar -C dist -cf - . | ssh -i ~/.ssh/blog_deploy -o BatchMode=yes -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 "${{ secrets.BLOG_USER }}@${{ secrets.BLOG_HOST }}" 'set -e; find /srv/david-ai-journal/site -mindepth 1 -maxdepth 1 -exec rm -rf {} +; tar -C /srv/david-ai-journal/site -xf -'

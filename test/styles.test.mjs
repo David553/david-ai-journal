@@ -15,4 +15,6 @@ test('audio player has a mobile-friendly listening panel', async () => {
   assert.match(css, /\.listen-panel/)
   assert.match(css, /\.listen-panel audio/)
   assert.match(css, /\.prose pre\s*\{[^}]*overflow-x:\s*auto/s)
+  assert.match(css, /\.prose pre code\s*\{[^}]*white-space:\s*pre-wrap/s)
+  assert.match(css, /\.prose pre code\s*\{[^}]*overflow-wrap:\s*anywhere/s)
 })
