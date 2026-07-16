@@ -33,3 +33,18 @@ test('parsePost rejects articles without required metadata', () => {
     /title.*date.*summary/i,
   )
 })
+
+test('parsePost preserves optional audio metadata', () => {
+  const post = parsePost('embedding.md', `---
+title: Embedding
+date: 2026-07-16
+summary: 向量空间入门
+audio: /audio/embedding.mp3
+audioDuration: "12:34"
+---
+
+正文`)
+
+  assert.equal(post.audio, '/audio/embedding.mp3')
+  assert.equal(post.audioDuration, '12:34')
+})

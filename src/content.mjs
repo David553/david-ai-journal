@@ -26,6 +26,9 @@ export function parsePost(filename, source) {
     date,
     summary: String(data.summary),
     tags: Array.isArray(data.tags) ? data.tags.map(String) : [],
+    audio: data.audio ? String(data.audio) : '',
+    audioDuration: data.audioDuration ? String(data.audioDuration) : '',
+    audioBytes: Number(data.audioBytes) || 0,
     html: markdown.render(content),
   }
 }

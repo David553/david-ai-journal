@@ -107,6 +107,12 @@ function homePage(posts) {
 }
 
 function articlePage(post) {
+  const player = post.audio ? `
+        <section class="listen-panel reveal" data-media-title="${escapeHtml(post.title)}" data-media-artist="David · AI 基础课">
+          <div class="listen-copy"><span>LISTEN TO THIS LESSON</span><strong>开车听本课</strong><small>${escapeHtml(post.audioDuration || '音频版')}</small></div>
+          <audio controls preload="metadata" src="${escapeHtml(post.audio)}">你的浏览器不支持音频播放。</audio>
+          <p>支持锁屏播放与前进/后退 15 秒；首次播放需要手动点一下。</p>
+        </section>` : ''
   return layout({
     title: `${post.title} · David`,
     description: post.summary,
@@ -120,6 +126,7 @@ function articlePage(post) {
           <p class="article-deck">${escapeHtml(post.summary)}</p>
         </header>
         <div class="article-rule"><span></span><i></i></div>
+        ${player}
         <div class="prose">${post.html}</div>
         <footer class="article-end"><span>END OF NOTE</span><a href="/">继续阅读 →</a></footer>
       </article>`,
@@ -136,7 +143,11 @@ function notFoundPage() {
 }
 
 function rss(posts) {
-  const items = posts.map((post) => `<item><title>${escapeHtml(post.title)}</title><link>${siteUrl}/posts/${post.slug}/</link><guid>${siteUrl}/posts/${post.slug}/</guid><pubDate>${new Date(`${post.date}T12:00:00+08:00`).toUTCString()}</pubDate><description>${escapeHtml(post.summary)}</description></item>`).join('')
+  const items = posts.map((post) => {
+    const audioUrl = post.audio ? `${siteUrl}${post.audio}` : ''
+    const enclosure = audioUrl ? `<enclosure url="${escapeHtml(audioUrl)}" length="${post.audioBytes}" type="audio/mpeg"/>` : ''
+    return `<item><title>${escapeHtml(post.title)}</title><link>${siteUrl}/posts/${post.slug}/</link><guid>${siteUrl}/posts/${post.slug}/</guid><pubDate>${new Date(`${post.date}T12:00:00+08:00`).toUTCString()}</pubDate><description>${escapeHtml(post.summary)}</description>${enclosure}</item>`
+  }).join('')
   return `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>David · 思考生长中</title><link>${siteUrl}</link><description>AI、产品、教育与生活的个人思考</description>${items}</channel></rss>`
 }
 
