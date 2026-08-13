@@ -33,6 +33,6 @@ jobs:
           chmod 600 ~/.ssh/blog_deploy
           printf '%s\n' "${{ secrets.BLOG_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
       - name: Publish static site
-        timeout-minutes: 3
+        timeout-minutes: 10
         run: |
-          tar -C dist -cf - . | ssh -i ~/.ssh/blog_deploy -o BatchMode=yes -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 "${{ secrets.BLOG_USER }}@${{ secrets.BLOG_HOST }}" 'set -e; find /srv/david-ai-journal/site -mindepth 1 -maxdepth 1 -exec rm -rf {} +; tar -C /srv/david-ai-journal/site -xf -'
+          tar -C dist -cf - . | ssh -i ~/.ssh/blog_deploy -o BatchMode=yes -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 "${{ secrets.BLOG_USER }}@${{ secrets.BLOG_HOST }}" 'set -e; stage=/srv/david-ai-journal/site/.next; rm -rf "$stage"; mkdir -p "$stage"; tar -C "$stage" -xf -; find /srv/david-ai-journal/site -mindepth 1 -maxdepth 1 ! -name .next -exec rm -rf {} +; cp -a "$stage"/. /srv/david-ai-journal/site/; rm -rf "$stage"'
