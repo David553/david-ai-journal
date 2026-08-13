@@ -5,7 +5,7 @@ summary: 从源码而不是宣传语出发，拆解两个热门 Agent 的执行�
 tags: [AI Agent, 开源, 自主进化, 架构]
 audio: /audio/2026-08-13-pi-hermes-self-evolving-agents.mp3
 audioDuration: "15:02"
-audioBytes: 14435100
+audioBytes: 3608973
 ---
 
 这篇文章来自一次约一小时的定向源码调研。代码快照取自 2026 年 8 月 13 日：Pi 为 `7d8c11d`，Hermes 为 `9460cc1`，GenericAgent 与 AgentEvolver 均取当日 `main`。我关心的不是“谁更像钢铁侠的 Jarvis”，而是四个可以落到代码的问题：Agent 如何循环执行？桌面端只是皮肤还是运行时的一部分？所谓学习究竟写到了哪里？下一次任务真的会更好吗？
