@@ -1,16 +1,16 @@
 ---
-title: 一小时读懂 Pi、Hermes 与“自主进化”Agent：它们到底在进化什么
+title: 一小时读懂 Pi、Hermes、DeepSeek Harness 与“自主进化”Agent
 date: 2026-08-13
-summary: 从源码而不是宣传语出发，拆解两个热门 Agent 的执行循环、桌面形态、技能系统，并比较 GenericAgent 与 AgentEvolver 两种完全不同的自进化路线。
+summary: 从源码拆解 Pi、Hermes、DeepSeek Harness 的执行循环、持久化、Skill 与自修改机制，并比较 GenericAgent 和 AgentEvolver 两种自主进化路线。
 tags: [AI Agent, 开源, 自主进化, 架构]
 audio: /audio/2026-08-13-pi-hermes-self-evolving-agents.mp3
-audioDuration: "15:02"
-audioBytes: 3608973
+audioDuration: "20:09"
+audioBytes: 4837389
 ---
 
-这篇文章来自一次约一小时的定向源码调研。代码快照取自 2026 年 8 月 13 日：Pi 为 `7d8c11d`，Hermes 为 `9460cc1`，GenericAgent 与 AgentEvolver 均取当日 `main`。我关心的不是“谁更像钢铁侠的 Jarvis”，而是四个可以落到代码的问题：Agent 如何循环执行？桌面端只是皮肤还是运行时的一部分？所谓学习究竟写到了哪里？下一次任务真的会更好吗？
+这篇文章来自一次约一小时的定向源码调研。代码快照取自 2026 年 8 月 13 日：Pi 为 `7d8c11d`，Hermes 为 `9460cc1`，DeepSeek Harness 为 `47f9438`，GenericAgent 与 AgentEvolver 均取当日 `main`。我关心的不是“谁更像钢铁侠的 Jarvis”，而是四个可以落到代码的问题：Agent loop 如何推进？状态如何持久化？系统如何自我迭代？Skill 怎样进入下一次推理？
 
-先给结论：**Pi 是精干、可嵌入的 Agent harness；Hermes 是常驻、多入口、带技能生命周期的个人 Agent 操作系统；GenericAgent 把成功路径沉淀为本地 Skill；AgentEvolver 则在训练流水线中生成任务、复用经验并更新模型策略。**它们都使用“进化”这个词，但改变的对象并不相同。
+先给结论：**Pi 是精干、可嵌入的 Agent harness；Hermes 是常驻、多入口、带技能生命周期的个人 Agent 操作系统；DeepSeek Harness 是“万物皆插件”、以事件日志为事实源、还能让 Agent 临时编写运行时插件的组合式底座；GenericAgent 把成功路径沉淀为本地 Skill；AgentEvolver 则在训练流水线中生成任务、复用经验并更新模型策略。**它们都使用“进化”这个词，但改变的对象并不相同。
 
 ## 先纠正一个容易混淆的前提：Pi 并不是典型桌面 Agent
 
@@ -22,14 +22,15 @@ Hermes 才是完整覆盖 CLI、Ink TUI、Web dashboard、消息网关与 Electr
 
 这一区别很重要：**Pi 更像发动机与驾驶舱组件，Hermes 更像一辆已经装好发动机、仪表、车库和长期保养计划的车。**
 
-| 维度 | Pi | Hermes | GenericAgent | AgentEvolver |
-| --- | --- | --- | --- | --- |
-| 主要定位 | 编码 Agent 与可嵌入 runtime | 常驻个人 Agent 平台 | 极简本地自主 Agent | 自进化 Agent 训练框架 |
-| 主语言 | TypeScript | Python + TypeScript | Python | Python |
-| 主要入口 | CLI / SDK / TUI / Web 组件 | CLI / TUI / Electron / Web / IM | TUI / Web / IM / 桌面辅助 | 训练 launcher / 环境服务 |
-| “学习”落点 | 会话、扩展、人工/Agent 创建的 Skill | 记忆、会话检索、Agent-created Skill、Curator | L0–L4 记忆与任务 SOP/Skill | 任务数据、经验池、轨迹归因、模型权重 |
-| 是否默认改模型权重 | 否 | 否 | 否 | 是，训练路线的核心目标 |
-| 最适合 | 开发工具、定制 harness | 24×7 个人助理与跨渠道自动化 | 本地电脑操作与轻量自举 | Agentic RL 研究与训练 |
+| 维度 | Pi | Hermes | DeepSeek Harness | GenericAgent | AgentEvolver |
+| --- | --- | --- | --- | --- | --- |
+| 主要定位 | 编码 Agent 与可嵌入 runtime | 常驻个人 Agent 平台 | 插件化 Agent 底座与开发者预览 | 极简本地自主 Agent | 自进化 Agent 训练框架 |
+| 主语言 | TypeScript | Python + TypeScript | TypeScript | Python | Python |
+| Agent loop | 双层循环、事件流、可插钩子 | Python 工具循环，外围能力丰富 | turn/step 状态机与 pre-step waterfall | 极简循环，能力下沉到 handler | rollout 与训练循环 |
+| 持久化 | 会话与产品层实现 | SQLite 会话、记忆、Skill | append-only 事件日志，JSONL/SQLite 后端 | L0–L4 分层记忆 | 数据集、轨迹、经验池、checkpoint |
+| 自我迭代 | extension / Skill，可由外部驱动 | Agent 写 Skill，Curator 治理 | 进程内定义、运行、升级、回滚 Cordis 插件 | 任务后沉淀 SOP/Skill | 出题、归因、强化学习更新 policy |
+| Skill | 渐进披露的 Agent Skills | 可写 Skill + 生命周期 | provider 合并目录，索引注入、按需加载正文 | 记忆树中的任务 SOP | 经验池更接近训练上下文，不是同类 Skill |
+| 是否默认改模型权重 | 否 | 否 | 否 | 否 | 是，训练路线的核心目标 |
 
 ## 四者共享的骨架：模型并不“执行”，循环才执行
 
@@ -51,6 +52,34 @@ Hermes 才是完整覆盖 CLI、Ink TUI、Web dashboard、消息网关与 Electr
 ```
 
 模型只负责提出下一步；文件读写、终端命令、浏览器操作、权限拦截、失败重试、上下文压缩、状态持久化，全是 harness 的工作。今天 Agent 产品的差异，越来越少在这十几行概念循环里，而在循环周围的工程约束：怎样组织上下文，怎样暴露工具，怎样恢复会话，怎样让失败可控，以及怎样把一次成功转成可复用资产。
+
+## DeepSeek Harness：把 Agent 自身也变成一组可热插拔插件
+
+DeepSeek Harness 目前明确标为 developer preview。它的核心主张是 **everything is a plugin**：模型适配器、工具注册表、session log、agent loop 本身都作为 Cordis 插件挂到共享 Context 中。插件通过 service、typed event 和可撤销 effect 协作；卸载时注册项随生命周期撤销。因此它不是一个“核心不可碰、外围加插件”的传统框架，而是连核心能力都能从配置替换的组合式运行时。
+
+### 1. Agent loop：turn 与 step 分离，pre-step 是扩展总线
+
+Harness 把一次用户驱动的完整工作称为 `turn`，把一次模型请求及其后续工具执行称为 `step`。流程大致是：`turn/start` 后认领 inbox 输入，进入 `agent/pre-step` waterfall；若允许继续，则记录 `step/start` 和用户消息，组装系统提示、历史和工具，流式请求模型，把 assistant chunk、完整消息、tool call 与 tool result 写入日志，最后 `step/end`。只要工具结果或新输入还欠模型一次响应，就继续下一个 step；否则进入 stopping 并结束 turn。
+
+`agent/pre-step` 不是普通广播，而是 waterfall：监听器包裹 `next()`，可以按顺序补充上下文或决定是否进入下一步。项目里的工作区说明、压缩、goal round、plan mode、checkpoint、subagent、Skill 等能力都从这里接入。这样 agent loop 只拥有推进语义，具体策略由插件组合决定。
+
+### 2. 持久化：追加式事件日志才是事实源
+
+Harness 最值得借鉴的设计是把“模型看见的东西必须被记录”写成架构约束。`Session` 保存单调递增序号的 append-only 事件；JSONL 与 SQLite 是可替换后端，write-behind 负责有界批写，checkpoint policy 决定何时 flush。`deriveMessages()` 不是读取一份另存的聊天记录，而是从事件日志投影出下一次模型历史。
+
+事件分两类：surface event 会生成模型消息，例如 `user/message`、`assistant/message`、`tool/result`；log-only event 则供回放、审计和恢复，例如 turn 边界、审批、命令状态和 inbox 变化。原始流式 chunk 也保留，所以 UI 回放、fork、resume、telemetry 与模型上下文都能从同一条事件流派生。代价是当前 `SESSION_FORMAT_VERSION = 0`，项目也明确不承诺预发布格式兼容性。
+
+### 3. 自我迭代：动态 Cordis 插件，不等于模型训练
+
+`tool-cordis` 给模型暴露 inspect、define、run、stop、undefine 等工具。Agent 可以先检查当前 service、event、工具 schema 或 UI slot，再提交一段 Host/Client JavaScript，定义一个不可变 Package；随后激活它，为现有 Plugin 追加新版本，失败后检查诊断并修复，也能停止、回滚或删除定义。运行中的动态包可以注册新工具、提示段和监听器，因而会改变后续 step 的能力。
+
+这是五个项目里最接近“Agent 修改自己的运行时”的机制，但要准确理解它的边界：定义只活在当前进程内存和所属 session；版本切换有明确状态，插件 effect 可撤销；浏览器侧代码可能要求用户批准；沙箱文档还明确说它只约束诚实代码，不是安全边界。它更新的是**运行时能力图**，不是模型参数，也不是经过 benchmark 自动晋升的长期策略。把它称为“可审计、可回滚的在线自改造”比“自主训练”更准确。
+
+### 4. Skill：目录只进索引，正文按需进入上下文
+
+Skill 子系统把 provider 与 consumer 分开。filesystem provider 扫描项目、额外目录、用户目录和可选 bundled root，并可监听本地变化；registry 合并多个 provider 的目录；`tool-skill` 在 session 前缀中注入紧凑目录，并要求模型命中后用精确名称加载完整说明。Skill 正文随后作为替换型 user context 注入，而不是把所有 `SKILL.md` 永久塞进系统提示。
+
+这和 Pi、Hermes 的渐进披露思想相似，但 Harness 把它做成正式 capability seam：Skill 来源可替换，模型侧消费方式也是独立插件。动态 Cordis 插件解决“现在缺一个运行能力”，Skill 解决“以后怎样稳定重复这套工作法”；目前源码没有把两者自动串成带评测、晋升和淘汰的完整学习闭环。
 
 ## Pi：把 Agent 拆成稳定内核与自由扩展层
 
@@ -154,7 +183,7 @@ AgentEvolver 不是另一款桌面助理，而是一套端到端 Agentic RL 训�
 | --- | --- | --- | --- | --- |
 | L1 会话适应 | 当前上下文、checkpoint | 所有工具 Agent | 快、无需持久化 | 会话结束即消失 |
 | L2 记忆适应 | 事实、历史摘要、用户模型 | Hermes、GenericAgent | 跨会话个性化 | 污染、隐私、错误召回 |
-| L3 策略资产适应 | Skill、SOP、脚本、模板 | Pi 可扩展能力、Hermes、GenericAgent | 可审计、可回滚、成本低 | 技能膨胀、过期、错误固化 |
+| L3 策略资产适应 | Skill、SOP、脚本、模板、运行时插件 | Pi、Hermes、DeepSeek Harness、GenericAgent | 可审计、可回滚、成本低 | 技能膨胀、过期、错误固化、代码权限 |
 | L4 参数适应 | 模型 policy/权重 | AgentEvolver | 行为真正内化 | 训练昂贵、reward hacking、灾难性遗忘 |
 
 很多产品把 L2 或 L3 叫作 self-evolving，并没有错，只是它不是在线微调。把层级说清，才能公平比较。
@@ -168,6 +197,10 @@ AgentEvolver 不是另一款桌面助理，而是一套端到端 Agentic RL 训�
 ### 做常驻个人助理、跨渠道自动化：选 Hermes
 
 它已经处理了会话、网关、cron、subagent、远程环境、Skill、记忆、桌面端和生命周期。需要接受更大的系统复杂度，并认真配置权限、Skill provenance、备份和 Curator 策略。
+
+### 想研究可组合、可热更新的 Agent 内核：看 DeepSeek Harness
+
+它适合研究事件溯源会话、插件化 capability seam、每 session 的 Agent preset，以及让模型临时创造工具或 UI 扩展。当前仍是开发者预览，动态代码也不应被误当作安全沙箱或自动验证过的长期进化。
 
 ### 想用最少代码试验“电脑越用越会用”：看 GenericAgent
 
@@ -194,7 +227,7 @@ AgentEvolver 不是另一款桌面助理，而是一套端到端 Agentic RL 训�
 
 Agent 的下一阶段未必是让模型在你的电脑上偷偷改自己的权重。更现实的路线，是把能力拆成可治理的层：稳定的执行循环、最小工具集、可检索记忆、可审计 Skill、离线评测，以及在证据充分时才进行的策略训练。
 
-Pi 把执行内核做得干净；Hermes 把长期运行和 Skill 生命周期做成产品；GenericAgent 展示了极简框架也能长出复杂能力；AgentEvolver 把问题推进到自动数据与策略优化。它们不是同一赛道的四个替代品，而是 Agent 技术栈的四个截面。
+Pi 把执行内核做得干净；Hermes 把长期运行和 Skill 生命周期做成产品；DeepSeek Harness 把循环、日志和自修改能力都放进可撤销的插件体系；GenericAgent 展示了极简框架也能长出复杂能力；AgentEvolver 把问题推进到自动数据与策略优化。它们不是同一赛道的五个替代品，而是 Agent 技术栈的五个截面。
 
 真正值得关注的不是哪个项目最会说“自我进化”，而是谁能回答三个问题：**它改了什么？凭什么认为改对了？出错后怎样恢复？**
 
@@ -203,6 +236,8 @@ Pi 把执行内核做得干净；Hermes 把长期运行和 Skill 生命周期做
 - [Pi monorepo](https://github.com/earendil-works/pi-mono)；重点文件：`packages/agent/src/agent-loop.ts`、`packages/coding-agent/docs/skills.md`
 - [Hermes Agent](https://github.com/NousResearch/hermes-agent)；重点文件：`run_agent.py`、`tools/skill_manager_tool.py`、`agent/curator.py`
 - [Hermes Curator 文档](https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/curator.md)
+- [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)；重点文件：`packages/core/agent-loop/src/agent.ts`、`packages/session/session-persistence/src/coordinator.ts`、`packages/skill/tool-skill/src/index.ts`、`packages/extensions/tool-cordis/src/index.ts`
+- [DeepSeek Harness 架构文档](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/architecture.md)与[持久化事件目录](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/persistence-catalog.md)
 - [GenericAgent](https://github.com/lsdefine/GenericAgent) 与其[技术报告](https://arxiv.org/abs/2604.17091)
 - [AgentEvolver](https://github.com/modelscope/AgentEvolver) 与其[论文](https://arxiv.org/abs/2511.10395)
 - 延伸阅读：[Self-Evolving Coding Agents 综述](https://arxiv.org/abs/2608.03392)
