@@ -1,7 +1,7 @@
 ---
 title: 大模型训练 Infra 实战课：用一次 35B MoE 后训练把原理讲透
 date: 2026-08-29
-summary: 以 40 卡 H20 集群上 Qwen3.6-35B-A3B(35B 总参 / 3B 激活 MoE)的 SFT+RL 后训练为教材，从硬件带宽地图讲到 RL infra 演进的 8 节结构化课程，所有公式都代入真实数字，附六次真实排障实录。
+summary: 以 40 卡 H20 集群上 Qwen3.6-35B-A3B(35B 总参 / 3B 激活 MoE)的 SFT+RL 后训练为教材的 8 节完整课程：从硬件带宽地图、显存账、并行选型、死锁诊断、框架对比、MFU 计算、稳定性工程一路讲到 RL infra 演进，所有公式都代入真实数字，附六次真实排障实录。
 tags: [训练 Infra, MoE, Megatron, 后训练, RL Infra, H20]
 ---
 
@@ -82,14 +82,14 @@ Qwen3.6-35B-A3B：35B 总参 / 3B 激活的 MoE，混合 GDN 线性注意力(每
 
 ## 课程结构
 
-- [第 1 节：硬件层——算力、显存、带宽的三角，与一张集群带宽地图](/posts/2026-08-29-training-infra-01-hardware-bandwidth-map/)
-- 第 2 节：显存账——一个参数在训练时到底占多少字节(连载中)
-- 第 3 节：并行策略全景——DP/ZeRO/TP/PP/EP/CP，以及本项目的选型推演(连载中)
-- 第 4 节：通信层——NCCL 原语、通信计算重叠、死锁的形成机理与诊断方法论(连载中)
-- 第 5 节：训练框架景观——DeepSpeed / Megatron / SWIFT / FSDP / verl，与版本兼容矩阵思维(连载中)
-- 第 6 节：吞吐与效率——手把手算 MFU，以及 8-10% 是什么水平、怎么往上提(连载中)
-- 第 7 节：稳定性工程——失败模式分类、监控、checkpoint 策略、脏环境治理(连载中)
-- 第 8 节：从 SFT infra 到 RL infra——rollout 引擎、reward 服务、权重同步(连载中)
+- [第 1 节：硬件层——算力、显存、带宽的三角,与一张集群带宽地图](/posts/2026-08-29-training-infra-01-hardware-bandwidth-map/)
+- [第 2 节：显存账——把 85.6GB 峰值逐项拆开算](/posts/2026-08-30-training-infra-02-memory-accounting/)
+- [第 3 节：并行策略全景——为什么是 TP1 / PP1 / EP8 / DP40](/posts/2026-08-30-training-infra-03-parallelism/)
+- [第 4 节：通信层与死锁诊断——5 小时静默死锁该怎么在 5 分钟内定位](/posts/2026-08-30-training-infra-04-communication-and-deadlock/)
+- [第 5 节：框架景观——从 2.5 天到一夜跑完 2 epoch](/posts/2026-08-30-training-infra-05-framework-landscape/)
+- [第 6 节：手把手算 MFU——8-10% 其实被低估了](/posts/2026-08-30-training-infra-06-mfu-and-throughput/)
+- [第 7 节：稳定性工程——失败模式、监控、checkpoint 与脏环境治理](/posts/2026-08-30-training-infra-07-reliability-engineering/)
+- [第 8 节：从 SFT 到 RL——一套 infra 两个入口](/posts/2026-08-30-training-infra-08-from-sft-to-rl/)
 
 ## 事故档案索引
 
