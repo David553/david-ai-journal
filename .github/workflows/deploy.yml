@@ -34,5 +34,12 @@ jobs:
           printf '%s\n' "${{ secrets.BLOG_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
       - name: Publish static site
         timeout-minutes: 30
+        env:
+          DEPLOY_TARGET: "${{ secrets.BLOG_USER }}@${{ secrets.BLOG_HOST }}"
         run: |
-          tar -C dist -cf - . | ssh -i ~/.ssh/blog_deploy -o BatchMode=yes -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 "${{ secrets.BLOG_USER }}@${{ secrets.BLOG_HOST }}" 'set -e; stage=/srv/david-ai-journal/site/.next; rm -rf "$stage"; mkdir -p "$stage"; tar -C "$stage" -xf -; find /srv/david-ai-journal/site -mindepth 1 -maxdepth 1 ! -name .next -exec rm -rf {} +; cp -a "$stage"/. /srv/david-ai-journal/site/; rm -rf "$stage"'
+          ssh -i ~/.ssh/blog_deploy -o BatchMode=yes -o ConnectTimeout=30 "$DEPLOY_TARGET" 'command -v rsync >/dev/null'
+          rsync -az --delete --partial --append-verify --timeout=60 \
+            --info=stats2,progress2 \
+            -e "ssh -i $HOME/.ssh/blog_deploy -o BatchMode=yes -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4" \
+            dist/ "$DEPLOY_TARGET:/srv/david-ai-journal/site/.next/"
+          ssh -i ~/.ssh/blog_deploy -o BatchMode=yes -o ConnectTimeout=30 "$DEPLOY_TARGET" 'set -e; stage=/srv/david-ai-journal/site/.next; find /srv/david-ai-journal/site -mindepth 1 -maxdepth 1 ! -name .next -exec rm -rf {} +; cp -a "$stage"/. /srv/david-ai-journal/site/; rm -rf "$stage"'
