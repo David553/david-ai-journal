@@ -29,6 +29,23 @@ export function parsePost(filename, source) {
     audio: data.audio ? String(data.audio) : '',
     audioDuration: data.audioDuration ? String(data.audioDuration) : '',
     audioBytes: Number(data.audioBytes) || 0,
+    youtubeId: data.youtubeId ? String(data.youtubeId) : '',
+    youtubeUrl: data.youtubeUrl ? String(data.youtubeUrl) : '',
+    html: markdown.render(content),
+  }
+}
+
+export function parseWikiPage(slug, source) {
+  const { data, content } = matter(source)
+  if (!data.title || !data.summary) {
+    throw new Error(`Wiki metadata requires title and summary: ${slug}`)
+  }
+
+  return {
+    slug: slug.replace(/\.md$/i, ''),
+    title: String(data.title),
+    summary: String(data.summary),
+    tags: Array.isArray(data.tags) ? data.tags.map(String) : [],
     html: markdown.render(content),
   }
 }

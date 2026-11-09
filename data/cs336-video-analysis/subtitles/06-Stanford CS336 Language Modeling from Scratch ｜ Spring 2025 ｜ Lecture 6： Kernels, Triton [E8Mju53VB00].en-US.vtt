@@ -1,0 +1,6986 @@
+WEBVTT
+Kind: captions
+Language: en-US
+
+00:00:04.820 --> 00:00:09.140
+Today, we're going to be
+going into details on writing
+
+00:00:09.140 --> 00:00:12.660
+high performance code for GPUs.
+
+00:00:12.660 --> 00:00:15.140
+So part of assignment
+2 is going to be
+
+00:00:15.140 --> 00:00:17.880
+you're going to have to
+do a bunch of profiling,
+
+00:00:17.880 --> 00:00:20.630
+you will have to
+write your own Triton
+
+00:00:20.630 --> 00:00:22.880
+kernel for FlashAttention-2.
+
+00:00:22.880 --> 00:00:24.830
+You will need to make
+all of this stuff
+
+00:00:24.830 --> 00:00:25.980
+very high performance.
+
+00:00:25.980 --> 00:00:27.638
+And so in this
+lecture, we're going
+
+00:00:27.638 --> 00:00:29.180
+to drill down a
+little bit, and we're
+
+00:00:29.180 --> 00:00:31.970
+going to try to write
+some high performance
+
+00:00:31.970 --> 00:00:36.410
+code for standard components
+in a language model.
+
+00:00:36.410 --> 00:00:38.720
+So the plan for this
+lecture is we're
+
+00:00:38.720 --> 00:00:42.770
+going to just do a brief amount
+of review about GPU stuff,
+
+00:00:42.770 --> 00:00:44.640
+just to make sure
+you have, once again,
+
+00:00:44.640 --> 00:00:47.180
+the basic components
+of the GPUs that we
+
+00:00:47.180 --> 00:00:51.440
+need to understand in order to
+follow the rest of the lecture.
+
+00:00:51.440 --> 00:00:55.160
+And then I'm going to show you
+a bunch of really basic things
+
+00:00:55.160 --> 00:00:56.940
+about benchmarking
+and profiling,
+
+00:00:56.940 --> 00:00:59.940
+which will be helpful for both
+the assignment and in general,
+
+00:00:59.940 --> 00:01:02.540
+if you want to write
+high performance PyTorch
+
+00:01:02.540 --> 00:01:03.720
+or deep learning code.
+
+00:01:03.720 --> 00:01:07.170
+And then we're going to,
+basically, write some kernels.
+
+00:01:07.170 --> 00:01:10.460
+We're going to write
+CUDA kernels in C++.
+
+00:01:10.460 --> 00:01:12.930
+We will then do the
+same thing in Triton.
+
+00:01:12.930 --> 00:01:16.130
+And then lastly, we're going
+to do the easy, but very good
+
+00:01:16.130 --> 00:01:20.210
+thing of using PyTorch's
+existing JIT compiler
+
+00:01:20.210 --> 00:01:21.467
+to have it optimized for us.
+
+00:01:21.467 --> 00:01:23.300
+And then we'll compare
+all of those and then
+
+00:01:23.300 --> 00:01:24.840
+profile and benchmark things.
+
+00:01:24.840 --> 00:01:27.450
+And throughout, we're going
+to really dig in deep.
+
+00:01:27.450 --> 00:01:30.230
+We're going to go down
+all the way to the PTX,
+
+00:01:30.230 --> 00:01:32.570
+so pretty close to
+the machine code,
+
+00:01:32.570 --> 00:01:35.640
+to understand what the GPU is
+actually doing under the hood
+
+00:01:35.640 --> 00:01:37.790
+when we write all of this code.
+
+00:01:37.790 --> 00:01:40.560
+And then hopefully we'll have
+time, and I think we will,
+
+00:01:40.560 --> 00:01:45.260
+we'll finish by writing a fast
+Triton implementation of softmax
+
+00:01:45.260 --> 00:01:48.440
+at the very end, OK?
+
+00:01:48.440 --> 00:01:51.070
+So assignment one
+has come to a close.
+
+00:01:51.070 --> 00:01:52.820
+There's still a
+leaderboard, you can still
+
+00:01:52.820 --> 00:01:54.680
+submit and update things there.
+
+00:01:54.680 --> 00:01:56.280
+Some of you may be
+using late days,
+
+00:01:56.280 --> 00:01:59.100
+so please finish
+up assignment one.
+
+00:01:59.100 --> 00:02:01.090
+And then assignment
+two is now out.
+
+00:02:01.090 --> 00:02:02.970
+And as I said
+before, there's going
+
+00:02:02.970 --> 00:02:06.450
+to be a bunch of systems stuff
+that you're going to need to do.
+
+00:02:06.450 --> 00:02:11.110
+There's fun parts that you can
+do now involving GPU kernels.
+
+00:02:11.110 --> 00:02:13.660
+And then next week, we're going
+to talk about parallelism,
+
+00:02:13.660 --> 00:02:15.993
+and that's going to be the
+other half of the assignment,
+
+00:02:15.993 --> 00:02:20.880
+writing fast parallel, code
+like data parallelism and so on.
+
+00:02:20.880 --> 00:02:23.830
+So we will get to
+that next week.
+
+00:02:23.830 --> 00:02:24.640
+All right.
+
+00:02:24.640 --> 00:02:28.750
+So now, remember how
+GPUs work, right?
+
+00:02:28.750 --> 00:02:31.830
+So when we have something
+like an aten:0 or an H100,
+
+00:02:31.830 --> 00:02:33.600
+we're going to have
+a whole bunch of SM,
+
+00:02:33.600 --> 00:02:35.170
+streaming multiprocessors.
+
+00:02:35.170 --> 00:02:38.640
+Within each SM is a
+large number of units
+
+00:02:38.640 --> 00:02:40.540
+that can do computation.
+
+00:02:40.540 --> 00:02:43.470
+We have Int32 ones or FP32 ones.
+
+00:02:43.470 --> 00:02:45.030
+And then each SM
+is going to launch
+
+00:02:45.030 --> 00:02:46.420
+a large number of threads.
+
+00:02:46.420 --> 00:02:49.560
+And we have the memory
+hierarchy, which
+
+00:02:49.560 --> 00:02:52.600
+is that we have DRAM, or global
+memory, which is big and slow,
+
+00:02:52.600 --> 00:02:55.220
+and then we've got caches
+that are much faster.
+
+00:02:55.220 --> 00:02:57.080
+And in fact, you
+see here there's
+
+00:02:57.080 --> 00:02:58.650
+this thing called
+the register file,
+
+00:02:58.650 --> 00:03:01.950
+this is very, very fast memory
+that each thread can access.
+
+00:03:01.950 --> 00:03:04.610
+And we're going to be making
+heavy use of these registers
+
+00:03:04.610 --> 00:03:09.290
+as we write high performance
+code for GPUs today.
+
+00:03:09.290 --> 00:03:11.750
+So the basic structure
+for the execution model
+
+00:03:11.750 --> 00:03:14.780
+is going to be we're going to
+have a collection of thread
+
+00:03:14.780 --> 00:03:18.780
+blocks, and a block is going
+to be scheduled on a single SM.
+
+00:03:18.780 --> 00:03:20.600
+So this is the atomic
+unit that we're
+
+00:03:20.600 --> 00:03:23.330
+going to be thinking about,
+especially when we write code
+
+00:03:23.330 --> 00:03:24.390
+in things like Triton.
+
+00:03:24.390 --> 00:03:25.940
+And then within
+each block, there's
+
+00:03:25.940 --> 00:03:27.540
+going to be a whole
+bunch of threads,
+
+00:03:27.540 --> 00:03:28.957
+and the threads
+are actually going
+
+00:03:28.957 --> 00:03:30.657
+to be the ones doing
+the computation.
+
+00:03:30.657 --> 00:03:32.240
+And so if you have
+a vector and you're
+
+00:03:32.240 --> 00:03:34.365
+going to be operating over
+elements of that vector,
+
+00:03:34.365 --> 00:03:36.573
+you're going to write code
+where each thread is going
+
+00:03:36.573 --> 00:03:38.540
+to go in and maybe operate
+over a few elements
+
+00:03:38.540 --> 00:03:40.080
+of that vector at once.
+
+00:03:40.080 --> 00:03:43.340
+And all the threads together
+will process the vector
+
+00:03:43.340 --> 00:03:44.810
+completely.
+
+00:03:44.810 --> 00:03:48.110
+So why do we have these
+things called thread blocks?
+
+00:03:48.110 --> 00:03:51.780
+Why not just have threads
+and your big global context?
+
+00:03:51.780 --> 00:03:53.950
+Well, thread blocks
+can communicate
+
+00:03:53.950 --> 00:03:56.840
+with each other, their shared
+memory kind of within the SM
+
+00:03:56.840 --> 00:03:58.000
+that's pretty fast.
+
+00:03:58.000 --> 00:04:00.560
+So when you need to do something
+like matrix multiplication,
+
+00:04:00.560 --> 00:04:02.227
+you're going to need
+to pass information
+
+00:04:02.227 --> 00:04:03.255
+from thread to thread.
+
+00:04:03.255 --> 00:04:04.630
+And within a thread
+block, that's
+
+00:04:04.630 --> 00:04:08.000
+very fast, across thread
+blocks or across these groups,
+
+00:04:08.000 --> 00:04:09.380
+it's going to be very expensive.
+
+00:04:09.380 --> 00:04:11.595
+So any data that
+you need, you're
+
+00:04:11.595 --> 00:04:13.720
+going to want to keep within
+the same thread block,
+
+00:04:13.720 --> 00:04:16.029
+or within the same
+tile, and that's going
+
+00:04:16.029 --> 00:04:17.950
+to keep things very, very fast.
+
+00:04:17.950 --> 00:04:20.300
+And that's going to be
+as fast as L1 cache,
+
+00:04:20.300 --> 00:04:21.829
+and that's a great place to be.
+
+00:04:21.829 --> 00:04:24.670
+And so you can use this to
+synchronize across threads,
+
+00:04:24.670 --> 00:04:27.710
+but you can't, for example,
+synchronize across blocks.
+
+00:04:27.710 --> 00:04:30.930
+You can't really control
+what's going to happen.
+
+00:04:30.930 --> 00:04:35.030
+And remember, the thing
+that I mentioned last week,
+
+00:04:35.030 --> 00:04:36.370
+there's this thing called waves.
+
+00:04:36.370 --> 00:04:39.770
+Waves aren't an inherent thing
+that you normally think about,
+
+00:04:39.770 --> 00:04:42.020
+but for performance, it
+is an important component.
+
+00:04:42.020 --> 00:04:44.480
+So when we actually
+run these things,
+
+00:04:44.480 --> 00:04:48.160
+the threads are grouped
+into consecutive blocks
+
+00:04:48.160 --> 00:04:49.580
+of 32 threads.
+
+00:04:49.580 --> 00:04:53.130
+And that's a wave, and that gets
+executed kind of all at once
+
+00:04:53.130 --> 00:04:54.330
+in an SM.
+
+00:04:54.330 --> 00:04:56.220
+And so one thing that
+we would like to do
+
+00:04:56.220 --> 00:04:57.637
+is to make sure
+all the waves have
+
+00:04:57.637 --> 00:04:59.500
+an equal amount of computation.
+
+00:04:59.500 --> 00:05:02.388
+We can't always do
+that, but if we can,
+
+00:05:02.388 --> 00:05:03.430
+we would like to do that.
+
+00:05:03.430 --> 00:05:05.763
+So we want to make the number
+of thread blocks, ideally.
+
+00:05:05.763 --> 00:05:07.620
+Divide the number of
+SMs, and to make sure
+
+00:05:07.620 --> 00:05:11.410
+that each wave has an
+equal amount of work.
+
+00:05:11.410 --> 00:05:14.410
+So we're going to ideally have a
+lot more thread blocks than SMs.
+
+00:05:14.410 --> 00:05:16.410
+And we're going to try
+to make that happen as we
+
+00:05:16.410 --> 00:05:19.020
+write high performance code.
+
+00:05:19.020 --> 00:05:19.660
+OK.
+
+00:05:19.660 --> 00:05:21.582
+And then the last
+concept, and maybe
+
+00:05:21.582 --> 00:05:23.040
+amongst the most
+important concepts
+
+00:05:23.040 --> 00:05:25.620
+here, is arithmetic intensity.
+
+00:05:25.620 --> 00:05:28.090
+We would like to keep
+arithmetic intensity high.
+
+00:05:28.090 --> 00:05:30.120
+We would like to have
+more flops than we
+
+00:05:30.120 --> 00:05:32.610
+have bytes of memory movement.
+
+00:05:32.610 --> 00:05:35.370
+And this is because, if
+you remember the scaling
+
+00:05:35.370 --> 00:05:38.700
+plot from last lecture,
+our compute scaling
+
+00:05:38.700 --> 00:05:40.750
+is much, much faster
+than memory scaling.
+
+00:05:40.750 --> 00:05:42.750
+So a lot of the
+time, computations
+
+00:05:42.750 --> 00:05:44.763
+are going to end up
+being memory bound,
+
+00:05:44.763 --> 00:05:46.930
+and we're not actually
+getting all of the work done.
+
+00:05:46.930 --> 00:05:51.210
+So as a general rule, matrix
+multiplication is compute bound.
+
+00:05:51.210 --> 00:05:52.947
+If we do it cleverly,
+everything else
+
+00:05:52.947 --> 00:05:54.530
+is going to be memory
+bound, and we're
+
+00:05:54.530 --> 00:05:57.050
+going to try to cleverly
+reduce the amount of things
+
+00:05:57.050 --> 00:05:59.300
+that are memory bound
+or how badly things
+
+00:05:59.300 --> 00:06:01.112
+are memory bound, OK?
+
+00:06:01.112 --> 00:06:04.812
+So that's our very, very
+brief review of GPUs.
+
+00:06:04.812 --> 00:06:06.270
+Hopefully, everyone
+remembers this.
+
+00:06:06.270 --> 00:06:09.980
+You still have a fresh memory
+of the execution model.
+
+00:06:09.980 --> 00:06:13.340
+Feel free to stop me and
+ask questions if any of you
+
+00:06:13.340 --> 00:06:17.647
+have lingering doubts or
+questions about how this is all
+
+00:06:17.647 --> 00:06:18.230
+going to work.
+
+00:06:18.230 --> 00:06:18.937
+Yes?
+
+00:06:18.937 --> 00:06:20.270
+What was the function of a warp?
+
+00:06:20.270 --> 00:06:21.670
+What was the
+function of-- sorry?
+
+00:06:21.670 --> 00:06:22.170
+A warp.
+
+00:06:22.170 --> 00:06:23.600
+A warp.
+
+00:06:23.600 --> 00:06:26.150
+A warp is essentially
+a group of threads
+
+00:06:26.150 --> 00:06:27.480
+that get executed together.
+
+00:06:27.480 --> 00:06:29.390
+And the reason
+why warps exist is
+
+00:06:29.390 --> 00:06:33.060
+that they reduce the amount of
+control machinery that's needed,
+
+00:06:33.060 --> 00:06:35.900
+because you're executing all
+these threads at the same time,
+
+00:06:35.900 --> 00:06:38.580
+you don't need a control
+thing for each thread,
+
+00:06:38.580 --> 00:06:40.440
+you need them for blocks of 32.
+
+00:06:40.440 --> 00:06:42.530
+And so you see, for
+example, there's
+
+00:06:42.530 --> 00:06:47.270
+a lot more compute units than
+there are warp schedulers.
+
+00:06:47.270 --> 00:06:49.460
+And so you're able to do
+a lot more parallel work
+
+00:06:49.460 --> 00:06:50.520
+without worrying about control.
+
+00:06:50.520 --> 00:06:52.353
+And this is one of the
+trade offs with CPUs.
+
+00:06:52.353 --> 00:06:57.650
+CPUs, a lot more Silicon area
+dedicated to control and branch
+
+00:06:57.650 --> 00:07:00.140
+prediction and things like
+this, whereas for GPUs,
+
+00:07:00.140 --> 00:07:02.060
+much more emphasis
+on computation
+
+00:07:02.060 --> 00:07:04.370
+with simpler controls.
+
+00:07:04.370 --> 00:07:05.606
+OK.
+
+00:07:05.606 --> 00:07:09.170
+So now we're going to get
+into newer content now.
+
+00:07:09.170 --> 00:07:11.660
+And I think if there's
+one high level thing
+
+00:07:11.660 --> 00:07:15.300
+to remember, it's, you want to
+write high performance code,
+
+00:07:15.300 --> 00:07:17.850
+you should remember to
+benchmark and profile your code.
+
+00:07:17.850 --> 00:07:20.780
+And that seems very obvious,
+but I've seen a lot of things
+
+00:07:20.780 --> 00:07:23.877
+where students or people go
+in and they're like, well,
+
+00:07:23.877 --> 00:07:25.460
+I think this is the
+bottleneck, so I'm
+
+00:07:25.460 --> 00:07:27.150
+going to spend three
+hours optimizing it.
+
+00:07:27.150 --> 00:07:29.192
+And it turns out it wasn't
+the bottleneck at all.
+
+00:07:29.192 --> 00:07:31.310
+I'm sure it was fun,
+but it was kind of time
+
+00:07:31.310 --> 00:07:32.910
+that was misallocated.
+
+00:07:32.910 --> 00:07:35.780
+And so if you actually use
+a high performance or a very
+
+00:07:35.780 --> 00:07:38.540
+detailed profiler, you
+can see exactly where
+
+00:07:38.540 --> 00:07:42.150
+your bottlenecks are and exactly
+what the machine is doing.
+
+00:07:42.150 --> 00:07:44.810
+And once you have that, you
+can go and spend your efforts
+
+00:07:44.810 --> 00:07:47.703
+in the most important parts
+of your code execution.
+
+00:07:47.703 --> 00:07:49.120
+And so that's the
+high level thing
+
+00:07:49.120 --> 00:07:52.180
+I want to get across, because
+some of the details about GPU
+
+00:07:52.180 --> 00:07:55.360
+execution and how you write
+a softmax kernel, that's
+
+00:07:55.360 --> 00:07:57.580
+going to change,
+and maybe you even
+
+00:07:57.580 --> 00:08:01.090
+want to just rely on the
+Torch compile auto JIT thing.
+
+00:08:01.090 --> 00:08:02.590
+But the fact that
+you should profile
+
+00:08:02.590 --> 00:08:05.007
+isn't really going to change
+no matter what the tools are.
+
+00:08:05.007 --> 00:08:07.750
+So I want you to
+internalize that idea
+
+00:08:07.750 --> 00:08:09.670
+that you should be
+always profiling
+
+00:08:09.670 --> 00:08:13.720
+if you want to be writing
+high performance code.
+
+00:08:13.720 --> 00:08:16.070
+And really, there's a
+limit to the theory.
+
+00:08:16.070 --> 00:08:18.040
+I think systems is
+part of this course
+
+00:08:18.040 --> 00:08:19.730
+that you can reason
+about pretty well.
+
+00:08:19.730 --> 00:08:21.647
+Architecture is somewhat
+hard to reason about,
+
+00:08:21.647 --> 00:08:25.190
+and you can really think about
+the roofline model and so on.
+
+00:08:25.190 --> 00:08:27.812
+But how fast is your
+matrix multiply?
+
+00:08:27.812 --> 00:08:29.770
+Well, maybe that depends
+on the library version
+
+00:08:29.770 --> 00:08:31.559
+or your hardware,
+like which things are
+
+00:08:31.559 --> 00:08:32.809
+bottlenecking for what reason.
+
+00:08:32.809 --> 00:08:35.140
+There's all sorts of
+microcode, things that you
+
+00:08:35.140 --> 00:08:37.039
+don't really fully know.
+
+00:08:37.039 --> 00:08:38.950
+And so you have to,
+in the end, have
+
+00:08:38.950 --> 00:08:40.750
+to do end to end
+benchmarking whenever
+
+00:08:40.750 --> 00:08:43.860
+you're developing these things.
+
+00:08:43.860 --> 00:08:45.970
+So I'm going to have
+an example computation.
+
+00:08:45.970 --> 00:08:47.465
+This is the simplest
+thing that we
+
+00:08:47.465 --> 00:08:49.590
+can run compared to all
+the things that you all are
+
+00:08:49.590 --> 00:08:51.390
+doing in your assignment one.
+
+00:08:51.390 --> 00:08:53.290
+But I'm going to run
+a very simple MLP.
+
+00:08:53.290 --> 00:08:55.330
+It's going to have
+128 dimensions.
+
+00:08:55.330 --> 00:08:56.950
+It's going to have 16 layers.
+
+00:08:56.950 --> 00:08:58.413
+It's going to have
+some batch size,
+
+00:08:58.413 --> 00:08:59.830
+and it's going to
+have five steps.
+
+00:08:59.830 --> 00:09:01.622
+I'm going to just do
+forwards and backwards
+
+00:09:01.622 --> 00:09:03.840
+for five different steps here.
+
+00:09:03.840 --> 00:09:06.480
+And just to make the code
+clear, it's something like this.
+
+00:09:06.480 --> 00:09:08.080
+I'm going to define
+an MLP model,
+
+00:09:08.080 --> 00:09:10.680
+and I'll show you
+that in a moment here,
+
+00:09:10.680 --> 00:09:13.780
+and then I'll define a
+random Gaussian input,
+
+00:09:13.780 --> 00:09:16.920
+and then I'll run it for five
+steps in that last case, where
+
+00:09:16.920 --> 00:09:19.630
+I compute some forward, and
+then I compute a backwards,
+
+00:09:19.630 --> 00:09:22.260
+and then I return
+the result, which
+
+00:09:22.260 --> 00:09:24.490
+is just the mean of
+the output of my MLP.
+
+00:09:24.490 --> 00:09:25.845
+There's not even losses.
+
+00:09:25.845 --> 00:09:26.470
+It's so simple.
+
+00:09:26.470 --> 00:09:28.300
+It's just you run
+the MLP forward
+
+00:09:28.300 --> 00:09:29.890
+and I just average
+pool at the end.
+
+00:09:29.890 --> 00:09:33.300
+And then the MLP is
+just the simplest thing.
+
+00:09:33.300 --> 00:09:35.130
+You can also imagine
+here it's just
+
+00:09:35.130 --> 00:09:38.400
+a bunch of linear layers stacked
+on top of each other, which
+
+00:09:38.400 --> 00:09:39.490
+is this bit.
+
+00:09:39.490 --> 00:09:42.420
+And then I've got
+a value in between.
+
+00:09:42.420 --> 00:09:45.858
+So this is just linear
+value, so on and so forth.
+
+00:09:45.858 --> 00:09:47.400
+Everything is nice
+and square, right?
+
+00:09:47.400 --> 00:09:49.340
+So hopefully, this
+is a very simple MLP
+
+00:09:49.340 --> 00:09:52.940
+that you all feel
+pretty comfortable with.
+
+00:09:52.940 --> 00:09:55.830
+And then let's go back.
+
+00:09:55.830 --> 00:09:56.660
+Yes.
+
+00:09:56.660 --> 00:09:57.690
+Oh, sorry.
+
+00:09:57.690 --> 00:10:00.360
+I want to go back up to here.
+
+00:10:00.360 --> 00:10:01.610
+OK, good.
+
+00:10:01.610 --> 00:10:04.212
+And so now I have this MLP
+code that I want to run.
+
+00:10:04.212 --> 00:10:05.670
+And now I'm going
+to do two things.
+
+00:10:05.670 --> 00:10:08.003
+I'm going to benchmark, so
+I'm going to do some timings.
+
+00:10:08.003 --> 00:10:10.920
+So I want to know how long
+does this function take to run.
+
+00:10:10.920 --> 00:10:12.770
+And then I'll do
+profiling, which
+
+00:10:12.770 --> 00:10:15.770
+is to go inside the
+function and ask, where am I
+
+00:10:15.770 --> 00:10:17.420
+spending all of my time?
+
+00:10:17.420 --> 00:10:19.650
+So let's start
+with benchmarking.
+
+00:10:19.650 --> 00:10:23.210
+So benchmarking is just the
+measurement of wall clock time
+
+00:10:23.210 --> 00:10:25.490
+of performing these operations.
+
+00:10:25.490 --> 00:10:27.860
+And I'm only looking for
+the end-to-end execution
+
+00:10:27.860 --> 00:10:30.800
+time of, in this
+case, my MLP function.
+
+00:10:30.800 --> 00:10:32.753
+And there are some
+subtleties to this.
+
+00:10:32.753 --> 00:10:34.670
+You're sitting there and
+you're like, why am I
+
+00:10:34.670 --> 00:10:36.200
+being told how to invoke--
+
+00:10:36.200 --> 00:10:38.600
+I don't know-- the
+time it function?
+
+00:10:38.600 --> 00:10:41.200
+But you do have to be a
+little bit careful about how
+
+00:10:41.200 --> 00:10:42.268
+you measure times.
+
+00:10:42.268 --> 00:10:44.060
+And I think if you're
+not paying attention,
+
+00:10:44.060 --> 00:10:47.620
+you will run into these pitfalls
+when you do assignment two.
+
+00:10:47.620 --> 00:10:49.520
+And so what are
+we doing this for?
+
+00:10:49.520 --> 00:10:51.410
+We're going to compare
+implementations later.
+
+00:10:51.410 --> 00:10:54.640
+We're going to compare our
+Triton to our handwritten C++,
+
+00:10:54.640 --> 00:10:57.825
+to PyTorch's implementation,
+and Torch compile.
+
+00:10:57.825 --> 00:10:59.200
+And we want to
+know, was it worth
+
+00:10:59.200 --> 00:11:00.910
+it to write that CUDA kernel?
+
+00:11:00.910 --> 00:11:02.320
+And we'd also like
+to understand,
+
+00:11:02.320 --> 00:11:04.370
+when I make my matrix
+multiplies bigger,
+
+00:11:04.370 --> 00:11:05.810
+how much slower does it get?
+
+00:11:05.810 --> 00:11:08.590
+So we'd like to do some
+empirical benchmarking of those.
+
+00:11:08.590 --> 00:11:11.020
+So throughout this
+lecture, I'm going
+
+00:11:11.020 --> 00:11:12.940
+to be using this
+benchmark function.
+
+00:11:12.940 --> 00:11:16.540
+And that's going to be a wrapper
+function, I'll step through it.
+
+00:11:16.540 --> 00:11:18.672
+Benchmark is going to
+do the following things.
+
+00:11:18.672 --> 00:11:20.380
+It's going to have a
+function that I want
+
+00:11:20.380 --> 00:11:21.622
+to benchmark, which is run.
+
+00:11:21.622 --> 00:11:24.080
+And then I'm going to do some
+number of warm up iterations.
+
+00:11:24.080 --> 00:11:27.026
+And then I'll do some
+number of trials.
+
+00:11:27.026 --> 00:11:30.820
+And you might wonder, OK,
+so what's this warm up thing
+
+00:11:30.820 --> 00:11:31.880
+that we're doing here?
+
+00:11:31.880 --> 00:11:33.670
+Well, one thing that's
+really important
+
+00:11:33.670 --> 00:11:37.390
+is when you first run
+your PyTorch code,
+
+00:11:37.390 --> 00:11:40.620
+and let's say it dispatches
+something to the GPU,
+
+00:11:40.620 --> 00:11:43.270
+it might look very fast
+and transparent to you,
+
+00:11:43.270 --> 00:11:44.700
+but that very first
+time something
+
+00:11:44.700 --> 00:11:48.220
+is executed, in the background
+machine code is being compiled.
+
+00:11:48.220 --> 00:11:51.130
+That code instruction might
+be being sent to the GPU.
+
+00:11:51.130 --> 00:11:54.750
+There's all sorts of things that
+happen to initialize your code.
+
+00:11:54.750 --> 00:11:57.720
+And so you always want to
+do some warm up iteration
+
+00:11:57.720 --> 00:12:01.060
+to make sure that you're not
+measuring the startup speed.
+
+00:12:01.060 --> 00:12:03.900
+Instead, you want to measure
+kind of the steady state speed.
+
+00:12:03.900 --> 00:12:06.480
+If you're running thousands
+and thousands of iterations,
+
+00:12:06.480 --> 00:12:08.370
+what you're interested
+in is that part,
+
+00:12:08.370 --> 00:12:12.840
+not necessarily how fast can
+you do on the fly compilation
+
+00:12:12.840 --> 00:12:14.912
+of your CUDA code.
+
+00:12:14.912 --> 00:12:16.450
+So that's why we have warm up.
+
+00:12:16.450 --> 00:12:19.230
+And you should always
+have a bit of warm up.
+
+00:12:19.230 --> 00:12:22.350
+And then another thing that's
+really important, and I'll
+
+00:12:22.350 --> 00:12:24.150
+get to this once we
+get to the profiler,
+
+00:12:24.150 --> 00:12:27.820
+is you want to call this thing
+called Torch CUDA synchronize.
+
+00:12:27.820 --> 00:12:28.690
+What is that?
+
+00:12:28.690 --> 00:12:31.530
+Well, the GPU and
+the CPU are basically
+
+00:12:31.530 --> 00:12:34.450
+two independent compute
+units in your computer.
+
+00:12:34.450 --> 00:12:37.202
+And they can basically
+run kind of independently.
+
+00:12:37.202 --> 00:12:38.660
+And so the execution
+model is going
+
+00:12:38.660 --> 00:12:41.160
+to be this, Python
+code that I have here,
+
+00:12:41.160 --> 00:12:42.710
+this lives on the CPU.
+
+00:12:42.710 --> 00:12:44.330
+And when I run
+something, it's going
+
+00:12:44.330 --> 00:12:47.653
+to dispatch a bunch of
+CUDA kernels to the GPU.
+
+00:12:47.653 --> 00:12:49.320
+It says, please run
+these things for me.
+
+00:12:49.320 --> 00:12:52.110
+And the GPU will go off
+and execute those things,
+
+00:12:52.110 --> 00:12:54.180
+and the CPU will actually
+go on and keep running.
+
+00:12:54.180 --> 00:12:57.000
+It doesn't wait for those
+CUDA executions to stop.
+
+00:12:57.000 --> 00:13:00.110
+And so, that's a great feature
+for writing high performance
+
+00:13:00.110 --> 00:13:03.260
+code, but you should hopefully
+see the immediate problem
+
+00:13:03.260 --> 00:13:04.580
+if you want to do benchmarking.
+
+00:13:04.580 --> 00:13:05.990
+If you're benchmarking
+and you've
+
+00:13:05.990 --> 00:13:08.270
+got this model where the
+GPU runs off in the side
+
+00:13:08.270 --> 00:13:10.110
+and your CPU is doing
+something different,
+
+00:13:10.110 --> 00:13:13.130
+you're actually not measuring
+the GPU execution time.
+
+00:13:13.130 --> 00:13:15.500
+So Torch CUDA
+synchronize basically
+
+00:13:15.500 --> 00:13:18.110
+says, all right, let's make
+sure that the GPU and CPU are
+
+00:13:18.110 --> 00:13:19.080
+in the same state.
+
+00:13:19.080 --> 00:13:21.480
+And there's no queued
+things running,
+
+00:13:21.480 --> 00:13:24.140
+and that we're kind of at the
+same point in terms of the code
+
+00:13:24.140 --> 00:13:25.350
+that's being executed.
+
+00:13:25.350 --> 00:13:28.463
+And now, also, the GPU and CPU
+are kind of in the same state,
+
+00:13:28.463 --> 00:13:29.880
+and I'm going to
+time it for real.
+
+00:13:29.880 --> 00:13:32.537
+And I'm going to time something
+for some number of times.
+
+00:13:32.537 --> 00:13:34.370
+And I'm going to run
+the computation, which,
+
+00:13:34.370 --> 00:13:36.660
+in this case, is
+the sleep command.
+
+00:13:36.660 --> 00:13:38.160
+I'm going to do it three times.
+
+00:13:38.160 --> 00:13:42.560
+And since I'm trying to
+sleep for 50 milliseconds,
+
+00:13:42.560 --> 00:13:44.840
+that's the time that I'm
+going to get at the end.
+
+00:13:44.840 --> 00:13:47.210
+So I do time that
+time three times.
+
+00:13:47.210 --> 00:13:51.620
+And of course here, I'm also
+calling torch.cuda.synchronize
+
+00:13:51.620 --> 00:13:54.530
+at the end of run to make
+sure that the GPU and CPU
+
+00:13:54.530 --> 00:13:55.370
+states are the same.
+
+00:13:55.370 --> 00:13:56.870
+So if the CPU is
+running ahead, it's
+
+00:13:56.870 --> 00:13:58.850
+going to wait for
+the GPU execution
+
+00:13:58.850 --> 00:14:01.700
+to actually finish
+here, and vice versa.
+
+00:14:01.700 --> 00:14:04.550
+And so now, I finished and
+then I'm going to average,
+
+00:14:04.550 --> 00:14:08.510
+because each single measurement
+might be fluctuating because
+
+00:14:08.510 --> 00:14:10.672
+of things like thermal
+properties of the GPU,
+
+00:14:10.672 --> 00:14:13.130
+and so you want to take multiple
+replicates, take the mean,
+
+00:14:13.130 --> 00:14:13.980
+and return that.
+
+00:14:13.980 --> 00:14:16.190
+That's our benchmarking code.
+
+00:14:16.190 --> 00:14:17.250
+Very simple.
+
+00:14:17.250 --> 00:14:20.160
+But remember the two
+important pieces here.
+
+00:14:20.160 --> 00:14:21.300
+Always do a warm up.
+
+00:14:21.300 --> 00:14:23.600
+Make sure to call
+CUDA synchronize.
+
+00:14:23.600 --> 00:14:25.470
+If you do those,
+it's very simple.
+
+00:14:25.470 --> 00:14:28.650
+If you forget to do those,
+you'll get pretty crazy numbers.
+
+00:14:28.650 --> 00:14:31.320
+You'll get that your big matrix
+multiply finished instantly,
+
+00:14:31.320 --> 00:14:33.090
+which is definitely not true.
+
+00:14:33.090 --> 00:14:35.430
+So now, we can do
+some benchmarking
+
+00:14:35.430 --> 00:14:37.050
+of matrix multiplies.
+
+00:14:37.050 --> 00:14:39.160
+I'm going to walk
+through some of these.
+
+00:14:39.160 --> 00:14:41.710
+They're just putting numbers
+to things that we already know,
+
+00:14:41.710 --> 00:14:43.960
+but I want to just walk
+through it and make sure we're
+
+00:14:43.960 --> 00:14:46.680
+on the same page here.
+
+00:14:46.680 --> 00:14:50.620
+Si I ran this on the
+class A100s, I have GPUs,
+
+00:14:50.620 --> 00:14:54.570
+I'm going to do matrix
+multiplies over these sizes,
+
+00:14:54.570 --> 00:14:57.060
+and then I'm going
+to go and collect
+
+00:14:57.060 --> 00:15:00.360
+a whole bunch of
+matrix multiply timings
+
+00:15:00.360 --> 00:15:02.400
+for each of these
+dimensions, stepping
+
+00:15:02.400 --> 00:15:04.960
+through this benchmark result.
+
+00:15:04.960 --> 00:15:06.750
+And so, we see--
+
+00:15:06.750 --> 00:15:10.838
+as we expect, super linear
+scaling of our runtimes as we
+
+00:15:10.838 --> 00:15:11.880
+increase the matrix size.
+
+00:15:11.880 --> 00:15:15.160
+Of course, at the smallest
+sizes, like 1024 and 2048,
+
+00:15:15.160 --> 00:15:17.580
+we actually see that the
+times don't grow at all
+
+00:15:17.580 --> 00:15:21.000
+because there's constant
+factor overhead in just doing
+
+00:15:21.000 --> 00:15:22.150
+these matrix multiplies.
+
+00:15:22.150 --> 00:15:25.990
+These numbers have to get
+shipped from the CPU to the GPU,
+
+00:15:25.990 --> 00:15:29.250
+there's overhead in
+launching the kernel,
+
+00:15:29.250 --> 00:15:31.490
+and so it's not
+the case that it's
+
+00:15:31.490 --> 00:15:33.530
+super linear all the way to 0.
+
+00:15:33.530 --> 00:15:35.130
+But once the matrices
+get big enough,
+
+00:15:35.130 --> 00:15:36.560
+we see exactly the
+kind of scaling
+
+00:15:36.560 --> 00:15:39.840
+that we expect to see with
+our matrix multiplies.
+
+00:15:39.840 --> 00:15:41.240
+OK.
+
+00:15:41.240 --> 00:15:43.290
+So hopefully straightforward.
+
+00:15:43.290 --> 00:15:45.810
+Now, let's try to
+benchmark our MLP.
+
+00:15:45.810 --> 00:15:47.610
+So what are we going to do?
+
+00:15:47.610 --> 00:15:49.140
+We're going to make
+our MLP bigger.
+
+00:15:49.140 --> 00:15:50.627
+We're going to have
+256 dimensions.
+
+00:15:50.627 --> 00:15:51.960
+We're going to have four layers.
+
+00:15:51.960 --> 00:15:53.580
+Batch size of 256.
+
+00:15:53.580 --> 00:15:55.130
+Take two steps.
+
+00:15:55.130 --> 00:15:57.270
+And so what's the time
+that it takes to do that?
+
+00:15:57.270 --> 00:16:00.750
+Well, it's going to take
+6.2 seconds to do that.
+
+00:16:00.750 --> 00:16:03.510
+And now I could do
+some basic things.
+
+00:16:03.510 --> 00:16:06.570
+I can scale the number
+of steps from 2 to 5,
+
+00:16:06.570 --> 00:16:08.370
+and I can benchmark
+all of those.
+
+00:16:08.370 --> 00:16:13.560
+And I'll get 2, 3,
+4, and then 5 steps.
+
+00:16:13.560 --> 00:16:15.990
+And unlike in the
+matrix multiply case,
+
+00:16:15.990 --> 00:16:17.900
+if I'm scaling the
+number of steps,
+
+00:16:17.900 --> 00:16:21.020
+or the number of forward and
+backward passes on my MLP,
+
+00:16:21.020 --> 00:16:23.400
+what do I expect the
+runtime to behave like?
+
+00:16:23.400 --> 00:16:25.340
+Well, I expect linear scaling.
+
+00:16:25.340 --> 00:16:27.200
+And that's kind of what we see.
+
+00:16:27.200 --> 00:16:31.280
+There's about five
+seconds per MLP execution,
+
+00:16:31.280 --> 00:16:35.020
+and we see it's about n
+times 5 for the runtime
+
+00:16:35.020 --> 00:16:38.530
+of the end-to-end object here.
+
+00:16:38.530 --> 00:16:41.740
+OK, let me see if I can
+set the thing that's
+
+00:16:41.740 --> 00:16:43.040
+being monitored here.
+
+00:16:43.040 --> 00:16:43.820
+Oh, nope, I can't.
+
+00:16:43.820 --> 00:16:45.050
+OK, I'm going to zoom
+out a little bit.
+
+00:16:45.050 --> 00:16:45.890
+Sorry about that.
+
+00:16:45.890 --> 00:16:48.160
+OK, now we can also scale
+the number of layers
+
+00:16:48.160 --> 00:16:53.300
+from 2, 3, 4 to 5, and
+what does that give us?
+
+00:16:53.300 --> 00:16:56.620
+Well, it gives us
+increasing runtimes.
+
+00:16:56.620 --> 00:16:59.270
+Once again, linear in
+the number of layers.
+
+00:16:59.270 --> 00:17:03.490
+This time, once again, one
+layer takes about five seconds,
+
+00:17:03.490 --> 00:17:04.670
+a little bit less than that.
+
+00:17:04.670 --> 00:17:07.569
+And so we get about four
+times-- actually four times
+
+00:17:07.569 --> 00:17:09.040
+the number of layers.
+
+00:17:09.040 --> 00:17:11.210
+And linear scaling
+shows up again.
+
+00:17:11.210 --> 00:17:12.230
+Unsurprising, right?
+
+00:17:12.230 --> 00:17:14.319
+So both steps and
+layers obviously
+
+00:17:14.319 --> 00:17:16.910
+have linear relationships
+with the runtime,
+
+00:17:16.910 --> 00:17:20.275
+and that is exactly what we
+end up seeing at the end here.
+
+00:17:20.275 --> 00:17:22.900
+I'm going to skip the batch size
+thing, because this is getting
+
+00:17:22.900 --> 00:17:25.690
+a little bit unwieldy in
+terms of the amount of things
+
+00:17:25.690 --> 00:17:27.069
+that are being tracked here.
+
+00:17:27.069 --> 00:17:28.750
+OK, all right.
+
+00:17:28.750 --> 00:17:31.750
+So that's the end of
+this benchmarking bit.
+
+00:17:31.750 --> 00:17:34.290
+We can make this
+nice function that
+
+00:17:34.290 --> 00:17:36.730
+does a little bit of warm
+up, does CUDA synchronize,
+
+00:17:36.730 --> 00:17:39.100
+and we can measure the runtime
+of anything that we want.
+
+00:17:39.100 --> 00:17:39.820
+And this is good.
+
+00:17:39.820 --> 00:17:41.740
+And you should do this all
+the time in your code right.
+
+00:17:41.740 --> 00:17:43.260
+You can measure
+how long it takes
+
+00:17:43.260 --> 00:17:45.720
+for your new fancy
+architecture to run.
+
+00:17:45.720 --> 00:17:49.030
+But then I think if you
+want to fix some problems,
+
+00:17:49.030 --> 00:17:50.950
+benchmarking is a very
+coarse grained tool.
+
+00:17:50.950 --> 00:17:52.600
+It tells you that
+your code is slow,
+
+00:17:52.600 --> 00:17:56.050
+but it doesn't tell you where
+the time is being spent.
+
+00:17:56.050 --> 00:18:01.170
+And so what we would like to
+do is instead do profiling.
+
+00:18:01.170 --> 00:18:04.080
+And so this is going to be a
+much more fine grained object
+
+00:18:04.080 --> 00:18:06.000
+that we're going to want to do.
+
+00:18:06.000 --> 00:18:09.450
+And so profiling is really
+nice, because it not only helps
+
+00:18:09.450 --> 00:18:12.910
+you see where the time is
+being spent, which functions,
+
+00:18:12.910 --> 00:18:15.250
+but when you look at
+what you're calling,
+
+00:18:15.250 --> 00:18:18.360
+usually you interact with the
+PyTorch interface, the parts
+
+00:18:18.360 --> 00:18:19.450
+of PyTorch that you call.
+
+00:18:19.450 --> 00:18:22.170
+But beneath PyTorch,
+there's this whole universe
+
+00:18:22.170 --> 00:18:24.160
+of CUDA stuff
+that's being called.
+
+00:18:24.160 --> 00:18:26.330
+And when you run a
+profiler, you can actually
+
+00:18:26.330 --> 00:18:28.970
+see, all the way to
+the low level calls,
+
+00:18:28.970 --> 00:18:30.330
+what is actually being called.
+
+00:18:30.330 --> 00:18:32.270
+And so you can get a
+much nicer intuition
+
+00:18:32.270 --> 00:18:36.420
+for how the program is actually
+being executed on the hardware.
+
+00:18:36.420 --> 00:18:38.690
+And so we'll step
+through profiling
+
+00:18:38.690 --> 00:18:42.680
+a few simple functions, and then
+get a little bit of intuition
+
+00:18:42.680 --> 00:18:44.750
+about what is happening.
+
+00:18:44.750 --> 00:18:46.640
+And so one of the
+things that is nice
+
+00:18:46.640 --> 00:18:50.000
+is that if you want
+basic profiling,
+
+00:18:50.000 --> 00:18:51.770
+PyTorch has a very
+nice kind of built
+
+00:18:51.770 --> 00:18:53.660
+in profiler that you can use.
+
+00:18:53.660 --> 00:18:57.350
+And this will allow you to not
+leave the Python PyTorch world
+
+00:18:57.350 --> 00:19:00.930
+and get some fairly
+reasonable looking outputs.
+
+00:19:00.930 --> 00:19:03.480
+And so I've profiled
+some functions here,
+
+00:19:03.480 --> 00:19:06.740
+and you can see the
+output of this as well.
+
+00:19:06.740 --> 00:19:10.580
+And so I've taken the
+sleep example from before.
+
+00:19:10.580 --> 00:19:13.230
+And here is the sleep function.
+
+00:19:13.230 --> 00:19:15.470
+And when we profile
+the sleep function,
+
+00:19:15.470 --> 00:19:17.460
+the profile function
+looks something like this.
+
+00:19:17.460 --> 00:19:21.110
+I have a warm up again, I
+have Torch CUDA synchronize,
+
+00:19:21.110 --> 00:19:23.780
+and then I call the
+profiler, and I'm tracking
+
+00:19:23.780 --> 00:19:27.290
+both CPU and the GPU times.
+
+00:19:27.290 --> 00:19:30.960
+And then I run something,
+and then I synchronize again,
+
+00:19:30.960 --> 00:19:34.680
+and I print out the average
+table across all the time.
+
+00:19:34.680 --> 00:19:37.130
+So I go back now.
+
+00:19:37.130 --> 00:19:40.370
+So now, I'm going to
+profile the sleep function.
+
+00:19:40.370 --> 00:19:43.800
+And if we look at what's
+happening, what happens here?
+
+00:19:43.800 --> 00:19:45.950
+Well, 100% of the
+time is being spent
+
+00:19:45.950 --> 00:19:48.590
+on something called CUDA device
+synchronize because there's
+
+00:19:48.590 --> 00:19:50.250
+no GPU work being done.
+
+00:19:50.250 --> 00:19:52.490
+This is just a no op,
+it's kind of a silly thing
+
+00:19:52.490 --> 00:19:53.520
+to be profiling.
+
+00:19:53.520 --> 00:19:56.250
+And so now let's look at
+something kind non-trivial.
+
+00:19:56.250 --> 00:19:59.120
+So let's look at
+this basic operation
+
+00:19:59.120 --> 00:20:02.370
+here of adding two matrices.
+
+00:20:02.370 --> 00:20:05.360
+So I defined add function
+that takes in an A and B
+
+00:20:05.360 --> 00:20:07.190
+and adds them together.
+
+00:20:07.190 --> 00:20:10.010
+And this is a
+helper function that
+
+00:20:10.010 --> 00:20:12.170
+instantiates two random
+Gaussian matrices
+
+00:20:12.170 --> 00:20:15.540
+and then invokes whatever's
+in the operation argument.
+
+00:20:15.540 --> 00:20:19.650
+So this is adding to 2048
+sized matrices together.
+
+00:20:19.650 --> 00:20:21.370
+So now I'm going
+to profile this,
+
+00:20:21.370 --> 00:20:23.320
+and I'm going to
+call the profiler.
+
+00:20:23.320 --> 00:20:27.140
+And I'll get back something that
+looks like this block over here.
+
+00:20:27.140 --> 00:20:28.900
+So this is what I get back.
+
+00:20:28.900 --> 00:20:31.990
+And I'm going to have to zoom
+back out, because this is not
+
+00:20:31.990 --> 00:20:34.130
+going to be all right.
+
+00:20:34.130 --> 00:20:36.245
+Is this visible from the back?
+
+00:20:36.245 --> 00:20:37.870
+Can someone give me
+a thumbs up if it's
+
+00:20:37.870 --> 00:20:39.010
+visible from the back or not?
+
+00:20:39.010 --> 00:20:39.950
+OK, good, good, good.
+
+00:20:39.950 --> 00:20:41.000
+Or thumbs down if it's not.
+
+00:20:41.000 --> 00:20:41.500
+All right.
+
+00:20:41.500 --> 00:20:47.470
+So when we call the add function
+in Python, this is kind of all
+
+00:20:47.470 --> 00:20:50.440
+that we interact with, this
+add function, A plus B. That's
+
+00:20:50.440 --> 00:20:51.410
+all we think about.
+
+00:20:51.410 --> 00:20:53.770
+But actually, underneath
+here, underneath the iceberg,
+
+00:20:53.770 --> 00:20:56.450
+so to speak, there's a
+lot more that happens.
+
+00:20:56.450 --> 00:20:58.280
+So this gets
+dispatched to the GPU.
+
+00:20:58.280 --> 00:21:00.070
+And first, there's
+this thing called
+
+00:21:00.070 --> 00:21:04.220
+aten, which is the C
+interface for PyTorch,
+
+00:21:04.220 --> 00:21:06.340
+and so this wrapper gets
+called and it says, OK,
+
+00:21:06.340 --> 00:21:07.730
+I'm going to add some numbers.
+
+00:21:07.730 --> 00:21:10.700
+This is what's being called,
+that's the outer wrapper.
+
+00:21:10.700 --> 00:21:13.990
+And then that dispatches
+to a particular kernel
+
+00:21:13.990 --> 00:21:18.070
+called vectorize elementwise
+kernel 4, at native CUDA vector
+
+00:21:18.070 --> 00:21:19.415
+add da, da, da, da, da.
+
+00:21:19.415 --> 00:21:22.150
+And this is the thing that's
+actually doing the adding.
+
+00:21:22.150 --> 00:21:24.270
+And then there's this,
+also, other thing
+
+00:21:24.270 --> 00:21:26.860
+called CUDA launch kernel
+that's taking some time.
+
+00:21:26.860 --> 00:21:30.300
+And this is actually the
+CPU is taking the command
+
+00:21:30.300 --> 00:21:31.930
+and sending it over to the GPU.
+
+00:21:31.930 --> 00:21:34.240
+That's the kernel launch,
+and that takes some time.
+
+00:21:34.240 --> 00:21:36.790
+And then finally, the
+CUDA device synchronizes,
+
+00:21:36.790 --> 00:21:39.120
+we're waiting for the GPU
+to finish and send things
+
+00:21:39.120 --> 00:21:41.010
+back to us, and that
+also takes some time.
+
+00:21:41.010 --> 00:21:43.830
+The mere act of having a
+synchronization barrier
+
+00:21:43.830 --> 00:21:45.540
+is going to cost us some time.
+
+00:21:45.540 --> 00:21:49.180
+And so we basically have the
+time total in the end here,
+
+00:21:49.180 --> 00:21:55.540
+1.4 milliseconds on the CPU and
+17 microseconds on the CUDA.
+
+00:21:55.540 --> 00:21:59.230
+So this is really fast on
+the GPU, slower on the CPU.
+
+00:21:59.230 --> 00:22:03.180
+And if we're looking at the
+CPU time that's being spent,
+
+00:22:03.180 --> 00:22:07.052
+which is the self-CPU time,
+we see that the C++ interface,
+
+00:22:07.052 --> 00:22:09.510
+or the C interface, is actually
+the thing that's costing us
+
+00:22:09.510 --> 00:22:12.630
+a whole bunch of CPU time, and
+their overhead to doing anything
+
+00:22:12.630 --> 00:22:15.960
+where we're sending
+stuff over to the GPU.
+
+00:22:15.960 --> 00:22:18.650
+So that's the add
+function, and we see what's
+
+00:22:18.650 --> 00:22:20.540
+happening under the hood.
+
+00:22:20.540 --> 00:22:23.040
+Same story here if I want
+to do a matrix multiply.
+
+00:22:23.040 --> 00:22:26.420
+So I'm doing A multiplied by
+B, so this is a matrix multiply
+
+00:22:26.420 --> 00:22:30.000
+of A and B. I'm doing
+2048 matrices once again,
+
+00:22:30.000 --> 00:22:32.120
+and then I do profiling.
+
+00:22:32.120 --> 00:22:35.400
+Now, this time,
+I see 810 matmul,
+
+00:22:35.400 --> 00:22:37.910
+so this is saying like this
+is the lower level interface
+
+00:22:37.910 --> 00:22:39.920
+to do matrix multiplies.
+
+00:22:39.920 --> 00:22:42.470
+And this is going to
+dispatch the Cutlass, which
+
+00:22:42.470 --> 00:22:46.770
+is NVIDIA's high performance
+matrix multiply CUDA library.
+
+00:22:46.770 --> 00:22:50.180
+And then it's dispatching to a
+very particular Cutlass kernel,
+
+00:22:50.180 --> 00:22:52.370
+which is going to
+have some tile size.
+
+00:22:52.370 --> 00:22:54.000
+The names are truncated here.
+
+00:22:54.000 --> 00:22:56.570
+I'll show you a more
+detailed version in a minute.
+
+00:22:56.570 --> 00:22:59.180
+This is basically pointing
+towards a very particular set
+
+00:22:59.180 --> 00:23:03.450
+of tile sizes and the
+number of blocks, and so on.
+
+00:23:03.450 --> 00:23:05.390
+And so this thing
+is parametrized,
+
+00:23:05.390 --> 00:23:07.790
+and that's actually doing
+the matrix multiply.
+
+00:23:07.790 --> 00:23:10.590
+And once again, we see the same
+two things at the bottom here,
+
+00:23:10.590 --> 00:23:15.370
+the kernel launch and the
+synchronization of CUDA devices.
+
+00:23:15.370 --> 00:23:19.430
+And you can see, once again,
+the CPU time CUDA time split.
+
+00:23:19.430 --> 00:23:21.100
+And we're spending
+way more time in CUDA
+
+00:23:21.100 --> 00:23:24.100
+because matrix multiplies
+do take more time
+
+00:23:24.100 --> 00:23:25.640
+than just adding two vectors.
+
+00:23:25.640 --> 00:23:29.390
+Any questions so far?
+
+00:23:29.390 --> 00:23:30.680
+I can pause for a moment here.
+
+00:23:30.680 --> 00:23:34.750
+I think I've just been going
+very quickly and on my own
+
+00:23:34.750 --> 00:23:35.630
+through the profiler.
+
+00:23:35.630 --> 00:23:37.880
+So if anyone has questions,
+I can stop for a moment.
+
+00:23:37.880 --> 00:23:40.060
+If not, I can keep going.
+
+00:23:40.060 --> 00:23:41.046
+OK.
+
+00:23:41.046 --> 00:23:42.550
+Oh, yes.
+
+00:23:42.550 --> 00:23:45.740
+In this case, our CUDA time
+is greater than our CPU time,
+
+00:23:45.740 --> 00:23:48.850
+but we did have a
+barrier that said to--
+
+00:23:48.850 --> 00:23:51.620
+for the CPU to wait
+and try to synchronize.
+
+00:23:51.620 --> 00:23:54.420
+And so by that, shouldn't
+the CPU time always
+
+00:23:54.420 --> 00:23:56.420
+be at least the same
+amount [INAUDIBLE] of time?
+
+00:23:56.420 --> 00:23:57.220
+[INAUDIBLE]
+
+00:23:57.220 --> 00:23:59.500
+We're all counting the
+time that this [INAUDIBLE].
+
+00:23:59.500 --> 00:24:03.610
+Yeah, I don't think this
+counts the [INAUDIBLE].
+
+00:24:03.610 --> 00:24:04.120
+Cool.
+
+00:24:04.120 --> 00:24:04.580
+Oh, yes.
+
+00:24:04.580 --> 00:24:05.540
+Sorry, there's two questions.
+
+00:24:05.540 --> 00:24:06.540
+There's all [INAUDIBLE].
+
+00:24:06.540 --> 00:24:08.440
+Is there any
+particular reason why
+
+00:24:08.440 --> 00:24:13.080
+when we switch from adding to
+matmul the CPU time went down?
+
+00:24:13.080 --> 00:24:16.230
+Is there a reason why when we
+go from adding to matmul the CPU
+
+00:24:16.230 --> 00:24:16.980
+time goes down?
+
+00:24:16.980 --> 00:24:20.100
+That I am not sure,
+to be entirely honest.
+
+00:24:20.100 --> 00:24:21.570
+Yes.
+
+00:24:21.570 --> 00:24:23.280
+Is there some overhead
+in the profiler
+
+00:24:23.280 --> 00:24:27.000
+that can distort [INAUDIBLE]
+compared to letting it
+
+00:24:27.000 --> 00:24:27.990
+[INAUDIBLE]?
+
+00:24:27.990 --> 00:24:29.840
+Is there overhead
+in the profiler
+
+00:24:29.840 --> 00:24:33.240
+that can distort things compared
+to running it in the real world?
+
+00:24:33.240 --> 00:24:36.480
+Yes, there is overhead
+in the profiler.
+
+00:24:36.480 --> 00:24:37.960
+The barriers will do that.
+
+00:24:37.960 --> 00:24:40.210
+I'll show you a more advanced
+profiler from NVIDIA,
+
+00:24:40.210 --> 00:24:41.835
+and you can add things
+like annotations
+
+00:24:41.835 --> 00:24:45.430
+that will also slightly distort
+the timings, but not by much.
+
+00:24:45.430 --> 00:24:47.400
+The really large scale
+things that you see
+
+00:24:47.400 --> 00:24:50.880
+aren't going to be really
+distorted by the profiler.
+
+00:24:50.880 --> 00:24:53.830
+So if you're looking at
+micro timings, yes, probably.
+
+00:24:53.830 --> 00:24:57.930
+But a lot of the things that
+we care about in the class, no.
+
+00:24:57.930 --> 00:24:58.797
+Yes.
+
+00:24:58.797 --> 00:25:00.880
+Just to make sure I'm
+interpreting this correctly,
+
+00:25:00.880 --> 00:25:08.910
+so for the adding case, is 98%
+of the CPU being utilized over
+
+00:25:08.910 --> 00:25:10.760
+the time period that it's--
+
+00:25:10.760 --> 00:25:12.530
+for the second time period?
+
+00:25:12.530 --> 00:25:13.183
+That's right.
+
+00:25:13.183 --> 00:25:14.850
+Yeah, so this is the
+percentage of time.
+
+00:25:14.850 --> 00:25:18.320
+As you can see, that the actual
+millisecond time that aten::add
+
+00:25:18.320 --> 00:25:23.990
+was actually executing in
+some capacity on the CPU.
+
+00:25:23.990 --> 00:25:27.080
+I don't think the CPU
+[INAUDIBLE] percent
+
+00:25:27.080 --> 00:25:29.550
+of what the CPU is doing.
+
+00:25:29.550 --> 00:25:30.090
+[INAUDIBLE]
+
+00:25:30.090 --> 00:25:30.680
+Yeah, that's right.
+
+00:25:30.680 --> 00:25:32.263
+This is the time of
+the CPU is active,
+
+00:25:32.263 --> 00:25:34.340
+not percentage utilization,
+if that's-- yeah,
+
+00:25:34.340 --> 00:25:37.040
+so this is not like the
+total amount of CPU flops
+
+00:25:37.040 --> 00:25:37.770
+or something.
+
+00:25:37.770 --> 00:25:39.470
+This is the total
+percentage of time
+
+00:25:39.470 --> 00:25:42.890
+that the CPU is doing something.
+
+00:25:42.890 --> 00:25:43.580
+Yes.
+
+00:25:43.580 --> 00:25:45.170
+OK, cool.
+
+00:25:45.170 --> 00:25:46.250
+All right.
+
+00:25:46.250 --> 00:25:48.480
+Here's another
+example of a matmul.
+
+00:25:48.480 --> 00:25:50.430
+So this is a different
+dimensionality.
+
+00:25:50.430 --> 00:25:51.230
+So this is a--
+
+00:25:51.230 --> 00:25:55.850
+I'm multiplying 128
+dimensional matrix here.
+
+00:25:55.850 --> 00:25:59.030
+So 128 by 128, much smaller.
+
+00:25:59.030 --> 00:26:04.250
+And you'll actually see that now
+it's actually directly executing
+
+00:26:04.250 --> 00:26:08.830
+this different command,
+it's executing XMMA GMM.
+
+00:26:08.830 --> 00:26:12.640
+GMM is a matrix multiply type.
+
+00:26:12.640 --> 00:26:13.750
+And this is float32.
+
+00:26:13.750 --> 00:26:17.928
+Float32, you can see from the
+naming of this kernel what's
+
+00:26:17.928 --> 00:26:20.470
+actually happening here, which
+is that this is a tiled matrix
+
+00:26:20.470 --> 00:26:22.670
+multiply of some kind.
+
+00:26:22.670 --> 00:26:24.380
+And it's not going
+through Cutlass,
+
+00:26:24.380 --> 00:26:26.900
+it's executing this
+particular command directly.
+
+00:26:26.900 --> 00:26:28.900
+And so for a small
+matrix multiply,
+
+00:26:28.900 --> 00:26:32.020
+you see that it's dispatching
+to a different kernel now.
+
+00:26:32.020 --> 00:26:36.040
+So you can see the complexity
+of matrix multiply.
+
+00:26:36.040 --> 00:26:38.630
+When we're operating at this
+high level of abstraction,
+
+00:26:38.630 --> 00:26:40.930
+we just think of matrix
+multiply as a single thing.
+
+00:26:40.930 --> 00:26:42.947
+We call A at B, and we're done.
+
+00:26:42.947 --> 00:26:45.280
+But underneath the hood,
+depending on the dimensionality
+
+00:26:45.280 --> 00:26:48.080
+that you have, depending on
+the hardware that you have,
+
+00:26:48.080 --> 00:26:52.420
+it will actually dispatch to
+very different matrix multiply
+
+00:26:52.420 --> 00:26:54.170
+primitives under the hood.
+
+00:26:54.170 --> 00:26:57.460
+And that will actually manifest
+in very, very different
+
+00:26:57.460 --> 00:26:59.210
+performance characteristics.
+
+00:26:59.210 --> 00:27:02.180
+And so one fun tip
+is Torch compile,
+
+00:27:02.180 --> 00:27:04.060
+which I will talk about
+later, actually has
+
+00:27:04.060 --> 00:27:07.440
+an option to macrobenchmark
+the matrix multiply performance
+
+00:27:07.440 --> 00:27:09.780
+on your hardware, and then
+it will actually then pick
+
+00:27:09.780 --> 00:27:13.320
+the highest performing
+matrix multiply subroutines
+
+00:27:13.320 --> 00:27:15.990
+for your model,
+which in the past
+
+00:27:15.990 --> 00:27:18.700
+I found gives you 10%
+speed up for free.
+
+00:27:18.700 --> 00:27:21.360
+It's very cool that
+optimizing for these things
+
+00:27:21.360 --> 00:27:25.170
+actually gives you free
+gains out in the real world.
+
+00:27:25.170 --> 00:27:29.850
+OK, so that's another
+matmul example.
+
+00:27:29.850 --> 00:27:31.960
+And so the cool thing
+about the profiler,
+
+00:27:31.960 --> 00:27:34.150
+compared to just the
+raw benchmarking,
+
+00:27:34.150 --> 00:27:37.480
+is we can now see which CUDA
+kernels are being called.
+
+00:27:37.480 --> 00:27:41.100
+We can see that different
+sizes of matrices
+
+00:27:41.100 --> 00:27:43.170
+lead to different CUDA kernels.
+
+00:27:43.170 --> 00:27:50.460
+And we see cutlass_80simtt_sgemm
+is this cutlass linear algebra
+
+00:27:50.460 --> 00:27:54.660
+library, and it tells us
+things like the tile size.
+
+00:27:54.660 --> 00:27:58.800
+So far, these operations
+are very boring, in a way.
+
+00:27:58.800 --> 00:28:00.870
+Like matrix multiplies and adds.
+
+00:28:00.870 --> 00:28:02.230
+They're basically one to one.
+
+00:28:02.230 --> 00:28:05.610
+You have operation
+on the CPU side,
+
+00:28:05.610 --> 00:28:07.880
+it translates to
+a GPU operation,
+
+00:28:07.880 --> 00:28:09.360
+and it just gets shipped over.
+
+00:28:09.360 --> 00:28:11.360
+So there's just a
+single operation
+
+00:28:11.360 --> 00:28:13.500
+in all of these that
+does anything on the GPU.
+
+00:28:13.500 --> 00:28:16.920
+So I want to look at some
+more complicated operations,
+
+00:28:16.920 --> 00:28:21.170
+two more of these, that
+have more compound behavior.
+
+00:28:21.170 --> 00:28:23.990
+So what I want to do
+now is I want to do--
+
+00:28:23.990 --> 00:28:27.050
+I want to look at this
+operation called torch.cdist,
+
+00:28:27.050 --> 00:28:30.240
+and this is computing
+for two sets of matrices,
+
+00:28:30.240 --> 00:28:33.450
+the pairwise Euclidean distance
+between two sets of vectors.
+
+00:28:33.450 --> 00:28:35.960
+So this is going to be
+a big distance matrix
+
+00:28:35.960 --> 00:28:38.910
+computation between A's
+and B's that I want.
+
+00:28:38.910 --> 00:28:40.310
+So that's cdist.
+
+00:28:40.310 --> 00:28:43.620
+And so this is obviously a much
+more complicated operation.
+
+00:28:43.620 --> 00:28:46.100
+If you want to compute
+Euclidean distances,
+
+00:28:46.100 --> 00:28:48.360
+you're going to need to
+compute dot products,
+
+00:28:48.360 --> 00:28:50.540
+you're going to need to
+compute square roots.
+
+00:28:50.540 --> 00:28:54.260
+And we're going to see
+that once we compute cdist.
+
+00:28:54.260 --> 00:28:59.390
+So now here is the
+profiled output of cdist.
+
+00:28:59.390 --> 00:29:03.040
+So we see that this
+Torch Python command
+
+00:29:03.040 --> 00:29:07.840
+does map in the C interface
+to some of lower level cdist.
+
+00:29:07.840 --> 00:29:10.240
+So this is aten::cdist,
+which then maps
+
+00:29:10.240 --> 00:29:12.113
+to aten::euclidean_dist.
+
+00:29:12.113 --> 00:29:14.530
+And then this will decompose
+into a whole bunch of things,
+
+00:29:14.530 --> 00:29:18.640
+like aten::matmul, aten::pow,
+and then some because these are
+
+00:29:18.640 --> 00:29:21.370
+all primitives that you're going
+to need in order to actually
+
+00:29:21.370 --> 00:29:26.140
+to compute the Euclidean
+distances between all
+
+00:29:26.140 --> 00:29:27.020
+of your vectors.
+
+00:29:27.020 --> 00:29:29.530
+And when you for each
+one of these matrix
+
+00:29:29.530 --> 00:29:33.640
+multiplies and concatenation
+and taking the powers,
+
+00:29:33.640 --> 00:29:37.420
+you have a corresponding
+CUDA command
+
+00:29:37.420 --> 00:29:38.980
+that is being called here.
+
+00:29:38.980 --> 00:29:41.720
+We have GMM, which we've
+become familiar with,
+
+00:29:41.720 --> 00:29:43.280
+so this is a matrix multiply.
+
+00:29:43.280 --> 00:29:48.730
+It's taking 78% of our
+compute time on the GPU.
+
+00:29:48.730 --> 00:29:53.120
+We've got copies and
+concatenation of arrays.
+
+00:29:53.120 --> 00:29:57.020
+This takes 6% of
+the execution time.
+
+00:29:57.020 --> 00:30:00.250
+And then this vectorized
+element wise kernel,
+
+00:30:00.250 --> 00:30:04.920
+which is taking the power,
+takes 5% of the GPU time,
+
+00:30:04.920 --> 00:30:06.760
+and 3% goes to the sum.
+
+00:30:06.760 --> 00:30:09.600
+So now we get this very
+nice low level breakdown
+
+00:30:09.600 --> 00:30:13.080
+of where my GPU is
+spending all of its time.
+
+00:30:13.080 --> 00:30:15.000
+And from this, I
+can get some sense
+
+00:30:15.000 --> 00:30:18.810
+of where maybe I should
+spend my time optimizing.
+
+00:30:18.810 --> 00:30:21.190
+Maybe I think I can
+optimize my matrix multiply.
+
+00:30:21.190 --> 00:30:24.810
+That would be great, because
+that's 70%+ of the time spent
+
+00:30:24.810 --> 00:30:26.910
+in the GPU.
+
+00:30:26.910 --> 00:30:30.150
+The final example-- the
+final two examples, sorry,
+
+00:30:30.150 --> 00:30:32.340
+that I want to talk about
+is gelu and softmax.
+
+00:30:32.340 --> 00:30:34.840
+So these will be our running--
+oh sorry, there's a question.
+
+00:30:34.840 --> 00:30:39.270
+Yeah, what's the CPU [INAUDIBLE]
+the computation going on?
+
+00:30:39.270 --> 00:30:42.990
+So I will maybe answering that
+question in a few minutes,
+
+00:30:42.990 --> 00:30:44.610
+because there's a
+cooler profiler that
+
+00:30:44.610 --> 00:30:46.090
+shows you a much nicer picture.
+
+00:30:46.090 --> 00:30:47.640
+And so I can
+gesticulate here, but I
+
+00:30:47.640 --> 00:30:51.000
+think it'll be better to
+show that with pictures.
+
+00:30:51.000 --> 00:30:56.250
+So I'm going to talk about
+now the gelu and the softmax.
+
+00:30:56.250 --> 00:30:59.810
+So the gelu is going to
+be our running example
+
+00:30:59.810 --> 00:31:01.110
+throughout the class.
+
+00:31:01.110 --> 00:31:02.802
+So this is a non-linearity.
+
+00:31:02.802 --> 00:31:04.760
+If you remember, it's
+the Gaussian error unit--
+
+00:31:04.760 --> 00:31:07.490
+Gaussian error linear unit.
+
+00:31:07.490 --> 00:31:13.370
+And that's going to be a product
+of a tanh and a exponential,
+
+00:31:13.370 --> 00:31:14.900
+if I remember right.
+
+00:31:14.900 --> 00:31:18.665
+And so we're going to have
+all sorts of operations.
+
+00:31:18.665 --> 00:31:20.540
+So we're going to add
+A and B, and then we're
+
+00:31:20.540 --> 00:31:24.740
+going to call gelu, simulating
+the linear plus nonlinear
+
+00:31:24.740 --> 00:31:28.400
+structure that we
+might have in our MLP.
+
+00:31:28.400 --> 00:31:32.100
+And so we see, once again,
+basically the same mapping.
+
+00:31:32.100 --> 00:31:34.470
+We see aten::add
+corresponding to A plus B.
+
+00:31:34.470 --> 00:31:36.630
+And then we have
+the CUDA equivalent.
+
+00:31:36.630 --> 00:31:38.870
+And then we have,
+actually, a gelu function
+
+00:31:38.870 --> 00:31:41.850
+implemented in CUDA, which
+is all the way down here.
+
+00:31:41.850 --> 00:31:44.900
+And that takes about
+33% of the compute.
+
+00:31:44.900 --> 00:31:45.480
+OK.
+
+00:31:45.480 --> 00:31:46.500
+Fairly reasonable.
+
+00:31:46.500 --> 00:31:48.390
+And then we have, once
+again, the softmax.
+
+00:31:48.390 --> 00:31:51.410
+I won't go through all
+of these in gory detail
+
+00:31:51.410 --> 00:31:54.540
+since they all start to
+look the same after a while.
+
+00:31:54.540 --> 00:31:56.930
+But the thing to really point
+out that I think is cool
+
+00:31:56.930 --> 00:31:58.810
+is that a lot of these
+really core primitives
+
+00:31:58.810 --> 00:32:02.980
+like softmax and gelu, there's
+just kernels written for them.
+
+00:32:02.980 --> 00:32:06.410
+So it's not like the GPU is
+executing the basic primitives.
+
+00:32:06.410 --> 00:32:09.170
+There's a fused operator
+that computes all of this.
+
+00:32:09.170 --> 00:32:11.950
+So there's no back and
+forth between CPU and GPU
+
+00:32:11.950 --> 00:32:13.600
+for all of these.
+
+00:32:13.600 --> 00:32:15.760
+So OK, I mentioned
+before that I was
+
+00:32:15.760 --> 00:32:18.723
+going to answer this question
+of what the CPU was doing.
+
+00:32:18.723 --> 00:32:20.140
+And so let's think
+about something
+
+00:32:20.140 --> 00:32:21.380
+a little more sophisticated.
+
+00:32:21.380 --> 00:32:25.300
+I had that MLP example that I
+started with for benchmarking,
+
+00:32:25.300 --> 00:32:27.800
+and I would let's say
+like to optimize the MLP,
+
+00:32:27.800 --> 00:32:29.210
+make it run really fast.
+
+00:32:29.210 --> 00:32:31.460
+So how can we do that.
+
+00:32:31.460 --> 00:32:36.920
+Well, ideally we would profile
+this in a nice fine grained way.
+
+00:32:36.920 --> 00:32:39.460
+So if we use the
+Torch profiler this
+
+00:32:39.460 --> 00:32:40.820
+is kind of what we would get.
+
+00:32:40.820 --> 00:32:43.370
+If you remember the MLP
+there's stacked linear layers.
+
+00:32:43.370 --> 00:32:45.130
+There's a forward
+and a backward.
+
+00:32:45.130 --> 00:32:49.370
+And you see roughly there's this
+backward thing that's happening.
+
+00:32:49.370 --> 00:32:50.810
+There is a matrix multiply.
+
+00:32:50.810 --> 00:32:52.420
+There's linear and then
+
+00:32:52.420 --> 00:32:56.280
+there's accumulate grad
+operation for the backward.
+
+00:32:56.280 --> 00:32:58.197
+And here's the matrix
+multiply kernel.
+
+00:32:58.197 --> 00:33:00.280
+And then there's only 10
+things that can fit here.
+
+00:33:00.280 --> 00:33:02.620
+So I think this gets cut
+off at a certain point.
+
+00:33:02.620 --> 00:33:03.877
+But this is nice.
+
+00:33:03.877 --> 00:33:05.460
+It does tell you
+that most of the time
+
+00:33:05.460 --> 00:33:08.010
+is being spent in the matmuls.
+
+00:33:08.010 --> 00:33:11.100
+But you do kind of wonder, where
+does all the rest of the time
+
+00:33:11.100 --> 00:33:11.680
+go.
+
+00:33:11.680 --> 00:33:16.030
+And why does only 31%
+of my time stay here.
+
+00:33:16.030 --> 00:33:18.010
+And where's the 60% here.
+
+00:33:18.010 --> 00:33:20.520
+It's a aten::mm but there's
+no corresponding kernel.
+
+00:33:20.520 --> 00:33:22.210
+This is a little bit mysterious.
+
+00:33:22.210 --> 00:33:25.810
+And for something that's
+very complex module,
+
+00:33:25.810 --> 00:33:28.530
+this is not a very
+good visualization.
+
+00:33:28.530 --> 00:33:31.890
+And so for that, I think
+we have to actually get out
+
+00:33:31.890 --> 00:33:34.830
+a real grown up profiler.
+
+00:33:34.830 --> 00:33:37.170
+And you will have
+to-- or we will
+
+00:33:37.170 --> 00:33:40.860
+ask you to look at
+this thing, which
+
+00:33:40.860 --> 00:33:42.900
+is NVIDIA's Nsight systems.
+
+00:33:42.900 --> 00:33:46.530
+And this is the kind of
+NVIDIA's detailed way
+
+00:33:46.530 --> 00:33:50.110
+of looking at GPU
+behavior and performance.
+
+00:33:50.110 --> 00:33:52.410
+And so we will actually
+see exactly what is
+
+00:33:52.410 --> 00:33:55.380
+happening as we run this MLP.
+
+00:33:55.380 --> 00:33:57.900
+So actually, in the
+back, can you see--
+
+00:33:57.900 --> 00:34:00.520
+I don't know-- this
+tiny text over here?
+
+00:34:00.520 --> 00:34:01.020
+Thumbs up?
+
+00:34:01.020 --> 00:34:01.390
+OK.
+
+00:34:01.390 --> 00:34:01.780
+All right.
+
+00:34:01.780 --> 00:34:03.822
+If you can see it, then
+I'm not going to zoom in.
+
+00:34:03.822 --> 00:34:06.450
+But it does seem
+small, even from here.
+
+00:34:06.450 --> 00:34:10.510
+All right, so basically,
+if we look here,
+
+00:34:10.510 --> 00:34:12.100
+we see several different things.
+
+00:34:12.100 --> 00:34:15.870
+We see CUDA HW over here
+and then we see threads.
+
+00:34:15.870 --> 00:34:18.300
+And so this top half,
+this CUDA part, this
+
+00:34:18.300 --> 00:34:21.010
+is what the GPU
+is kind of doing.
+
+00:34:21.010 --> 00:34:25.929
+And then in this threads part,
+we see what the CPU is doing.
+
+00:34:25.929 --> 00:34:28.949
+And I can also pull
+up the code, I think.
+
+00:34:28.949 --> 00:34:32.290
+Yes, the code here,
+when I profiled it--
+
+00:34:32.290 --> 00:34:34.050
+I've added a few annotations.
+
+00:34:34.050 --> 00:34:36.210
+OK, this one I need
+to zoom in for sure.
+
+00:34:36.210 --> 00:34:39.370
+OK, let's zoom.
+
+00:34:39.370 --> 00:34:39.870
+Excellent.
+
+00:34:39.870 --> 00:34:41.130
+All right.
+
+00:34:41.130 --> 00:34:46.035
+So I've annotated the code with
+this set of things that says--
+
+00:34:46.035 --> 00:34:47.790
+oh, let's see--
+
+00:34:47.790 --> 00:34:55.800
+NVTX, which basically
+annotates my code with markers.
+
+00:34:55.800 --> 00:34:58.050
+So when the profiler
+comes in here,
+
+00:34:58.050 --> 00:35:00.230
+it will know that
+this piece of code
+
+00:35:00.230 --> 00:35:02.430
+belongs to a block
+called define model.
+
+00:35:02.430 --> 00:35:06.990
+And for example, this part that
+says step range push and range
+
+00:35:06.990 --> 00:35:11.570
+pop, this range here
+from line 77 to line 55
+
+00:35:11.570 --> 00:35:14.560
+should be annotated with
+something that says step_step,
+
+00:35:14.560 --> 00:35:15.060
+OK?
+
+00:35:15.060 --> 00:35:17.180
+So I've added all of these
+annotations in my code
+
+00:35:17.180 --> 00:35:20.180
+before, calling on my profiler.
+
+00:35:20.180 --> 00:35:21.500
+So let's go back here.
+
+00:35:21.500 --> 00:35:24.560
+So now if we go to this
+line that says NVTX,
+
+00:35:24.560 --> 00:35:28.190
+we can see define model, which
+is the thing that I wrapped
+
+00:35:28.190 --> 00:35:30.710
+my model construction
+call, and then I
+
+00:35:30.710 --> 00:35:34.320
+see step 0, step 1, step
+2, step 3, step 4, step 5.
+
+00:35:34.320 --> 00:35:37.410
+So each step is now nicely
+annotated in this profiler.
+
+00:35:37.410 --> 00:35:40.190
+And we can see all of
+the things that the model
+
+00:35:40.190 --> 00:35:43.020
+is doing as it goes along.
+
+00:35:43.020 --> 00:35:44.990
+And I'll start on this side.
+
+00:35:44.990 --> 00:35:47.902
+One thing we see is
+that this piece of code,
+
+00:35:47.902 --> 00:35:49.110
+it doesn't do very much work.
+
+00:35:49.110 --> 00:35:50.990
+It takes only 14 seconds.
+
+00:35:50.990 --> 00:35:53.260
+So actually, most of the
+time for the profiler
+
+00:35:53.260 --> 00:35:54.740
+is spent on overhead.
+
+00:35:54.740 --> 00:35:57.520
+So the part up
+until roughly here
+
+00:35:57.520 --> 00:36:00.650
+is things like just
+loading the libraries,
+
+00:36:00.650 --> 00:36:01.820
+and that takes a long time.
+
+00:36:01.820 --> 00:36:05.060
+It takes apparently 7.5 seconds
+to just initialize everything.
+
+00:36:05.060 --> 00:36:09.880
+And then, at least on
+the GPU, at 7.5 seconds
+
+00:36:09.880 --> 00:36:11.560
+or so into the
+program, it starts
+
+00:36:11.560 --> 00:36:13.070
+actually building the model.
+
+00:36:13.070 --> 00:36:15.400
+And you see here, on
+the memory footprint,
+
+00:36:15.400 --> 00:36:19.100
+this is the place where now
+memory is being allocated.
+
+00:36:19.100 --> 00:36:23.360
+And on the GPU memory, the
+memory usage starts to grow Now,
+
+00:36:23.360 --> 00:36:25.370
+the model is now
+constructed at this point,
+
+00:36:25.370 --> 00:36:29.240
+and then step zero is where
+the action starts to happen.
+
+00:36:29.240 --> 00:36:31.600
+And so you were
+asking earlier, what's
+
+00:36:31.600 --> 00:36:35.660
+happening between
+the CPU and GPU?
+
+00:36:35.660 --> 00:36:40.030
+And so how the execution
+model of this works is here
+
+00:36:40.030 --> 00:36:43.610
+is step 0 on the CPU, and
+I'm starting right here.
+
+00:36:43.610 --> 00:36:45.860
+And here's the forward pass,
+and this is layer zero.
+
+00:36:45.860 --> 00:36:48.900
+So let's just think
+through what's happening.
+
+00:36:48.900 --> 00:36:51.450
+As I said before, when
+you first encounter
+
+00:36:51.450 --> 00:36:54.540
+or when you first call a
+piece of code in PyTorch,
+
+00:36:54.540 --> 00:36:56.110
+it doesn't just
+directly execute.
+
+00:36:56.110 --> 00:37:00.040
+It will actually do things like,
+on the fly, compile things.
+
+00:37:00.040 --> 00:37:04.170
+And so this thing, like runtime
+triggered module loading,
+
+00:37:04.170 --> 00:37:08.760
+is overhead work that's being
+done in order to just initialize
+
+00:37:08.760 --> 00:37:12.420
+the layer and the computation
+and move various bits of code
+
+00:37:12.420 --> 00:37:13.860
+into the GPU.
+
+00:37:13.860 --> 00:37:15.930
+So this takes a long time.
+
+00:37:15.930 --> 00:37:18.700
+And then after this
+layer zero is done,
+
+00:37:18.700 --> 00:37:23.472
+now if I look at any slice here,
+let's zoom in to selection,
+
+00:37:23.472 --> 00:37:24.930
+we'll see that each
+of these layers
+
+00:37:24.930 --> 00:37:27.220
+is really, really, really quick.
+
+00:37:27.220 --> 00:37:30.390
+And what happens here is
+when I highlight this layer
+
+00:37:30.390 --> 00:37:32.940
+one over here on
+the CPU side, notice
+
+00:37:32.940 --> 00:37:36.250
+that that's not where layer
+one is on the GPU side.
+
+00:37:36.250 --> 00:37:39.060
+So as I said before,
+the CPU and GPU
+
+00:37:39.060 --> 00:37:41.380
+are two different
+execution devices.
+
+00:37:41.380 --> 00:37:44.400
+So I start at layer zero,
+I'm done with layer zero,
+
+00:37:44.400 --> 00:37:46.850
+I start layer one, now
+the CPU is actually
+
+00:37:46.850 --> 00:37:52.670
+just sending all of the CUDA
+commands, the CUDA kernels--
+
+00:37:52.670 --> 00:37:54.500
+it's launching all the
+CUDA kernels already
+
+00:37:54.500 --> 00:37:55.850
+to the GPU at this point.
+
+00:37:55.850 --> 00:37:58.410
+So when the CPU is saying,
+I'm doing layer one,
+
+00:37:58.410 --> 00:38:01.328
+what it's actually doing is it's
+queuing commands into the GPU.
+
+00:38:01.328 --> 00:38:02.870
+It says, now run
+this thing, next run
+
+00:38:02.870 --> 00:38:04.972
+this thing, next
+run this thing next.
+
+00:38:04.972 --> 00:38:07.980
+And so the CPU is running
+way ahead of the GPU,
+
+00:38:07.980 --> 00:38:11.910
+and by the time layer one
+starts executing on the GPU,
+
+00:38:11.910 --> 00:38:14.570
+actually, we're already
+at layer nine on the CPU.
+
+00:38:14.570 --> 00:38:17.900
+The CPU is running way ahead,
+and there's basically a queue
+
+00:38:17.900 --> 00:38:20.900
+that the CPU
+maintains where it's
+
+00:38:20.900 --> 00:38:25.848
+sending a fixed number of a
+kernel CUDA kernels to the GPU.
+
+00:38:25.848 --> 00:38:27.390
+And so once you hit
+that queue depth,
+
+00:38:27.390 --> 00:38:29.040
+it's going to stop
+running ahead.
+
+00:38:29.040 --> 00:38:30.582
+But until that point,
+it's just going
+
+00:38:30.582 --> 00:38:33.945
+to keep going and going
+and going as far as it can.
+
+00:38:33.945 --> 00:38:36.380
+And in this case,
+this does become--
+
+00:38:36.380 --> 00:38:39.480
+I'm going to zoom out again.
+
+00:38:39.480 --> 00:38:41.690
+Undo the zoom.
+
+00:38:41.690 --> 00:38:43.220
+There we go.
+
+00:38:43.220 --> 00:38:46.120
+In this case, this kind
+of gets a little extreme
+
+00:38:46.120 --> 00:38:51.280
+because if I zoom out once more,
+notice how, in these steps,
+
+00:38:51.280 --> 00:38:54.560
+I'm running way ahead,
+like the step zero is here,
+
+00:38:54.560 --> 00:38:55.670
+step two is here.
+
+00:38:55.670 --> 00:38:58.210
+This was step one, which
+basically took no time at all.
+
+00:38:58.210 --> 00:39:00.640
+Step two is here, so
+the CPU is basically
+
+00:39:00.640 --> 00:39:05.860
+running one entire step forward
+and backward ahead of the GPU.
+
+00:39:05.860 --> 00:39:10.150
+One interesting thing that you
+might do is if you're writing
+
+00:39:10.150 --> 00:39:12.665
+various code for training
+a language model,
+
+00:39:12.665 --> 00:39:14.290
+one normal thing that
+you might do is--
+
+00:39:14.290 --> 00:39:15.760
+let's go back to the code--
+
+00:39:15.760 --> 00:39:20.770
+I might do something like print
+my losses in between iterations.
+
+00:39:20.770 --> 00:39:23.440
+This seems like it should
+have no effect on what
+
+00:39:23.440 --> 00:39:24.640
+the GPU is doing.
+
+00:39:24.640 --> 00:39:26.390
+You're like, well,
+it's a print statement.
+
+00:39:26.390 --> 00:39:27.730
+How much could it do?
+
+00:39:27.730 --> 00:39:29.270
+If you think about
+it for a moment,
+
+00:39:29.270 --> 00:39:33.260
+this will have big impacts on
+the execution layout on the GPU,
+
+00:39:33.260 --> 00:39:35.390
+because in order to print
+this statement right,
+
+00:39:35.390 --> 00:39:37.240
+this print statement
+happens on the CPU
+
+00:39:37.240 --> 00:39:39.350
+and the CPU needs
+to get the loss.
+
+00:39:39.350 --> 00:39:42.573
+That means it needs to wait for
+the GPU to compute that loss,
+
+00:39:42.573 --> 00:39:43.990
+and so let's look
+at what happens.
+
+00:39:43.990 --> 00:39:47.580
+So here, as I said,
+step four on the CPU
+
+00:39:47.580 --> 00:39:49.660
+happens way before
+the GPU equivalent.
+
+00:39:49.660 --> 00:39:50.800
+Now, let's switch back.
+
+00:39:50.800 --> 00:39:53.010
+Now, this is the version
+that I profiled where
+
+00:39:53.010 --> 00:39:54.250
+it has the print statement.
+
+00:39:54.250 --> 00:39:59.340
+And then now I zoom
+into selection here.
+
+00:39:59.340 --> 00:40:02.940
+Now, see how step
+one and step two
+
+00:40:02.940 --> 00:40:05.560
+are basically kind
+of synchronized now.
+
+00:40:05.560 --> 00:40:08.738
+Because I have to wait for
+the loss to get computed.
+
+00:40:08.738 --> 00:40:11.280
+And you look at this and you
+say, oh, but it's still a little
+
+00:40:11.280 --> 00:40:12.130
+offset right.
+
+00:40:12.130 --> 00:40:15.220
+Step two-- step one isn't
+exactly aligned with each other,
+
+00:40:15.220 --> 00:40:18.010
+so now let's zoom
+back in and see, OK,
+
+00:40:18.010 --> 00:40:19.960
+what happened to
+step one on the CPU?
+
+00:40:19.960 --> 00:40:24.450
+Well, basically, the endpoint
+of step one on the CPU
+
+00:40:24.450 --> 00:40:27.810
+is also kind of where the
+optimizer step starts.
+
+00:40:27.810 --> 00:40:31.410
+So by the time that
+forward is done--
+
+00:40:31.410 --> 00:40:33.370
+sorry, this CUDA stream
+synchronize the thing.
+
+00:40:33.370 --> 00:40:36.220
+So this CUDA stream
+synchronize command on the CPU,
+
+00:40:36.220 --> 00:40:38.550
+this is basically saying,
+I'm just waiting for the GPU,
+
+00:40:38.550 --> 00:40:39.790
+because I can't run ahead.
+
+00:40:39.790 --> 00:40:41.540
+I'm waiting for this
+loss to be computed
+
+00:40:41.540 --> 00:40:43.140
+and to be sent back to me.
+
+00:40:43.140 --> 00:40:44.900
+So this is a dummy
+operation where
+
+00:40:44.900 --> 00:40:47.300
+it's saying CPU waits, waits,
+waits, waits, waits, waits,
+
+00:40:47.300 --> 00:40:50.430
+waits, well, the
+backward step is done,
+
+00:40:50.430 --> 00:40:52.050
+so now I can print the loss.
+
+00:40:52.050 --> 00:40:55.310
+I've printed the loss, now the
+CPU can start running ahead.
+
+00:40:55.310 --> 00:40:58.250
+And it does run ahead and starts
+sending step two stuff now.
+
+00:40:58.250 --> 00:41:02.160
+And then, well, once it hits
+here, it's run out of commands.
+
+00:41:02.160 --> 00:41:03.510
+It's waiting for the loss again.
+
+00:41:03.510 --> 00:41:05.550
+CUDA synchronize, wait,
+wait, wait, wait, wait.
+
+00:41:05.550 --> 00:41:06.930
+Backward step is done.
+
+00:41:06.930 --> 00:41:08.070
+Now I can print the loss.
+
+00:41:08.070 --> 00:41:09.892
+Now I run ahead again.
+
+00:41:09.892 --> 00:41:13.250
+So in this case, the GPU
+is still, essentially,
+
+00:41:13.250 --> 00:41:14.978
+full utilization in both cases.
+
+00:41:14.978 --> 00:41:16.520
+But in extreme cases,
+where let's say
+
+00:41:16.520 --> 00:41:18.312
+you're printing tons
+of stuff all the time,
+
+00:41:18.312 --> 00:41:20.520
+actually, you're going to
+introduce a CPU bottleneck,
+
+00:41:20.520 --> 00:41:22.280
+because the GPU has
+to-- or the CPU has
+
+00:41:22.280 --> 00:41:24.620
+to keep waiting for the
+GPU, and it can't launch
+
+00:41:24.620 --> 00:41:26.930
+the kernels ahead of time.
+
+00:41:26.930 --> 00:41:29.930
+So that's kind of
+a really cool thing
+
+00:41:29.930 --> 00:41:34.198
+that you can see with the
+profiler, the CPU versus GPU,
+
+00:41:34.198 --> 00:41:35.990
+and they're actually
+different devices that
+
+00:41:35.990 --> 00:41:37.230
+communicate to each other.
+
+00:41:37.230 --> 00:41:39.170
+It's not a single
+unified object,
+
+00:41:39.170 --> 00:41:40.750
+and you wouldn't
+see that unless you
+
+00:41:40.750 --> 00:41:44.140
+started to look at some of
+these more advanced profilers.
+
+00:41:44.140 --> 00:41:47.520
+Any question about
+that set of things?
+
+00:41:50.050 --> 00:41:50.830
+Cool.
+
+00:41:50.830 --> 00:41:52.000
+OK.
+
+00:41:52.000 --> 00:41:56.890
+And the other thing that I want
+to show you is the profiler
+
+00:41:56.890 --> 00:41:59.330
+thing that I was
+playing with before,
+
+00:41:59.330 --> 00:42:03.920
+you can also generate very
+similar views in NSIS as well,
+
+00:42:03.920 --> 00:42:07.870
+where you select some range of
+things that you want to-- let's
+
+00:42:07.870 --> 00:42:08.657
+do a warm up.
+
+00:42:08.657 --> 00:42:11.240
+I said we should, so we should
+exclude the first couple steps.
+
+00:42:11.240 --> 00:42:14.830
+So we'll start at step three,
+and we'll measure some steps.
+
+00:42:14.830 --> 00:42:17.660
+In this range, we could
+take the kernels--
+
+00:42:17.660 --> 00:42:19.340
+this is what's doing
+the computation--
+
+00:42:19.340 --> 00:42:22.060
+and you can see that there's
+actually many different kinds
+
+00:42:22.060 --> 00:42:22.970
+of matrix multiply.
+
+00:42:22.970 --> 00:42:24.590
+This is one matrix
+multiply kernel,
+
+00:42:24.590 --> 00:42:26.480
+this is a different
+matrix multiply kernel,
+
+00:42:26.480 --> 00:42:29.740
+there's a different
+vectorized element kernel.
+
+00:42:29.740 --> 00:42:31.630
+And all of these are
+taking different amounts
+
+00:42:31.630 --> 00:42:32.810
+of computation.
+
+00:42:32.810 --> 00:42:37.170
+And we can take this and
+we can say, oh, show me,
+
+00:42:37.170 --> 00:42:40.410
+in the event's view, all of
+the things that are happening.
+
+00:42:40.410 --> 00:42:43.380
+And I can also see,
+the stats view,
+
+00:42:43.380 --> 00:42:46.720
+all of the time that it takes--
+
+00:42:46.720 --> 00:42:49.000
+wait, let's see.
+
+00:42:49.000 --> 00:42:51.010
+We want the average time?
+
+00:42:51.010 --> 00:42:52.120
+No, we want-- sorry.
+
+00:42:52.120 --> 00:42:58.170
+The CUDA kernel
+execution summary.
+
+00:42:58.170 --> 00:43:02.740
+Yeah, we want the total
+duration of the kernels.
+
+00:43:02.740 --> 00:43:05.310
+And so we can see
+which kernels are
+
+00:43:05.310 --> 00:43:08.620
+taking the most time in
+aggregate across these views.
+
+00:43:08.620 --> 00:43:10.770
+So this is actually a
+very, very powerful tool
+
+00:43:10.770 --> 00:43:13.650
+that can give you both the
+aggregate view of what's slow
+
+00:43:13.650 --> 00:43:15.985
+and what's fast, as well
+as individual kernels that
+
+00:43:15.985 --> 00:43:17.860
+are being launched and
+when they're launched,
+
+00:43:17.860 --> 00:43:21.900
+and where the CPU commands
+for that came from.
+
+00:43:21.900 --> 00:43:24.750
+And I guess one final
+side note here this
+
+00:43:24.750 --> 00:43:28.140
+is one of the reasons why
+it doesn't matter that we're
+
+00:43:28.140 --> 00:43:30.990
+programming in Python and Python
+is not a very high performance
+
+00:43:30.990 --> 00:43:31.510
+language.
+
+00:43:31.510 --> 00:43:33.450
+Because the CPU is
+never the bottleneck,
+
+00:43:33.450 --> 00:43:38.150
+because the CPU can run ahead
+and queue commands into the GPU.
+
+00:43:38.150 --> 00:43:43.490
+And so this detaching or
+this disconnecting aspect
+
+00:43:43.490 --> 00:43:45.650
+between the GPU
+and the CPU is one
+
+00:43:45.650 --> 00:43:47.900
+of the key reasons why we
+can use this nice high level
+
+00:43:47.900 --> 00:43:49.790
+programming language
+and yet still get
+
+00:43:49.790 --> 00:43:54.410
+of full utilization
+out of our GPUs.
+
+00:43:54.410 --> 00:43:55.070
+Cool.
+
+00:43:55.070 --> 00:43:56.090
+OK.
+
+00:43:56.090 --> 00:43:59.040
+Any questions before
+I switch back to this?
+
+00:43:59.040 --> 00:44:02.360
+Because I'm going to leave
+NSIS forever for this lecture,
+
+00:44:02.360 --> 00:44:04.700
+at this point.
+
+00:44:04.700 --> 00:44:05.520
+Cool, yeah.
+
+00:44:05.520 --> 00:44:07.020
+But you'll get to play
+with it in assignment two.
+
+00:44:07.020 --> 00:44:08.395
+And I think you'll
+appreciate it,
+
+00:44:08.395 --> 00:44:12.320
+because it gives you a really
+interesting view into what
+
+00:44:12.320 --> 00:44:15.710
+your hardware is actually doing
+to make these language models
+
+00:44:15.710 --> 00:44:16.970
+train.
+
+00:44:16.970 --> 00:44:19.012
+OK, that was benchmarking
+and profiling.
+
+00:44:19.012 --> 00:44:20.720
+Now you have all the
+tools you need to be
+
+00:44:20.720 --> 00:44:23.360
+able to do performance things.
+
+00:44:23.360 --> 00:44:26.330
+And now, we're going to write
+some kernels in the remaining
+
+00:44:26.330 --> 00:44:26.850
+time.
+
+00:44:26.850 --> 00:44:29.430
+So remember kernel fusion.
+
+00:44:29.430 --> 00:44:32.860
+So this was the image that
+I showed you in lecture.
+
+00:44:32.860 --> 00:44:35.500
+There's a little factory, every
+time I need to do an operation,
+
+00:44:35.500 --> 00:44:37.000
+I need to ship it
+from the warehouse
+
+00:44:37.000 --> 00:44:38.480
+to the factory and back.
+
+00:44:38.480 --> 00:44:43.120
+And so if I naively do a bunch
+of operations in sequence
+
+00:44:43.120 --> 00:44:44.920
+without thinking
+about it, I'm paying
+
+00:44:44.920 --> 00:44:48.590
+for a lot of shipping costs back
+and forth from the warehouse.
+
+00:44:48.590 --> 00:44:50.890
+What I should do is
+have one factory that
+
+00:44:50.890 --> 00:44:53.980
+does all the operations at once
+so I do not pay for this cost
+
+00:44:53.980 --> 00:44:54.830
+multiple times.
+
+00:44:54.830 --> 00:44:56.440
+That's very important.
+
+00:44:56.440 --> 00:44:58.780
+So now we're going
+to do gelu, and we're
+
+00:44:58.780 --> 00:45:00.243
+going to write a
+kernel for gelu.
+
+00:45:00.243 --> 00:45:01.660
+And I'm going to
+write that kernel
+
+00:45:01.660 --> 00:45:03.430
+in several different
+ways, and we're
+
+00:45:03.430 --> 00:45:07.360
+going to look at the performance
+impact of doing that.
+
+00:45:07.360 --> 00:45:11.240
+And so we have the PyTorch
+implementation of gelu,
+
+00:45:11.240 --> 00:45:13.090
+and that looks just like this.
+
+00:45:13.090 --> 00:45:17.800
+torch.nn functional gelu, and I
+invoke approximate equals tanh,
+
+00:45:17.800 --> 00:45:22.120
+because I want this to exactly
+match the naive thing that I'm
+
+00:45:22.120 --> 00:45:22.970
+going to do next.
+
+00:45:22.970 --> 00:45:25.450
+So this is not going to
+be actually multiplying
+
+00:45:25.450 --> 00:45:28.773
+by the CDF of the
+Gaussian, it's going
+
+00:45:28.773 --> 00:45:31.190
+to be some approximation to
+that that's easier to compute.
+
+00:45:31.190 --> 00:45:32.950
+So that's the PyTorch gelu.
+
+00:45:32.950 --> 00:45:34.860
+And now, I'm going
+to do the dumb thing.
+
+00:45:34.860 --> 00:45:36.610
+You're going to look
+at this code and say,
+
+00:45:36.610 --> 00:45:38.920
+this is going to
+be low performance.
+
+00:45:38.920 --> 00:45:41.290
+I'm going to go in,
+and in PyTorch, I'm
+
+00:45:41.290 --> 00:45:43.870
+going to write
+gelu as 0.5 times x
+
+00:45:43.870 --> 00:45:51.160
+times 1 plus tanh h, square root
+pi over 2 times x plus 0.044715
+
+00:45:51.160 --> 00:45:52.932
+times x cubed.
+
+00:45:52.932 --> 00:45:56.390
+Magic formula, but this is a
+good approximation to the gelu.
+
+00:45:56.390 --> 00:45:59.800
+You can look it up or convince
+yourself this is true.
+
+00:45:59.800 --> 00:46:02.740
+But if you do this,
+you see that there's
+
+00:46:02.740 --> 00:46:04.360
+a lot of operations that happen.
+
+00:46:04.360 --> 00:46:06.830
+There's a tanh,
+there's a x cubed,
+
+00:46:06.830 --> 00:46:08.530
+there's multiplication
+by a constant,
+
+00:46:08.530 --> 00:46:12.250
+and addition and
+multiplication by 0.5 and x.
+
+00:46:12.250 --> 00:46:16.210
+If this involves multiple
+different CUDA kernels,
+
+00:46:16.210 --> 00:46:18.130
+this is probably
+going to be slow.
+
+00:46:18.130 --> 00:46:20.800
+That should be our intuition
+at this point, from Fusion.
+
+00:46:20.800 --> 00:46:22.100
+So let's see if that's true.
+
+00:46:22.100 --> 00:46:23.390
+So these two are the same.
+
+00:46:23.390 --> 00:46:26.530
+You can see at the top left they
+compute the exact same numbers.
+
+00:46:26.530 --> 00:46:31.100
+And we can systematically
+check this on random Gaussians.
+
+00:46:31.100 --> 00:46:33.180
+And now, let's
+benchmark the two.
+
+00:46:33.180 --> 00:46:37.160
+So the manual time
+is 8.1 seconds
+
+00:46:37.160 --> 00:46:39.290
+for a really, really big value.
+
+00:46:39.290 --> 00:46:43.340
+And PyTorch time is 1.1
+milliseconds, sorry.
+
+00:46:43.340 --> 00:46:46.580
+And the fused version is going
+to be significantly faster,
+
+00:46:46.580 --> 00:46:48.330
+in fact, eight times faster.
+
+00:46:48.330 --> 00:46:49.040
+Wow.
+
+00:46:49.040 --> 00:46:51.560
+Big difference from
+writing a simple kernel.
+
+00:46:51.560 --> 00:46:53.960
+Of course, you're matmuls
+are probably still going
+
+00:46:53.960 --> 00:46:56.630
+to be the bottleneck, but
+it would be really cool
+
+00:46:56.630 --> 00:46:58.520
+if we could go from
+that 8 milliseconds
+
+00:46:58.520 --> 00:46:59.537
+to that 1 millisecond.
+
+00:46:59.537 --> 00:47:00.870
+That would feel very satisfying.
+
+00:47:00.870 --> 00:47:04.130
+So we're going to try to get
+close to that 1.1 millisecond
+
+00:47:04.130 --> 00:47:06.410
+in the next few
+parts of the lecture.
+
+00:47:06.410 --> 00:47:10.102
+So now let's look at what's
+happening under the hood.
+
+00:47:10.102 --> 00:47:11.810
+I don't need to look
+at NSIS, because all
+
+00:47:11.810 --> 00:47:14.030
+I really want to know is
+some very high level stuff.
+
+00:47:14.030 --> 00:47:17.055
+For the manual gelu,
+kind of just like I said,
+
+00:47:17.055 --> 00:47:18.930
+it's going to do a whole
+bunch of operations.
+
+00:47:18.930 --> 00:47:21.180
+It's going to do a bunch
+of multiplications.
+
+00:47:21.180 --> 00:47:23.780
+It's vectorized, but it's a
+bunch of CUDA kernels being
+
+00:47:23.780 --> 00:47:25.220
+launched here.
+
+00:47:25.220 --> 00:47:27.140
+And notice on the
+right, this CUDA kernel
+
+00:47:27.140 --> 00:47:28.640
+gets called three
+times because we
+
+00:47:28.640 --> 00:47:30.848
+have a whole bunch of
+multiplications floating around
+
+00:47:30.848 --> 00:47:31.520
+here.
+
+00:47:31.520 --> 00:47:33.450
+We've also got addition.
+
+00:47:33.450 --> 00:47:34.820
+We've got a tanh.
+
+00:47:34.820 --> 00:47:37.230
+And each one of these is
+probably kind of slow.
+
+00:47:37.230 --> 00:47:40.190
+And in the end, we're
+incurring fairly large overhead
+
+00:47:40.190 --> 00:47:42.050
+doing this.
+
+00:47:42.050 --> 00:47:47.160
+Now, let's do the same
+thing with the PyTorch gelu.
+
+00:47:47.160 --> 00:47:48.810
+And this is really great.
+
+00:47:48.810 --> 00:47:50.790
+There's a single
+CUDA kernel launch.
+
+00:47:50.790 --> 00:47:53.550
+It happens once and it just
+processes the whole thing.
+
+00:47:53.550 --> 00:47:55.400
+This is what we'd like to see.
+
+00:47:55.400 --> 00:47:57.260
+And of course, this
+is very, very fast,
+
+00:47:57.260 --> 00:48:00.620
+because it's just a
+single CUDA kernel.
+
+00:48:00.620 --> 00:48:05.510
+So this is really nice, and
+we would like to somehow get
+
+00:48:05.510 --> 00:48:06.810
+to the CUDA kernel.
+
+00:48:06.810 --> 00:48:08.690
+And so the first thing
+you might think of,
+
+00:48:08.690 --> 00:48:11.210
+depending on how much
+you know about writing
+
+00:48:11.210 --> 00:48:15.110
+GPU efficient code, is, all
+right, the PyTorch people
+
+00:48:15.110 --> 00:48:17.652
+must have written this in the
+lowest level language possible,
+
+00:48:17.652 --> 00:48:19.152
+so we're going to
+do the same thing.
+
+00:48:19.152 --> 00:48:21.420
+We're going to go to-- not
+the lowest level possible,
+
+00:48:21.420 --> 00:48:23.970
+but we're going to
+go to the C+ API,
+
+00:48:23.970 --> 00:48:27.470
+and we're going to write
+the CUDA kernel in C++.
+
+00:48:27.470 --> 00:48:31.570
+So let's open it up and
+write our own CUDA kernel.
+
+00:48:31.570 --> 00:48:32.990
+So how is that going to work?
+
+00:48:32.990 --> 00:48:38.810
+So we have gone in and created a
+C++ version of the whole thing.
+
+00:48:38.810 --> 00:48:40.960
+So CUDA, when we say
+CUDA, is actually
+
+00:48:40.960 --> 00:48:45.470
+the C API for interfacing
+with and programming GPUs.
+
+00:48:45.470 --> 00:48:49.300
+And just the logical
+model of a GPU
+
+00:48:49.300 --> 00:48:51.910
+that we described, we're going
+to write some of them function,
+
+00:48:51.910 --> 00:48:52.870
+f.
+
+00:48:52.870 --> 00:48:56.060
+And then when we invoke
+this CUDA kernel,
+
+00:48:56.060 --> 00:48:58.720
+it's going to automatically
+call f on all of the elements
+
+00:48:58.720 --> 00:49:01.270
+of a vector, or a
+matrix, and then we
+
+00:49:01.270 --> 00:49:05.290
+will get to parallel compute
+everything that we want.
+
+00:49:05.290 --> 00:49:08.050
+As nomenclature, we're going
+to have a grid, which is
+
+00:49:08.050 --> 00:49:09.440
+a collection of thread blocks.
+
+00:49:09.440 --> 00:49:11.330
+So think of this
+as, I have a task,
+
+00:49:11.330 --> 00:49:13.330
+I'm going to cut
+it up into pieces.
+
+00:49:13.330 --> 00:49:16.110
+And there's going to
+be a number of blocks.
+
+00:49:16.110 --> 00:49:19.570
+In a 2D grid, for example,
+there's going to be a row
+
+00:49:19.570 --> 00:49:22.070
+coordinate and then there's
+going to be a column coordinate.
+
+00:49:22.070 --> 00:49:25.320
+And this will be very useful if
+you're working with matrices.
+
+00:49:25.320 --> 00:49:28.210
+And then there will be the
+size of each of these blocks.
+
+00:49:28.210 --> 00:49:32.290
+How big are these in terms of
+the number of thread blocks?
+
+00:49:32.290 --> 00:49:34.200
+So this is the
+dimension of the blocks.
+
+00:49:34.200 --> 00:49:37.725
+And then there's a collection
+of threads within these blocks.
+
+00:49:37.725 --> 00:49:39.600
+And this is the coordinate
+that, for example,
+
+00:49:39.600 --> 00:49:42.180
+one thread block lives
+in, and then each thread
+
+00:49:42.180 --> 00:49:43.630
+is within each block.
+
+00:49:43.630 --> 00:49:45.520
+So there's hierarchical
+structure here.
+
+00:49:45.520 --> 00:49:48.040
+There's a grid and then
+there's a thread inside a grid.
+
+00:49:48.040 --> 00:49:50.970
+And then we're going
+to, basically--
+
+00:49:50.970 --> 00:49:53.463
+each function is going
+to take in three things.
+
+00:49:53.463 --> 00:49:55.380
+It's going to take the
+block index, like which
+
+00:49:55.380 --> 00:49:59.640
+thread block do I belong
+to, what side of the block
+
+00:49:59.640 --> 00:50:03.630
+dimensions, and then what is
+the index that [INAUDIBLE]
+
+00:50:03.630 --> 00:50:05.290
+like my thread index.
+
+00:50:05.290 --> 00:50:07.980
+And with these, I can
+know which coordinate
+
+00:50:07.980 --> 00:50:10.270
+that I am in the
+matrix or the vector,
+
+00:50:10.270 --> 00:50:14.100
+and then I can decide
+what logic that I want.
+
+00:50:14.100 --> 00:50:18.750
+One last thing before we go
+through the actual C++ code is
+
+00:50:18.750 --> 00:50:22.230
+whenever you're
+trying to debug CUDA,
+
+00:50:22.230 --> 00:50:25.210
+you want to launch with CUDA
+launch blocking equals 1,
+
+00:50:25.210 --> 00:50:28.150
+this will allow you to actually
+debug your CUDA kernel.
+
+00:50:28.150 --> 00:50:31.390
+It will give you error
+messages back at a cost,
+
+00:50:31.390 --> 00:50:32.980
+in terms of the runtime.
+
+00:50:32.980 --> 00:50:34.890
+If you don't do
+that, you are going
+
+00:50:34.890 --> 00:50:37.380
+to have a bad time if
+you're writing CUDA code
+
+00:50:37.380 --> 00:50:38.910
+and needing to debug.
+
+00:50:38.910 --> 00:50:43.410
+OK, here is my gelu code,
+and let's go through it
+
+00:50:43.410 --> 00:50:45.690
+kind of piece by
+piece, and then I'll
+
+00:50:45.690 --> 00:50:48.060
+talk about what all
+the pieces are doing.
+
+00:50:48.060 --> 00:50:50.585
+This will probably take the
+longest out of the things
+
+00:50:50.585 --> 00:50:51.960
+that we're going
+to walk through,
+
+00:50:51.960 --> 00:50:53.910
+other than the machine code.
+
+00:50:53.910 --> 00:50:55.587
+And once you
+understand this, you
+
+00:50:55.587 --> 00:50:57.670
+should be able to understand
+all the other pieces.
+
+00:50:57.670 --> 00:51:00.000
+So we'll go through
+this a little slowly.
+
+00:51:00.000 --> 00:51:01.870
+So there's two
+parts to this code.
+
+00:51:01.870 --> 00:51:05.260
+So the first part, this
+gelu kernel piece up here,
+
+00:51:05.260 --> 00:51:07.330
+this is the actual kernel.
+
+00:51:07.330 --> 00:51:08.830
+This does the computation.
+
+00:51:08.830 --> 00:51:10.660
+This is going to
+get sent to the GPU,
+
+00:51:10.660 --> 00:51:12.250
+it's going to do
+the computation,
+
+00:51:12.250 --> 00:51:14.200
+and then it will
+return the results.
+
+00:51:14.200 --> 00:51:18.220
+This piece, the gelu function
+here, this is a wrapper.
+
+00:51:18.220 --> 00:51:19.960
+This lives on the
+CPU, it's going
+
+00:51:19.960 --> 00:51:22.960
+to orchestrate the launch of the
+kernel, which is actually going
+
+00:51:22.960 --> 00:51:25.330
+to go out and live in the GPU.
+
+00:51:25.330 --> 00:51:29.300
+So maybe we can start
+with this wrapper piece,
+
+00:51:29.300 --> 00:51:30.680
+this gelu function first.
+
+00:51:30.680 --> 00:51:33.670
+So we're always going
+to check two things.
+
+00:51:33.670 --> 00:51:37.220
+Basically in the Triton
+or the CUDA code,
+
+00:51:37.220 --> 00:51:38.510
+we're always going to check--
+
+00:51:38.510 --> 00:51:39.080
+oh, sorry.
+
+00:51:39.080 --> 00:51:40.010
+There's a question back there.
+
+00:51:40.010 --> 00:51:41.020
+Sorry, I can't see it.
+
+00:51:41.020 --> 00:51:41.535
+Oh, OK.
+
+00:51:41.535 --> 00:51:42.410
+Sorry, that's my bad.
+
+00:51:42.410 --> 00:51:43.720
+OK, let me zoom in.
+
+00:51:43.720 --> 00:51:46.420
+That is an easy
+fix, but I needed
+
+00:51:46.420 --> 00:51:47.630
+to know that you can't see.
+
+00:51:47.630 --> 00:51:49.170
+OK, good.
+
+00:51:49.170 --> 00:51:49.670
+All right.
+
+00:51:49.670 --> 00:51:50.390
+Is this good?
+
+00:51:50.390 --> 00:51:52.390
+OK, excellent.
+
+00:51:52.390 --> 00:51:53.800
+OK.
+
+00:51:53.800 --> 00:51:55.763
+So we're going to start
+with the gelu function,
+
+00:51:55.763 --> 00:51:57.430
+and there's two things
+that we're always
+
+00:51:57.430 --> 00:51:58.263
+going to need to do.
+
+00:51:58.263 --> 00:52:04.240
+The first one is to make sure
+that x lives in the GPU device,
+
+00:52:04.240 --> 00:52:06.140
+like a CUDA tensor of some kind.
+
+00:52:06.140 --> 00:52:10.082
+If it's not, well, that's
+going to be a problem.
+
+00:52:10.082 --> 00:52:12.290
+We're not going to be able
+to do anything on the GPU.
+
+00:52:12.290 --> 00:52:15.170
+The second thing, which
+is maybe less obvious,
+
+00:52:15.170 --> 00:52:17.890
+is that we want to check to
+make sure x is contiguous.
+
+00:52:17.890 --> 00:52:21.130
+What that means is that it lives
+in a contiguous block of memory,
+
+00:52:21.130 --> 00:52:23.160
+because when we
+index into x, we're
+
+00:52:23.160 --> 00:52:25.240
+going to do a whole bunch
+of indexing arithmetic,
+
+00:52:25.240 --> 00:52:28.150
+and we're going to assume that
+x lives in a block of memory.
+
+00:52:28.150 --> 00:52:30.330
+And if it doesn't,
+it's just going
+
+00:52:30.330 --> 00:52:32.340
+to be basically
+impossible to do this
+
+00:52:32.340 --> 00:52:34.920
+with any level of generality.
+
+00:52:34.920 --> 00:52:38.820
+And so when we compute the
+gelu, we take in an input, x,
+
+00:52:38.820 --> 00:52:40.800
+and we're going to output a y.
+
+00:52:40.800 --> 00:52:43.480
+And so we need to
+allocate an output.
+
+00:52:43.480 --> 00:52:46.930
+So torch::Tensor y equals
+torch::empty_like(x).
+
+00:52:46.930 --> 00:52:50.910
+This is just saying, well,
+give me an output tensor
+
+00:52:50.910 --> 00:52:53.670
+space or a pointer
+to an output tensor
+
+00:52:53.670 --> 00:52:56.500
+that is just like
+the dimension of x.
+
+00:52:56.500 --> 00:52:58.840
+And notice that I'm
+not calling zeros.
+
+00:52:58.840 --> 00:53:01.090
+This will save on
+extra operations.
+
+00:53:01.090 --> 00:53:02.340
+I don't need to 0 out these.
+
+00:53:02.340 --> 00:53:02.730
+Why?
+
+00:53:02.730 --> 00:53:04.563
+Because I'm going to
+write into them anyway.
+
+00:53:04.563 --> 00:53:07.890
+So this is a minor, but
+you might as well do it,
+
+00:53:07.890 --> 00:53:08.860
+optimization.
+
+00:53:08.860 --> 00:53:12.210
+And then, basically, in
+all the code that we write,
+
+00:53:12.210 --> 00:53:14.595
+we're going to need to
+figure out the grid.
+
+00:53:14.595 --> 00:53:17.310
+So what's the total number
+of elements that I have?
+
+00:53:17.310 --> 00:53:19.380
+What's the size of each block?
+
+00:53:19.380 --> 00:53:21.590
+The number of threads
+that I have in each block?
+
+00:53:21.590 --> 00:53:24.330
+And then, how many
+blocks total do I have?
+
+00:53:24.330 --> 00:53:27.060
+And when I need to figure
+out the number of blocks,
+
+00:53:27.060 --> 00:53:30.110
+I'm going to call cdiv,
+which is going to be,
+
+00:53:30.110 --> 00:53:33.200
+essentially, take the ratio
+of num elements to blocksize
+
+00:53:33.200 --> 00:53:34.680
+and then take the ceiling.
+
+00:53:34.680 --> 00:53:37.310
+Because I need to
+round up to make sure
+
+00:53:37.310 --> 00:53:39.530
+that very last set
+of elements that
+
+00:53:39.530 --> 00:53:42.320
+isn't divisible by blocksize
+still gets computed.
+
+00:53:42.320 --> 00:53:45.440
+So I take the ceiling
+rather than the floor.
+
+00:53:45.440 --> 00:53:48.315
+And then this is all very
+simple bookkeeping stuff.
+
+00:53:48.315 --> 00:53:50.190
+And then I say, all
+right, launch the kernel.
+
+00:53:50.190 --> 00:53:52.550
+And the gelu kernel
+gets launched.
+
+00:53:52.550 --> 00:53:56.360
+And this angle brackets is
+saying, this is kind of the--
+
+00:53:56.360 --> 00:53:59.550
+the given number of blocks,
+and the size of each block.
+
+00:53:59.550 --> 00:54:03.450
+And this is going to be passed
+into the kernel command.
+
+00:54:03.450 --> 00:54:06.150
+And then I'm going to pass in
+the pointers to x's and y's.
+
+00:54:06.150 --> 00:54:08.480
+I'm not actually going
+to pass the values
+
+00:54:08.480 --> 00:54:11.460
+of x's and y's, and the
+total number of elements.
+
+00:54:11.460 --> 00:54:14.740
+And I need this to compute,
+essentially, the boundary
+
+00:54:14.740 --> 00:54:17.230
+conditions of my kernel.
+
+00:54:17.230 --> 00:54:20.300
+So now let's go to the
+actual kernel itself.
+
+00:54:20.300 --> 00:54:23.420
+So I have global
+void gelukernel,
+
+00:54:23.420 --> 00:54:25.070
+and I get in pointers
+for in and out,
+
+00:54:25.070 --> 00:54:27.310
+and I have number
+of elements items.
+
+00:54:27.310 --> 00:54:30.820
+And this keyword
+global, the website--
+
+00:54:30.820 --> 00:54:33.680
+sorry, the rendering here
+has mangled it a little bit,
+
+00:54:33.680 --> 00:54:35.990
+but you should think
+of this as __global.
+
+00:54:35.990 --> 00:54:37.960
+And this is a keyword
+that distinguishes it
+
+00:54:37.960 --> 00:54:41.200
+as a CUDA kernel function.
+
+00:54:41.200 --> 00:54:42.470
+And so what am I doing?
+
+00:54:42.470 --> 00:54:45.970
+Well, this thread
+is actually supposed
+
+00:54:45.970 --> 00:54:48.970
+to operate on a single
+element, i, right?
+
+00:54:48.970 --> 00:54:51.293
+But I don't get i as input.
+
+00:54:51.293 --> 00:54:52.960
+Like, the code doesn't
+actually tell me,
+
+00:54:52.960 --> 00:54:55.040
+you're in a vector
+in coordinate i.
+
+00:54:55.040 --> 00:54:56.980
+So I need to compute where I am.
+
+00:54:56.980 --> 00:54:59.410
+And how am I going to
+do that, it's going
+
+00:54:59.410 --> 00:55:01.070
+to be I take my block index.
+
+00:55:01.070 --> 00:55:04.360
+I only have one dimension, so
+it's block index.x, so just
+
+00:55:04.360 --> 00:55:05.950
+the first coordinate.
+
+00:55:05.950 --> 00:55:10.450
+And then multiply it by the size
+of each block, the blockDim.x.
+
+00:55:10.450 --> 00:55:12.780
+And this tells me,
+basically, the starting point
+
+00:55:12.780 --> 00:55:14.920
+within my current block.
+
+00:55:14.920 --> 00:55:17.550
+And then now I add
+in threadIdx so I
+
+00:55:17.550 --> 00:55:19.630
+know where the start
+of my current block is,
+
+00:55:19.630 --> 00:55:22.720
+and I add in the offset to
+where I am within the block,
+
+00:55:22.720 --> 00:55:25.630
+and that gives me my
+global coordinate i.
+
+00:55:25.630 --> 00:55:27.690
+So some bookkeeping
+computation just
+
+00:55:27.690 --> 00:55:29.460
+to get the coordinates here.
+
+00:55:29.460 --> 00:55:31.410
+And then this is important, too.
+
+00:55:31.410 --> 00:55:34.080
+You see this pattern
+basically in all the CUDA code
+
+00:55:34.080 --> 00:55:35.550
+that people write.
+
+00:55:35.550 --> 00:55:38.470
+There's no kind of out of
+bounds checking, naturally.
+
+00:55:38.470 --> 00:55:40.500
+And so what you do is
+I have my coordinate
+
+00:55:40.500 --> 00:55:42.330
+and I'm going to
+check to make sure
+
+00:55:42.330 --> 00:55:45.090
+that I am supposed to be
+processing something that's
+
+00:55:45.090 --> 00:55:45.850
+in bounds.
+
+00:55:45.850 --> 00:55:48.188
+And some of the threads at
+the very end of your block,
+
+00:55:48.188 --> 00:55:49.980
+they're going to be
+processing stuff that's
+
+00:55:49.980 --> 00:55:53.140
+out of bounds in memory, and you
+do not want it to touch those,
+
+00:55:53.140 --> 00:55:55.950
+and so you basically condition
+it on i less than num elements,
+
+00:55:55.950 --> 00:55:58.030
+and you do nothing if
+you're outside of that.
+
+00:55:58.030 --> 00:55:58.535
+Sorry, yes.
+
+00:55:58.535 --> 00:56:01.260
+[INAUDIBLE]
+
+00:56:03.150 --> 00:56:06.000
+Sorry, this is
+just the extension
+
+00:56:06.000 --> 00:56:08.140
+that you write the CUDA code in.
+
+00:56:08.140 --> 00:56:12.960
+It's to distinguish it from
+just your standard C code.
+
+00:56:12.960 --> 00:56:16.030
+OK, so it's just
+a file name thing.
+
+00:56:16.030 --> 00:56:16.840
+It's just .cu.
+
+00:56:16.840 --> 00:56:19.230
+There's nothing particularly
+special about it.
+
+00:56:19.230 --> 00:56:21.660
+OK, and then so
+now, within here,
+
+00:56:21.660 --> 00:56:23.620
+we're going to just
+do our computation.
+
+00:56:23.620 --> 00:56:25.590
+It's just going to be
+I'm going to write out.
+
+00:56:25.590 --> 00:56:29.260
+I have my input, in, I'm going
+to index into the ith element,
+
+00:56:29.260 --> 00:56:32.200
+and I compute my gelu
+just like I did before,
+
+00:56:32.200 --> 00:56:35.942
+and I assign it to out
+of i, and then I'm done.
+
+00:56:35.942 --> 00:56:37.150
+That's all that I need to do.
+
+00:56:37.150 --> 00:56:38.850
+And since this is
+all pointer stuff,
+
+00:56:38.850 --> 00:56:40.650
+I don't really need
+to worry too much
+
+00:56:40.650 --> 00:56:43.740
+about what is kind of
+actually happening here.
+
+00:56:43.740 --> 00:56:46.450
+So that's basically it.
+
+00:56:46.450 --> 00:56:50.830
+I can then take my CUDA
+gelu code that I have,
+
+00:56:50.830 --> 00:56:53.950
+and then I can load
+this C++ code in line,
+
+00:56:53.950 --> 00:56:57.060
+and then I can just have it
+compile into a module all within
+
+00:56:57.060 --> 00:56:57.723
+Python.
+
+00:56:57.723 --> 00:56:59.140
+It's all very nice
+and convenient.
+
+00:56:59.140 --> 00:57:01.950
+You don't really have to go
+out onto the command line
+
+00:57:01.950 --> 00:57:02.680
+and do things.
+
+00:57:02.680 --> 00:57:05.910
+And so now, we
+have CUDA defined.
+
+00:57:05.910 --> 00:57:07.210
+So this is nice.
+
+00:57:07.210 --> 00:57:10.630
+And basically, it's a
+compilation of this,
+
+00:57:10.630 --> 00:57:12.980
+and I can call it
+from within Python.
+
+00:57:12.980 --> 00:57:16.840
+And we'll use the C
+bindings to call this guy.
+
+00:57:16.840 --> 00:57:19.140
+OK, we're done
+calling CUDA gelu.
+
+00:57:21.706 --> 00:57:24.970
+I can check that the manual
+gelu and the CUDA gelu
+
+00:57:24.970 --> 00:57:27.460
+are the same, and now
+let's benchmark the two.
+
+00:57:27.460 --> 00:57:30.170
+So I have the time that
+it takes to run PyTorch.
+
+00:57:30.170 --> 00:57:33.580
+And just like last time,
+it's about 1.1 milliseconds.
+
+00:57:33.580 --> 00:57:36.950
+And manual time, remember,
+it's 8.1 milliseconds,
+
+00:57:36.950 --> 00:57:37.870
+and so drumroll.
+
+00:57:37.870 --> 00:57:39.620
+What is our CUDA time?
+
+00:57:39.620 --> 00:57:41.320
+Well, we've gotten
+it down to 1.8.
+
+00:57:41.320 --> 00:57:44.090
+Not quite as good as
+PyTorch's implementation,
+
+00:57:44.090 --> 00:57:47.800
+but we're getting pretty
+close to PyTorch time.
+
+00:57:47.800 --> 00:57:51.140
+We've gone from 8 milliseconds
+to 1.8 milliseconds,
+
+00:57:51.140 --> 00:57:54.680
+which is not bad, because that C
+code wasn't that hard to write.
+
+00:57:54.680 --> 00:57:57.910
+And so now we also
+do some profiling.
+
+00:57:57.910 --> 00:58:01.060
+And we can see what
+is happening here now.
+
+00:58:01.060 --> 00:58:03.110
+And it's called the gelu kernel.
+
+00:58:03.110 --> 00:58:07.020
+This is the code that got
+shipped off to the GPU.
+
+00:58:07.020 --> 00:58:09.040
+And then it's
+calling empty_like.
+
+00:58:09.040 --> 00:58:11.350
+This is the initialization.
+
+00:58:11.350 --> 00:58:13.800
+And then empty_strided.
+
+00:58:13.800 --> 00:58:17.490
+And then CUDA launch kernel
+and CUDA device synchronize.
+
+00:58:17.490 --> 00:58:19.540
+And that's basically
+all that's happening.
+
+00:58:19.540 --> 00:58:22.350
+And notice how, once again,
+this is a single CUDA kernel
+
+00:58:22.350 --> 00:58:26.070
+eats up 100% of the GPU
+time, kind of what we wanted.
+
+00:58:26.070 --> 00:58:28.510
+So there's some further
+optimization we can do,
+
+00:58:28.510 --> 00:58:30.460
+but this is really
+already solved
+
+00:58:30.460 --> 00:58:32.590
+the problem of kernel fusion.
+
+00:58:32.590 --> 00:58:36.140
+We fused all the
+operators together.
+
+00:58:36.140 --> 00:58:37.890
+So pretty good.
+
+00:58:37.890 --> 00:58:39.600
+These kinds of
+element-wise operations
+
+00:58:39.600 --> 00:58:40.810
+are easy to write in CUDA.
+
+00:58:40.810 --> 00:58:42.180
+If you have a new kind of--
+
+00:58:42.180 --> 00:58:45.780
+I don't know, nonlinearity,
+you could easily
+
+00:58:45.780 --> 00:58:47.580
+write a CUDA kernel
+for it yourself,
+
+00:58:47.580 --> 00:58:49.110
+if you really wanted to.
+
+00:58:49.110 --> 00:58:50.820
+But more interesting
+operations are
+
+00:58:50.820 --> 00:58:52.750
+going to require
+reading multiple values,
+
+00:58:52.750 --> 00:58:53.798
+like doing reductions.
+
+00:58:53.798 --> 00:58:55.840
+Those are going to get a
+little more complicated.
+
+00:58:55.840 --> 00:58:59.250
+Flash attention will be a little
+bit more complicated, but not
+
+00:58:59.250 --> 00:59:03.462
+too much so when you have
+to do it in the assignment.
+
+00:59:03.462 --> 00:59:08.595
+And questions on the
+simple C++ CUDA kernel?
+
+00:59:08.595 --> 00:59:09.095
+Yes.
+
+00:59:11.273 --> 00:59:12.690
+So another check
+at the beginning.
+
+00:59:12.690 --> 00:59:13.663
+Yeah.
+
+00:59:13.663 --> 00:59:15.080
+Is that [INAUDIBLE]
+error or is it
+
+00:59:15.080 --> 00:59:17.030
+some slower kernel or something?
+
+00:59:17.030 --> 00:59:19.620
+Yeah, so the question was what
+happens if it's not contiguous?
+
+00:59:19.620 --> 00:59:21.300
+At least in the
+code that we wrote,
+
+00:59:21.300 --> 00:59:23.900
+it will just throw an error,
+because it's an assert.
+
+00:59:23.900 --> 00:59:26.310
+You could potentially
+write code to handle it,
+
+00:59:26.310 --> 00:59:29.660
+but there's almost no reason
+for memory to be fragmented,
+
+00:59:29.660 --> 00:59:32.420
+because it will
+allocate contiguously.
+
+00:59:32.420 --> 00:59:34.910
+And you won't deallocate
+the middle of a memory,
+
+00:59:34.910 --> 00:59:37.490
+unless you're doing
+something really tricky.
+
+00:59:37.490 --> 00:59:39.200
+And so you should
+really-- unless you're
+
+00:59:39.200 --> 00:59:41.460
+doing something
+pretty advanced--
+
+00:59:41.460 --> 00:59:44.660
+expect to have
+contiguous memory.
+
+00:59:44.660 --> 00:59:47.600
+[INAUDIBLE] do a transpose
+or some operation that
+
+00:59:47.600 --> 00:59:49.177
+makes memory non-contiguous?
+
+00:59:49.177 --> 00:59:49.677
+Right.
+
+00:59:49.677 --> 00:59:53.870
+So when you're coding at a
+higher level, be careful that,
+
+00:59:53.870 --> 00:59:55.370
+conversely, you may--
+
+00:59:55.370 --> 00:59:58.400
+like you forced [INAUDIBLE]
+on operations that implement.
+
+00:59:58.400 --> 01:00:02.085
+Yeah, so the question was
+like, if you're transposing,
+
+01:00:02.085 --> 01:00:03.960
+then you're no longer
+going to be contiguous,
+
+01:00:03.960 --> 01:00:05.757
+you're going to have
+a jump between all
+
+01:00:05.757 --> 01:00:06.840
+the elements in the index.
+
+01:00:06.840 --> 01:00:10.340
+If you're traversing something,
+that's column stored.
+
+01:00:10.340 --> 01:00:14.120
+Yeah, so I think transpose or
+views or essentially shuffling
+
+01:00:14.120 --> 01:00:16.170
+dimension is the one
+exception to this,
+
+01:00:16.170 --> 01:00:19.680
+but that's handleable in
+the outer the wrapper part.
+
+01:00:19.680 --> 01:00:21.740
+You can basically
+pass it something
+
+01:00:21.740 --> 01:00:23.720
+that is contiguously indexed.
+
+01:00:23.720 --> 01:00:26.520
+And for a lot of the matrices,
+you won't really care.
+
+01:00:26.520 --> 01:00:28.970
+So yes?
+
+01:00:28.970 --> 01:00:31.845
+What would happen if you were
+to choose a different blocksize?
+
+01:00:31.845 --> 01:00:32.345
+Right.
+
+01:00:32.345 --> 01:00:35.900
+So what would happen if you
+chose a different blocksize?
+
+01:00:35.900 --> 01:00:40.640
+The GPU-related of
+concerns would kick in.
+
+01:00:40.640 --> 01:00:44.450
+Do you have enough blocks
+for it to saturate your SMs?
+
+01:00:44.450 --> 01:00:48.030
+And do you have enough
+work within each block?
+
+01:00:48.030 --> 01:00:51.030
+And those are the two things
+that could matter here.
+
+01:00:51.030 --> 01:00:54.620
+But I think-- my guess is
+that for block sizes that
+
+01:00:54.620 --> 01:00:57.713
+are relatively large, like
+1024, it probably won't
+
+01:00:57.713 --> 01:00:58.880
+matter past a certain point.
+
+01:00:58.880 --> 01:01:00.120
+Because we're not doing
+anything advanced,
+
+01:01:00.120 --> 01:01:02.720
+it's all entrywise operations
+for this very, very simple
+
+01:01:02.720 --> 01:01:03.620
+example.
+
+01:01:03.620 --> 01:01:04.610
+Yeah.
+
+01:01:04.610 --> 01:01:08.390
+Is the reason that our
+non-GP [INAUDIBLE] so slow
+
+01:01:08.390 --> 01:01:12.320
+because this queue was asked
+to do some operation on the GPU
+
+01:01:12.320 --> 01:01:16.040
+and send it back [INAUDIBLE]
+other small things [INAUDIBLE]?
+
+01:01:16.040 --> 01:01:20.270
+So the question was why was
+our non-CUDA kernel manual
+
+01:01:20.270 --> 01:01:21.680
+thing so slow?
+
+01:01:21.680 --> 01:01:24.890
+It's not that it's sending
+things back from GPU to CPU,
+
+01:01:24.890 --> 01:01:25.410
+per se.
+
+01:01:25.410 --> 01:01:27.360
+Like, x is going
+to live in the GPU.
+
+01:01:27.360 --> 01:01:29.240
+We allocate it in GPU.
+
+01:01:29.240 --> 01:01:32.810
+We'll do as device
+like CUDA, but it's
+
+01:01:32.810 --> 01:01:36.290
+going to basically not be
+in the SM the whole time.
+
+01:01:36.290 --> 01:01:40.650
+So once we do x squared,
+that's a CUDA kernel.
+
+01:01:40.650 --> 01:01:44.480
+And so that multiplication
+operation will read the vector
+
+01:01:44.480 --> 01:01:47.610
+from the global memory into
+the SMs, do the computation,
+
+01:01:47.610 --> 01:01:48.540
+it'll write it back.
+
+01:01:48.540 --> 01:01:52.160
+And so this is all
+in the DRAM to SM
+
+01:01:52.160 --> 01:01:54.590
+communication cost
+rather than the CPU
+
+01:01:54.590 --> 01:01:56.570
+to GPU communication cost.
+
+01:01:56.570 --> 01:01:58.870
+Of course, if you write
+like, as device CPU,
+
+01:01:58.870 --> 01:02:01.980
+then you'll get the CPU
+transfer cost in addition
+
+01:02:01.980 --> 01:02:05.910
+to the DRAM transfer cost.
+
+01:02:05.910 --> 01:02:11.020
+OK, so now you've seen that in--
+so that was not too painful.
+
+01:02:11.020 --> 01:02:15.660
+But it would be really nice if
+we had nicer Python abstractions
+
+01:02:15.660 --> 01:02:17.260
+for writing CUDA kernels.
+
+01:02:17.260 --> 01:02:18.940
+And this is what Triton is.
+
+01:02:18.940 --> 01:02:20.530
+And Triton is quite nice.
+
+01:02:20.530 --> 01:02:22.723
+It has this very
+nice middle ground
+
+01:02:22.723 --> 01:02:24.390
+where you don't have
+to manage literally
+
+01:02:24.390 --> 01:02:25.990
+everything about the GPU.
+
+01:02:25.990 --> 01:02:32.550
+So Triton is a domain-specific
+language developed by OpenAI
+
+01:02:32.550 --> 01:02:36.810
+in 2021, and it makes
+GPU programming much more
+
+01:02:36.810 --> 01:02:37.480
+accessible.
+
+01:02:37.480 --> 01:02:40.860
+So you write everything
+kind of in Python,
+
+01:02:40.860 --> 01:02:43.900
+and you don't really think
+about the threads anymore.
+
+01:02:43.900 --> 01:02:46.080
+You think about thread blocks.
+
+01:02:46.080 --> 01:02:50.050
+And Triton manages a lot
+of stuff that is annoying,
+
+01:02:50.050 --> 01:02:52.020
+but can be
+automatically optimized.
+
+01:02:52.020 --> 01:02:56.090
+So it can manage
+coalescing of memory.
+
+01:02:56.090 --> 01:03:01.280
+So remember that from DRAM
+you get four adjacent values
+
+01:03:01.280 --> 01:03:03.660
+at once, what's something
+called burst mode.
+
+01:03:03.660 --> 01:03:07.280
+So you really want to make sure
+that your memory retrievals are
+
+01:03:07.280 --> 01:03:13.537
+of grouped into adjacent four
+elements or more calls at once.
+
+01:03:13.537 --> 01:03:15.120
+So it will handle
+those automatically.
+
+01:03:15.120 --> 01:03:16.760
+It will group those.
+
+01:03:16.760 --> 01:03:18.980
+It will do shared
+memory management
+
+01:03:18.980 --> 01:03:24.440
+when you need to manage which
+memory that you're writing to
+
+01:03:24.440 --> 01:03:27.650
+within the SM, with
+multiple threads.
+
+01:03:27.650 --> 01:03:31.250
+From within each SM, you might
+need to stop or start threads
+
+01:03:31.250 --> 01:03:34.850
+all managed automatically,
+but scheduling across SMs
+
+01:03:34.850 --> 01:03:37.410
+or what different SMs
+do, that's manual.
+
+01:03:37.410 --> 01:03:39.440
+So the programming
+model is that you're
+
+01:03:39.440 --> 01:03:41.970
+going to think kind of
+at the SM-centric level,
+
+01:03:41.970 --> 01:03:44.870
+and the compiler will handle
+a lot more of the lower level
+
+01:03:44.870 --> 01:03:46.310
+details.
+
+01:03:46.310 --> 01:03:48.890
+And Triton is quite
+nice because it
+
+01:03:48.890 --> 01:03:52.500
+can outperform, by quite a bit,
+a lot PyTorch implementations.
+
+01:03:52.500 --> 01:03:55.280
+So it's kind of going all
+the way to writing CUDA,
+
+01:03:55.280 --> 01:03:58.190
+but you're still in the
+very familiar Python land.
+
+01:03:58.190 --> 01:04:01.030
+And I think a very
+underappreciated advantage
+
+01:04:01.030 --> 01:04:04.160
+is, as it's written
+here, it's all in Python.
+
+01:04:04.160 --> 01:04:07.910
+You can step through it, you
+can debug it fairly nicely.
+
+01:04:07.910 --> 01:04:10.490
+And so let's step
+through a trying kernel.
+
+01:04:10.490 --> 01:04:12.850
+Once again, we're
+going to write gelu,
+
+01:04:12.850 --> 01:04:15.500
+and we're going to
+do it in Triton.
+
+01:04:15.500 --> 01:04:20.350
+So this, I've put the code to be
+as similar structure as possible
+
+01:04:20.350 --> 01:04:21.320
+to our other code.
+
+01:04:21.320 --> 01:04:24.560
+So this is of the CPU
+side code, so to speak.
+
+01:04:24.560 --> 01:04:26.810
+This is the wrapper
+Triton gelu code.
+
+01:04:26.810 --> 01:04:28.910
+It takes in x, which
+is a Torch tensor,
+
+01:04:28.910 --> 01:04:31.240
+and I've got my two
+asserts at the top.
+
+01:04:31.240 --> 01:04:34.450
+And I'm going to
+allocate an output tensor
+
+01:04:34.450 --> 01:04:36.710
+y using empty_like, once again.
+
+01:04:36.710 --> 01:04:40.180
+And it has the same exact
+coordinate computation
+
+01:04:40.180 --> 01:04:41.980
+components.
+
+01:04:41.980 --> 01:04:44.480
+And even the kernel
+launch looks very similar.
+
+01:04:44.480 --> 01:04:47.030
+I've got this
+num_blocks annotation,
+
+01:04:47.030 --> 01:04:49.790
+and then my blocksize
+is at the end here,
+
+01:04:49.790 --> 01:04:51.990
+not in part of this
+brackets, but basically
+
+01:04:51.990 --> 01:04:54.790
+in passing the same
+information to my kernel.
+
+01:04:54.790 --> 01:04:59.760
+And now triangle kernel
+is this code over here.
+
+01:04:59.760 --> 01:05:01.920
+And this is going
+to do the same thing
+
+01:05:01.920 --> 01:05:04.290
+as what we were doing
+before, but now it's
+
+01:05:04.290 --> 01:05:06.420
+nicely written in Python.
+
+01:05:06.420 --> 01:05:09.510
+And the mental model
+here is the inputs
+
+01:05:09.510 --> 01:05:11.580
+are going to be at x pointer.
+
+01:05:11.580 --> 01:05:15.400
+Y pointer is the output vector,
+the starting coordinate.
+
+01:05:15.400 --> 01:05:18.970
+And the blocksize is how
+big each of my blocks are.
+
+01:05:18.970 --> 01:05:22.320
+And num_elements is going to
+be the very end of my array.
+
+01:05:22.320 --> 01:05:28.360
+So now I need to get this
+set of lines, 557 7 to 561,
+
+01:05:28.360 --> 01:05:31.800
+this is doing the
+computation of my index.
+
+01:05:31.800 --> 01:05:34.545
+I did i equals some
+formula before,
+
+01:05:34.545 --> 01:05:36.420
+this is doing the same
+calculation over here.
+
+01:05:36.420 --> 01:05:39.120
+I'm calculating where is the
+start of my current block, well,
+
+01:05:39.120 --> 01:05:42.120
+that's my block ID, times
+the size of the block, that
+
+01:05:42.120 --> 01:05:43.810
+gets me-- let's say
+I live in block one,
+
+01:05:43.810 --> 01:05:46.950
+it'll get me this point
+right here at the middle.
+
+01:05:46.950 --> 01:05:49.790
+And then afterwards,
+I need to know
+
+01:05:49.790 --> 01:05:52.320
+where do I live
+within my block, well,
+
+01:05:52.320 --> 01:05:54.420
+that's going to be the offset.
+
+01:05:54.420 --> 01:05:56.420
+But now, notice one difference.
+
+01:05:56.420 --> 01:05:59.780
+I don't get in an offset because
+I'm not programming threads.
+
+01:05:59.780 --> 01:06:01.680
+I'm programming blocks.
+
+01:06:01.680 --> 01:06:03.060
+And so what does that mean?
+
+01:06:03.060 --> 01:06:07.245
+Well, my offsets are actually
+a vector, not a single value.
+
+01:06:07.245 --> 01:06:08.870
+Because this is
+basically going to be--
+
+01:06:08.870 --> 01:06:11.330
+I'm going to do vectorized
+operation, where
+
+01:06:11.330 --> 01:06:13.550
+the vectorized
+operation is going to be
+
+01:06:13.550 --> 01:06:15.470
+handled by different threads.
+
+01:06:15.470 --> 01:06:17.870
+So here, my offsets
+are the start
+
+01:06:17.870 --> 01:06:23.220
+of the block plus a vector,
+this range of blocksize offset.
+
+01:06:23.220 --> 01:06:26.870
+So I'm my offsets are all of
+these coordinates within block
+
+01:06:26.870 --> 01:06:28.200
+one at once.
+
+01:06:28.200 --> 01:06:31.140
+Of course, if I'm at the very
+end, I might go off the edge
+
+01:06:31.140 --> 01:06:34.280
+and so I need a mask to
+handle anything that lives off
+
+01:06:34.280 --> 01:06:37.250
+the boundary of my vector.
+
+01:06:37.250 --> 01:06:42.020
+Now, I'm going to load in a
+single vectorized operation,
+
+01:06:42.020 --> 01:06:44.580
+everything at once.
+
+01:06:44.580 --> 01:06:47.660
+So x pointer plus offsets,
+these are the values
+
+01:06:47.660 --> 01:06:49.850
+that I'm responsible
+for, masked up,
+
+01:06:49.850 --> 01:06:55.670
+and it's loaded into x,
+which is my internal values,
+
+01:06:55.670 --> 01:06:58.670
+my internal temporary
+vector that I need.
+
+01:06:58.670 --> 01:07:00.160
+And with this
+temporary vector, I'm
+
+01:07:00.160 --> 01:07:03.760
+going to do exactly the
+old gelu computation.
+
+01:07:03.760 --> 01:07:06.020
+There's no tanh, so I
+compute that manually.
+
+01:07:06.020 --> 01:07:07.940
+But this formula, you
+can convince yourself,
+
+01:07:07.940 --> 01:07:10.840
+is the same as
+what we have here.
+
+01:07:10.840 --> 01:07:14.750
+And then y is going to be
+the formula computed up here.
+
+01:07:14.750 --> 01:07:17.230
+Now once I'm done, I
+need to write it back
+
+01:07:17.230 --> 01:07:21.080
+into my output buffer,
+or my output vector.
+
+01:07:21.080 --> 01:07:23.240
+And so I compute my targets.
+
+01:07:23.240 --> 01:07:24.790
+So this is y pointer
+plus offsets.
+
+01:07:24.790 --> 01:07:29.520
+I take my values, my temporary
+values, y, and then I store it.
+
+01:07:29.520 --> 01:07:33.020
+So this is very, very, very
+similar to what came before,
+
+01:07:33.020 --> 01:07:34.850
+but this one is the
+vectorized version.
+
+01:07:34.850 --> 01:07:37.100
+I get to operate on an
+entire block at once.
+
+01:07:37.100 --> 01:07:40.760
+And so instead of thinking at
+the perspective of a thread,
+
+01:07:40.760 --> 01:07:42.830
+I'm thinking from the
+perspective of a block,
+
+01:07:42.830 --> 01:07:44.560
+but not too different.
+
+01:07:44.560 --> 01:07:47.590
+This is all fairly
+similar stuff.
+
+01:07:47.590 --> 01:07:50.760
+So now, I've written
+my Triton gelu and--
+
+01:07:50.760 --> 01:07:52.940
+all right, I will do
+this fairly quickly.
+
+01:07:52.940 --> 01:07:53.440
+All right.
+
+01:07:53.440 --> 01:07:54.673
+So one last thing.
+
+01:07:54.673 --> 01:07:56.340
+I will only point out
+a few things here,
+
+01:07:56.340 --> 01:07:59.640
+because I don't want to get so
+in the weeds that you all get up
+
+01:07:59.640 --> 01:08:00.810
+and leave.
+
+01:08:00.810 --> 01:08:05.190
+But the one last cool thing that
+we can do is Triton, of course,
+
+01:08:05.190 --> 01:08:10.180
+compiles into low level, almost
+machine code for the GPU.
+
+01:08:10.180 --> 01:08:12.480
+And we can look at
+this very low level
+
+01:08:12.480 --> 01:08:18.010
+code called PTX code, after the
+Triton compiler goes over it.
+
+01:08:18.010 --> 01:08:19.779
+And it's actually cool.
+
+01:08:19.779 --> 01:08:24.130
+You can see how the GPU actually
+works at the thread level.
+
+01:08:24.130 --> 01:08:26.319
+So this is the
+Triton gelu kernel.
+
+01:08:26.319 --> 01:08:28.380
+It was generated
+by the compiler.
+
+01:08:28.380 --> 01:08:32.260
+And at first, it's going to do
+some of the really basic stuff.
+
+01:08:32.260 --> 01:08:33.550
+So what's it doing here?
+
+01:08:33.550 --> 01:08:36.819
+It's saying, well, I'm going
+to need to store some values.
+
+01:08:36.819 --> 01:08:39.250
+I'm going to need to store
+intermediate computations.
+
+01:08:39.250 --> 01:08:41.670
+b means, actually, untyped--
+
+01:08:41.670 --> 01:08:43.029
+basically, like bytes.
+
+01:08:43.029 --> 01:08:46.800
+So I need bites that
+are of 32-bit size.
+
+01:08:46.800 --> 01:08:50.130
+I need floats for doing
+computations, called f.
+
+01:08:50.130 --> 01:08:52.399
+And I need another
+set of registers
+
+01:08:52.399 --> 01:08:56.930
+that are 64 bits, and that's
+another set of registers.
+
+01:08:56.930 --> 01:08:59.180
+And so I have all
+of these registers
+
+01:08:59.180 --> 01:09:01.170
+that I need for
+temporary computations.
+
+01:09:01.170 --> 01:09:04.399
+And then starting here, I'm
+going to start computing,
+
+01:09:04.399 --> 01:09:05.890
+basically, my coordinates.
+
+01:09:05.890 --> 01:09:06.390
+Oh, sorry.
+
+01:09:06.390 --> 01:09:11.310
+This part is loading the various
+arguments to the function.
+
+01:09:11.310 --> 01:09:15.500
+So things like the x pointer and
+the y pointer get loaded here.
+
+01:09:15.500 --> 01:09:19.880
+Starting here, I start
+computing the coordinate offsets
+
+01:09:19.880 --> 01:09:22.200
+of my Triton kernel.
+
+01:09:22.200 --> 01:09:26.010
+And then once I get down
+here, this LD global,
+
+01:09:26.010 --> 01:09:29.240
+this is the code
+that's used to load
+
+01:09:29.240 --> 01:09:33.779
+the values from x pointer back
+into my temporary registers.
+
+01:09:33.779 --> 01:09:39.410
+So it's basically saying
+load r2, r3, r4, r5 using
+
+01:09:39.410 --> 01:09:43.380
+the memory position in rd1.
+
+01:09:43.380 --> 01:09:45.880
+And notice how it's loading
+four things at once because it's
+
+01:09:45.880 --> 01:09:47.470
+cleverly handling coalescing.
+
+01:09:47.470 --> 01:09:49.250
+We know we can get
+four values for free,
+
+01:09:49.250 --> 01:09:51.790
+we should operate on
+all four of these values
+
+01:09:51.790 --> 01:09:53.060
+at once because we get them.
+
+01:09:53.060 --> 01:09:58.720
+And then you do the
+same thing again for--
+
+01:09:58.720 --> 01:10:00.380
+you do the same
+thing again here.
+
+01:10:00.380 --> 01:10:02.350
+And then you start
+to get, basically,
+
+01:10:02.350 --> 01:10:05.090
+the floating point
+operations, mul.f32,
+
+01:10:05.090 --> 01:10:08.240
+which basically goes through
+and does the tanh computations.
+
+01:10:08.240 --> 01:10:10.580
+I'm not going to explain
+all the different pieces,
+
+01:10:10.580 --> 01:10:13.640
+but here it's multiplying
+by a constant,
+
+01:10:13.640 --> 01:10:17.260
+it does a x to the cube by
+multiplying the same numbers
+
+01:10:17.260 --> 01:10:19.120
+multiple times.
+
+01:10:19.120 --> 01:10:23.240
+And then it's going to
+compute here, 2 to the x,
+
+01:10:23.240 --> 01:10:26.950
+but we want e to the x, and
+so it multiplies by log 2
+
+01:10:26.950 --> 01:10:29.060
+to get the exponentiated base.
+
+01:10:29.060 --> 01:10:32.530
+And you can really see all
+of the different literal
+
+01:10:32.530 --> 01:10:35.380
+step-by-step operations
+that the GPU does in order
+
+01:10:35.380 --> 01:10:37.220
+to get you the final result.
+
+01:10:37.220 --> 01:10:38.905
+And so I'll skip
+all over to the end.
+
+01:10:38.905 --> 01:10:40.530
+This is all floating
+point computations
+
+01:10:40.530 --> 01:10:41.950
+that it needs to do.
+
+01:10:41.950 --> 01:10:44.100
+And then at the very
+end, it stores the values
+
+01:10:44.100 --> 01:10:49.050
+that it has, r38 through r41,
+into rd4, which is the memory
+
+01:10:49.050 --> 01:10:50.660
+position of our output.
+
+01:10:50.660 --> 01:10:54.480
+So this is what's actually
+happening at the low level.
+
+01:10:54.480 --> 01:10:56.790
+And we see that each
+thread is operating
+
+01:10:56.790 --> 01:10:58.450
+on four values at a time.
+
+01:10:58.450 --> 01:11:00.610
+And its temporary
+storage is the registers,
+
+01:11:00.610 --> 01:11:03.060
+which is the really,
+really high speed storage
+
+01:11:03.060 --> 01:11:04.180
+that it has very locally.
+
+01:11:04.180 --> 01:11:06.960
+So we can see this is going
+to, just looking at it,
+
+01:11:06.960 --> 01:11:09.780
+be probably pretty fast code.
+
+01:11:09.780 --> 01:11:10.530
+OK.
+
+01:11:10.530 --> 01:11:13.800
+So that was the PTX, and we can
+go through and see what it's
+
+01:11:13.800 --> 01:11:16.540
+doing for all sorts of things.
+
+01:11:16.540 --> 01:11:19.690
+But now, let's go back and
+actually benchmark things.
+
+01:11:19.690 --> 01:11:22.320
+So we got manual gelu,
+8.1 seconds, PyTorch time,
+
+01:11:22.320 --> 01:11:26.250
+1.1 seconds, CUDA time,
+1.84 seconds, Triton time,
+
+01:11:26.250 --> 01:11:27.880
+1.848 seconds.
+
+01:11:27.880 --> 01:11:31.410
+So we didn't get any faster,
+but it was much easier
+
+01:11:31.410 --> 01:11:32.460
+to write Triton code.
+
+01:11:32.460 --> 01:11:34.870
+We wrote it in Python,
+we thought about blocks,
+
+01:11:34.870 --> 01:11:36.780
+we could do
+vectorized additions.
+
+01:11:36.780 --> 01:11:39.340
+If you're doing more
+sophisticated stuff,
+
+01:11:39.340 --> 01:11:43.530
+basically, Triton will handle a
+lot of the memory stuff for you.
+
+01:11:43.530 --> 01:11:45.790
+And so it's actually
+pretty good.
+
+01:11:45.790 --> 01:11:47.430
+And then profiling,
+once again, we
+
+01:11:47.430 --> 01:11:52.622
+see single kernel launch that
+consumes all of the GPU time.
+
+01:11:52.622 --> 01:11:57.030
+So that's great, and
+that gets Triton kernels.
+
+01:11:57.030 --> 01:12:01.248
+The last thing--
+at least in this--
+
+01:12:01.248 --> 01:12:03.930
+whoops-- one second.
+
+01:12:03.930 --> 01:12:08.250
+Here, OK-- that I want to
+talk about is torch.compile.
+
+01:12:08.250 --> 01:12:10.320
+Of course, writing
+CUDA kernels is cool
+
+01:12:10.320 --> 01:12:12.210
+and it makes you
+feel really good,
+
+01:12:12.210 --> 01:12:15.030
+but maybe we don't
+need to do that.
+
+01:12:15.030 --> 01:12:17.530
+The things that we were
+doing here were very simple.
+
+01:12:17.530 --> 01:12:21.210
+We were just taking these
+x cubed and exponentiation
+
+01:12:21.210 --> 01:12:23.010
+operations and we
+were just shoving them
+
+01:12:23.010 --> 01:12:25.600
+all into a single CUDA kernel.
+
+01:12:25.600 --> 01:12:29.620
+And so maybe we can just
+do that without doing much.
+
+01:12:29.620 --> 01:12:32.280
+And so we've had the
+several different ways
+
+01:12:32.280 --> 01:12:35.220
+that we've showed you, but the
+last one I want to talk about
+
+01:12:35.220 --> 01:12:37.010
+is this thing called
+torch.compile,
+
+01:12:37.010 --> 01:12:42.010
+which will take a
+non-optimized PyTorch code
+
+01:12:42.010 --> 01:12:45.590
+and it will write
+more optimized code.
+
+01:12:45.590 --> 01:12:47.140
+And so here it's
+going to attempt
+
+01:12:47.140 --> 01:12:48.730
+to automatically
+do optimizations,
+
+01:12:48.730 --> 01:12:51.250
+like kernel fusion.
+
+01:12:51.250 --> 01:12:54.100
+And this compiled
+gelu is going to be
+
+01:12:54.100 --> 01:12:57.740
+equivalent in the actual
+outputs that it generates.
+
+01:12:57.740 --> 01:13:00.580
+But now let's look
+at the runtimes.
+
+01:13:00.580 --> 01:13:04.338
+So we've got some runtime
+variation, but basically
+
+01:13:04.338 --> 01:13:05.380
+the same kind of numbers.
+
+01:13:05.380 --> 01:13:09.520
+8.1 seconds, manual, 1.1
+seconds, PyTorch, 1.8 seconds,
+
+01:13:09.520 --> 01:13:15.760
+CUDA, and then 1.47
+seconds on torch.compile.
+
+01:13:15.760 --> 01:13:19.850
+So the punchline here is modern
+JIT compilers are pretty good.
+
+01:13:19.850 --> 01:13:22.750
+It can do optimizations
+like operation fusion,
+
+01:13:22.750 --> 01:13:25.910
+without you having to
+do very much at all.
+
+01:13:25.910 --> 01:13:28.750
+And if you look
+under the hood, you
+
+01:13:28.750 --> 01:13:32.690
+can see that there's,
+basically, once again,
+
+01:13:32.690 --> 01:13:34.370
+one thing that happens.
+
+01:13:34.370 --> 01:13:39.250
+This is a fused add,
+multiply, tanh Triton code.
+
+01:13:39.250 --> 01:13:42.840
+So it's generating Triton under
+the hood, that basically is
+
+01:13:42.840 --> 01:13:44.950
+doing similar kinds of
+things as our Triton code,
+
+01:13:44.950 --> 01:13:48.202
+but is actually slightly more
+optimized than what we did.
+
+01:13:48.202 --> 01:13:50.160
+And so it's getting
+slightly better performance
+
+01:13:50.160 --> 01:13:52.230
+than even our code.
+
+01:13:52.230 --> 01:13:54.870
+So torch.compile is quite nice.
+
+01:13:54.870 --> 01:13:55.920
+Yes.
+
+01:13:55.920 --> 01:13:59.880
+How do you [INAUDIBLE] that
+torch.compile will do better?
+
+01:13:59.880 --> 01:14:02.970
+Do you just need to try to
+implement your previous version
+
+01:14:02.970 --> 01:14:04.560
+and see if it works--
+
+01:14:04.560 --> 01:14:07.260
+like it can't do
+[INAUDIBLE], right?
+
+01:14:07.260 --> 01:14:11.107
+Yeah, so so the question was
+like, when do you know that--
+
+01:14:11.107 --> 01:14:12.690
+I guess maybe the
+better way to phrase
+
+01:14:12.690 --> 01:14:14.190
+that question is,
+when do you can
+
+01:14:14.190 --> 01:14:18.480
+do better than torch.compile,
+right, is the relevant question?
+
+01:14:18.480 --> 01:14:22.320
+And I think for simple stuff,
+like simple operator fusion.
+
+01:14:22.320 --> 01:14:24.540
+Or the other thing
+that it's very good at
+
+01:14:24.540 --> 01:14:28.050
+is optimizing matrix multiplies.
+
+01:14:28.050 --> 01:14:30.025
+So torch.compile,
+as I said before,
+
+01:14:30.025 --> 01:14:32.400
+can do things like if it knows
+the shape of the matrices,
+
+01:14:32.400 --> 01:14:34.360
+can figure out which
+kernels to dispatch.
+
+01:14:34.360 --> 01:14:36.190
+It is very good at those things.
+
+01:14:36.190 --> 01:14:38.860
+I doubt that you can get
+much better than that.
+
+01:14:38.860 --> 01:14:43.740
+But there are things like if you
+see FlashAttention 1, 2, and 3,
+
+01:14:43.740 --> 01:14:45.750
+those are pretty
+non-trivial optimizations.
+
+01:14:45.750 --> 01:14:50.340
+Like these days torch.compile
+and Jax's XLA compiler
+
+01:14:50.340 --> 01:14:51.913
+can do those, but
+that's because we
+
+01:14:51.913 --> 01:14:54.330
+know, in hindsight, that those
+are the right optimizations
+
+01:14:54.330 --> 01:14:55.435
+to do.
+
+01:14:55.435 --> 01:14:57.810
+I think some of those things
+are a little bit non-trivial
+
+01:14:57.810 --> 01:14:58.660
+to figure out.
+
+01:14:58.660 --> 01:15:01.320
+FlashAttention3 has
+additional hardware level
+
+01:15:01.320 --> 01:15:04.900
+optimizations that
+leverage the H100 hardware.
+
+01:15:04.900 --> 01:15:08.292
+That's not obvious to
+do with a JIT compiler.
+
+01:15:08.292 --> 01:15:09.750
+And so there are
+some things that I
+
+01:15:09.750 --> 01:15:12.555
+think are quite hard
+with torch.compile
+
+01:15:12.555 --> 01:15:13.930
+that I think you
+could do better.
+
+01:15:13.930 --> 01:15:15.900
+But in general, I
+think the point here
+
+01:15:15.900 --> 01:15:20.088
+is you shouldn't go home and
+say, I'm going to CUDA kernel--
+
+01:15:20.088 --> 01:15:22.380
+I'm going to write CUDA
+kernels for every single pardon
+
+01:15:22.380 --> 01:15:23.500
+my language model.
+
+01:15:23.500 --> 01:15:25.663
+That's probably not a
+good use of your time.
+
+01:15:25.663 --> 01:15:27.330
+But if you're writing
+a new architecture
+
+01:15:27.330 --> 01:15:30.957
+with some complicated piece and
+you're not getting utilization
+
+01:15:30.957 --> 01:15:32.790
+but you think you can,
+that's maybe the time
+
+01:15:32.790 --> 01:15:35.160
+to really bust out the Triton.
+
+01:15:35.160 --> 01:15:40.860
+OK, so we're basically at
+time, but we can quickly
+
+01:15:40.860 --> 01:15:43.840
+go through one last
+example of Triton.
+
+01:15:43.840 --> 01:15:45.630
+Maybe this will
+be useful for you
+
+01:15:45.630 --> 01:15:48.490
+in assignment two
+of doing softmax.
+
+01:15:48.490 --> 01:15:50.580
+So one difference
+is, until now, we
+
+01:15:50.580 --> 01:15:52.900
+were doing just basic
+element wise operations.
+
+01:15:52.900 --> 01:15:56.020
+And that's really easy, because
+you just operate on each element
+
+01:15:56.020 --> 01:15:59.800
+and there's no complexity
+to those kinds of things.
+
+01:15:59.800 --> 01:16:03.750
+So now, let's do softmax, which
+has a reduction operation where
+
+01:16:03.750 --> 01:16:06.210
+you have to add across
+all of the elements.
+
+01:16:06.210 --> 01:16:07.480
+So how do we do that?
+
+01:16:07.480 --> 01:16:10.830
+Well, what we want to do
+is we want to normalize
+
+01:16:10.830 --> 01:16:12.940
+across each row of the matrix.
+
+01:16:12.940 --> 01:16:16.720
+And what we would like to do
+is we'd like to make this fast.
+
+01:16:16.720 --> 01:16:21.040
+So a naive version of this
+is going to be pretty slow.
+
+01:16:21.040 --> 01:16:23.880
+And now we're going to
+write the Triton kernel.
+
+01:16:23.880 --> 01:16:27.925
+So if I wanted to be lazy, the
+easiest way to do this is--
+
+01:16:27.925 --> 01:16:30.550
+OK, actually, you can think for
+a moment about what the easiest
+
+01:16:30.550 --> 01:16:31.220
+way to do this.
+
+01:16:31.220 --> 01:16:33.012
+Now, let's say you want
+to write a softmax.
+
+01:16:33.012 --> 01:16:35.540
+So you're going to normalize
+each row of a matrix.
+
+01:16:35.540 --> 01:16:38.090
+And imagine these
+matrices are pretty small.
+
+01:16:38.090 --> 01:16:40.940
+So you're just writing a
+kernel for small matrices.
+
+01:16:40.940 --> 01:16:44.780
+So if you're doing this, what's
+the right kind of block design?
+
+01:16:44.780 --> 01:16:48.100
+Well, maybe what we
+should do is our grid
+
+01:16:48.100 --> 01:16:49.970
+should actually just be rows.
+
+01:16:49.970 --> 01:16:52.755
+So each SM is going to
+handle a single row.
+
+01:16:52.755 --> 01:16:54.380
+That's kind of the
+optimal thing to do.
+
+01:16:54.380 --> 01:16:56.540
+Because if we can fit
+a whole row into an SM,
+
+01:16:56.540 --> 01:17:00.530
+then we just sum across that row
+in the SM and then we divide.
+
+01:17:00.530 --> 01:17:01.760
+That's great.
+
+01:17:01.760 --> 01:17:05.110
+And so that's going to be the
+simple design for our very
+
+01:17:05.110 --> 01:17:06.950
+naive softmax kernel here.
+
+01:17:06.950 --> 01:17:09.250
+So all we're going to do
+is that we're going to make
+
+01:17:09.250 --> 01:17:12.510
+the blocksize, basically--
+
+01:17:12.510 --> 01:17:13.010
+sorry.
+
+01:17:13.010 --> 01:17:15.020
+We're going to make
+each block a row,
+
+01:17:15.020 --> 01:17:17.440
+and so the blocksize
+should be number of columns
+
+01:17:17.440 --> 01:17:21.050
+plus a little bit of buffer to
+be able to fit all the columns.
+
+01:17:21.050 --> 01:17:23.420
+So this is Triton
+next power of x2 of n,
+
+01:17:23.420 --> 01:17:27.010
+and that's a nice way of
+padding out your columns.
+
+01:17:27.010 --> 01:17:29.950
+And then, I'm going to
+make each block a row.
+
+01:17:29.950 --> 01:17:32.950
+So the number of blocks is
+exactly the number of rows.
+
+01:17:32.950 --> 01:17:36.490
+And then I have my
+Triton softmax kernel,
+
+01:17:36.490 --> 01:17:38.620
+which is written in the
+way that you expect.
+
+01:17:38.620 --> 01:17:42.490
+So now we have a matrix
+rather than a vector.
+
+01:17:42.490 --> 01:17:44.560
+So we have x pointers,
+we have y pointers,
+
+01:17:44.560 --> 01:17:47.280
+we need the strides
+of the matrices,
+
+01:17:47.280 --> 01:17:50.580
+and then we can basically figure
+out what row index I'm in.
+
+01:17:50.580 --> 01:17:52.240
+I can get the column offsets.
+
+01:17:52.240 --> 01:17:55.060
+This is going to be the
+same kind of code as before.
+
+01:17:55.060 --> 01:17:56.820
+In fact, getting the
+row offset is simpler
+
+01:17:56.820 --> 01:17:59.580
+because each row is a block.
+
+01:17:59.580 --> 01:18:01.710
+And then now, I'm
+going to do basically
+
+01:18:01.710 --> 01:18:02.710
+the same kind of stuff.
+
+01:18:02.710 --> 01:18:07.240
+I'm going to load in each row
+into my SM's local memory,
+
+01:18:07.240 --> 01:18:09.442
+and then I'm going to
+do computation exactly
+
+01:18:09.442 --> 01:18:10.900
+in a way that looks
+like a softmax.
+
+01:18:10.900 --> 01:18:13.900
+I have my row, I subtract
+my max, I take the exponent,
+
+01:18:13.900 --> 01:18:15.840
+I sum it, and then
+I divide, which
+
+01:18:15.840 --> 01:18:18.730
+is going to give me my
+softmax normalized row,
+
+01:18:18.730 --> 01:18:20.920
+and I write it back
+to global memory.
+
+01:18:20.920 --> 01:18:22.890
+No complexity at all.
+
+01:18:22.890 --> 01:18:26.160
+Whenever your computations
+fit nicely in an SM,
+
+01:18:26.160 --> 01:18:28.790
+writing Triton code looks
+very similar to writing
+
+01:18:28.790 --> 01:18:31.820
+just normal Python code, just
+with a little bit of load
+
+01:18:31.820 --> 01:18:35.180
+and store and keeping track
+of where the blocks are.
+
+01:18:35.180 --> 01:18:38.450
+So life is pretty
+simple, let's go back--
+
+01:18:38.450 --> 01:18:39.470
+oh wait, where were we?
+
+01:18:39.470 --> 01:18:40.850
+To the Triton.
+
+01:18:40.850 --> 01:18:41.520
+Here we go.
+
+01:18:41.520 --> 01:18:45.310
+And then we can see how fast all
+of our different pieces of code
+
+01:18:45.310 --> 01:18:45.810
+are.
+
+01:18:45.810 --> 01:18:47.760
+So I'll zoom out again
+just to make sure.
+
+01:18:47.760 --> 01:18:50.810
+OK, so manual time
+takes 3.7 seconds.
+
+01:18:50.810 --> 01:18:54.840
+Our compile time is 1.3
+seconds for torch.compile,
+
+01:18:54.840 --> 01:18:58.280
+and the PyTorch
+time is 1.5 seconds,
+
+01:18:58.280 --> 01:19:01.350
+and the Triton time
+is 1.9 seconds,
+
+01:19:01.350 --> 01:19:04.220
+so it's still a little bit slow.
+
+01:19:04.220 --> 01:19:07.850
+torch.compile can actually do
+better than the native PyTorch
+
+01:19:07.850 --> 01:19:09.770
+implementation,
+especially when it
+
+01:19:09.770 --> 01:19:13.670
+knows about the shapes and
+sizes of certain operations.
+
+01:19:13.670 --> 01:19:16.350
+So finally, we can
+look in the profiler.
+
+01:19:16.350 --> 01:19:19.170
+The manual softmax is
+kind of a disaster here.
+
+01:19:19.170 --> 01:19:21.860
+You see all sorts of
+crazy operations happening
+
+01:19:21.860 --> 01:19:23.120
+all over the place.
+
+01:19:23.120 --> 01:19:24.640
+Let me clear this.
+
+01:19:24.640 --> 01:19:25.820
+If we go back up here.
+
+01:19:25.820 --> 01:19:26.710
+OK, Yep.
+
+01:19:26.710 --> 01:19:28.780
+We see all sorts of
+operations happening.
+
+01:19:28.780 --> 01:19:30.670
+We have x, we have
+max, we have sum,
+
+01:19:30.670 --> 01:19:32.380
+because we've implemented
+things naively,
+
+01:19:32.380 --> 01:19:34.570
+and we've got memory reads
+and writes everywhere.
+
+01:19:34.570 --> 01:19:38.950
+The compiled softmax is just
+going to be one fused softmax
+
+01:19:38.950 --> 01:19:41.470
+operation that goes quite fast.
+
+01:19:41.470 --> 01:19:43.420
+And then we've got
+PyTorch softmax,
+
+01:19:43.420 --> 01:19:48.520
+which is also one CUDA
+kernel call, and same thing
+
+01:19:48.520 --> 01:19:50.900
+with our Triton softmax.
+
+01:19:50.900 --> 01:19:52.960
+We have our nice
+Triton softmax kernel
+
+01:19:52.960 --> 01:19:56.380
+that is a single fused
+kernel for everything.
+
+01:19:56.380 --> 01:19:59.180
+OK, I won't go through
+the PTX code for this.
+
+01:19:59.180 --> 01:20:01.870
+I think we're kind
+of at time, and I
+
+01:20:01.870 --> 01:20:04.180
+don't want to drag you
+through that low level again,
+
+01:20:04.180 --> 01:20:08.110
+but hopefully this has given
+you a flavor of lower level GPU
+
+01:20:08.110 --> 01:20:12.440
+programming for the purpose of
+making language models go fast,
+
+01:20:12.440 --> 01:20:15.610
+and hopefully you'll have
+fun doing assignment two.
+
+01:20:15.610 --> 01:20:17.160
+Thanks.

@@ -1,0 +1,4858 @@
+WEBVTT
+Kind: captions
+Language: en-US
+
+00:00:04.850 --> 00:00:09.485
+OK, so last lecture, I gave
+an overview of language models
+
+00:00:09.485 --> 00:00:11.360
+and what it means to
+build them from scratch,
+
+00:00:11.360 --> 00:00:12.750
+and why we want to do that.
+
+00:00:12.750 --> 00:00:14.430
+I also talked
+about tokenization,
+
+00:00:14.430 --> 00:00:17.930
+which is going to be the first
+half of the first assignment.
+
+00:00:17.930 --> 00:00:22.220
+Today's lecture, we'll
+be going through actually
+
+00:00:22.220 --> 00:00:24.170
+building a model.
+
+00:00:24.170 --> 00:00:28.790
+We'll discuss the primitives
+in PyTorch that are needed.
+
+00:00:28.790 --> 00:00:30.780
+We're going to
+start with tensors,
+
+00:00:30.780 --> 00:00:33.420
+build models, optimizers,
+and training loop.
+
+00:00:33.420 --> 00:00:37.560
+And we're going to place
+close attention to efficiency,
+
+00:00:37.560 --> 00:00:41.210
+in particular, how we're
+using resources both memory
+
+00:00:41.210 --> 00:00:43.160
+and compute.
+
+00:00:43.160 --> 00:00:48.800
+So to motivate things a
+bit, here's some questions.
+
+00:00:48.800 --> 00:00:52.650
+These questions are going to
+be answerable by napkin math.
+
+00:00:52.650 --> 00:00:55.010
+So get your napkins out.
+
+00:00:55.010 --> 00:00:58.370
+So how long would it take to
+train a 70 billion parameter
+
+00:00:58.370 --> 00:01:04.580
+dense transformer model on 15
+trillion tokens on 1,024 H100s?
+
+00:01:04.580 --> 00:01:07.325
+OK, so I'm just
+going to sketch out
+
+00:01:07.325 --> 00:01:09.950
+the-- give you a flavor
+of the type of things
+
+00:01:09.950 --> 00:01:11.160
+that we want to do.
+
+00:01:11.160 --> 00:01:14.540
+So here's how you go
+about reasoning it.
+
+00:01:14.540 --> 00:01:22.230
+You count the total number
+of flops needed to train.
+
+00:01:22.230 --> 00:01:24.560
+So that's 6 times the
+number of parameters,
+
+00:01:24.560 --> 00:01:26.900
+times the number of tokens.
+
+00:01:26.900 --> 00:01:28.590
+And where does that come from?
+
+00:01:28.590 --> 00:01:32.090
+That will be what we'll
+talk about in this lecture.
+
+00:01:32.090 --> 00:01:35.570
+You can look at the promise,
+the number of flops per second
+
+00:01:35.570 --> 00:01:38.870
+that H100 gives you.
+
+00:01:38.870 --> 00:01:41.160
+The MFU, which is
+something we'll see later.
+
+00:01:41.160 --> 00:01:43.820
+Let's just set it to 0.5.
+
+00:01:43.820 --> 00:01:48.560
+And you can look at the
+number of flops per day
+
+00:01:48.560 --> 00:01:51.690
+that your hardware is going to
+give you at this particular MFU.
+
+00:01:51.690 --> 00:02:01.312
+So 1,024 of them for one
+day, and then you just divide
+
+00:02:01.312 --> 00:02:03.520
+the total number of flops
+you need to train the model
+
+00:02:03.520 --> 00:02:07.400
+by the number of flops that
+you're supposed to get.
+
+00:02:07.400 --> 00:02:12.070
+And that gives you about 144.
+
+00:02:12.070 --> 00:02:15.590
+So this is very
+simple calculations.
+
+00:02:15.590 --> 00:02:17.590
+At the end of the
+day, we're going
+
+00:02:17.590 --> 00:02:22.288
+to go through a bit more
+where these numbers come from.
+
+00:02:22.288 --> 00:02:23.830
+And in particular
+where the six times
+
+00:02:23.830 --> 00:02:29.620
+number of parameters times
+number of tokens comes from.
+
+00:02:29.620 --> 00:02:31.420
+So here's a question,
+what is the largest
+
+00:02:31.420 --> 00:02:35.050
+model you can train
+on 8 H100s using AdamW
+
+00:02:35.050 --> 00:02:37.990
+if you're not being too clever?
+
+00:02:37.990 --> 00:02:45.670
+So H100 has 80
+gigabytes of HBM memory.
+
+00:02:45.670 --> 00:02:47.920
+The number of
+bytes per parameter
+
+00:02:47.920 --> 00:02:50.200
+that you need for the
+parameters, the gradients,
+
+00:02:50.200 --> 00:02:53.180
+optimizer, state is 16.
+
+00:02:53.180 --> 00:02:55.960
+And we'll talk more about
+where that comes from.
+
+00:02:55.960 --> 00:02:59.103
+And the number of
+parameters is basically,
+
+00:02:59.103 --> 00:03:00.520
+the total amount
+of memory divided
+
+00:03:00.520 --> 00:03:03.230
+by number of bytes you
+need per parameter.
+
+00:03:03.230 --> 00:03:09.430
+And that gives you about
+40 billion parameters.
+
+00:03:09.430 --> 00:03:12.700
+And this is very
+rough because it
+
+00:03:12.700 --> 00:03:15.400
+doesn't take you into
+activations which
+
+00:03:15.400 --> 00:03:17.920
+depends on batch size and
+sequence length, which I'm not
+
+00:03:17.920 --> 00:03:19.540
+really going to talk
+about but will be
+
+00:03:19.540 --> 00:03:22.585
+important for assignment one.
+
+00:03:22.585 --> 00:03:25.603
+So this is a rough back
+envelope calculation.
+
+00:03:25.603 --> 00:03:27.520
+And this is something
+that you're probably not
+
+00:03:27.520 --> 00:03:28.520
+used to doing.
+
+00:03:28.520 --> 00:03:31.230
+You just implement a model,
+you train it and what happens
+
+00:03:31.230 --> 00:03:31.730
+happens.
+
+00:03:31.730 --> 00:03:34.280
+But remember that efficiency
+is the name of the game.
+
+00:03:34.280 --> 00:03:36.940
+And to be efficient, you have
+to know exactly how many flops
+
+00:03:36.940 --> 00:03:38.360
+you're actually expending.
+
+00:03:38.360 --> 00:03:40.430
+Because when these
+numbers get large,
+
+00:03:40.430 --> 00:03:42.290
+these directly
+translate into dollars,
+
+00:03:42.290 --> 00:03:46.150
+and you want that to be
+as small as possible.
+
+00:03:46.150 --> 00:03:48.970
+So we'll talk more
+about the details
+
+00:03:48.970 --> 00:03:51.143
+of how these numbers arise.
+
+00:03:54.500 --> 00:03:57.130
+We will not actually go
+over the transformer.
+
+00:03:57.130 --> 00:04:02.220
+So Tatsu is going to talk
+over the conceptual overview
+
+00:04:02.220 --> 00:04:04.110
+of that next time.
+
+00:04:04.110 --> 00:04:06.990
+And there's many ways you can
+learn about transformer if you
+
+00:04:06.990 --> 00:04:08.920
+haven't already looked at it.
+
+00:04:08.920 --> 00:04:10.770
+There's assignment 1
+If you do assignment 1,
+
+00:04:10.770 --> 00:04:13.170
+you'll definitely know
+what a transformer is.
+
+00:04:13.170 --> 00:04:15.240
+And the handout actually
+does a pretty good job
+
+00:04:15.240 --> 00:04:17.200
+of walking through all
+the different pieces.
+
+00:04:17.200 --> 00:04:18.690
+There's a mathematical
+description
+
+00:04:18.690 --> 00:04:20.470
+if you like pictures,
+there's pictures.
+
+00:04:20.470 --> 00:04:24.520
+There's a lot of stuff
+you can look on online.
+
+00:04:24.520 --> 00:04:27.120
+But instead I'm going to
+work with simpler models
+
+00:04:27.120 --> 00:04:30.330
+and really talk about the
+primitives and the resource
+
+00:04:30.330 --> 00:04:32.110
+accounting piece.
+
+00:04:32.110 --> 00:04:34.380
+So remember, last time I
+said what kinds of knowledge
+
+00:04:34.380 --> 00:04:35.470
+can you learn?
+
+00:04:35.470 --> 00:04:37.020
+So mechanics.
+
+00:04:37.020 --> 00:04:40.500
+In this lecture, it's
+going to be just PyTorch
+
+00:04:40.500 --> 00:04:42.480
+and understanding
+how PyTorch works
+
+00:04:42.480 --> 00:04:45.220
+at a fairly primitive level.
+
+00:04:45.220 --> 00:04:47.110
+So that will be pretty
+straightforward.
+
+00:04:47.110 --> 00:04:50.110
+Mindset is about
+resource accounting.
+
+00:04:50.110 --> 00:04:52.740
+And it's not hard, you
+just have to do it.
+
+00:04:52.740 --> 00:04:56.190
+And intuitions,
+unfortunately this
+
+00:04:56.190 --> 00:04:58.358
+is just going to be
+broad strokes for now.
+
+00:04:58.358 --> 00:05:00.150
+Actually, there's not
+really much intuition
+
+00:05:00.150 --> 00:05:01.950
+that I'm going to
+talk about in terms
+
+00:05:01.950 --> 00:05:05.470
+of how anything we're doing
+translates to good models.
+
+00:05:05.470 --> 00:05:09.810
+This is more about the
+mechanics and mindset.
+
+00:05:09.810 --> 00:05:14.790
+So let's start with
+memory accounting.
+
+00:05:14.790 --> 00:05:17.400
+And then I'll talk about
+compute accounting.
+
+00:05:17.400 --> 00:05:19.750
+And then we'll
+build up bottom up.
+
+00:05:19.750 --> 00:05:20.890
+OK.
+
+00:05:20.890 --> 00:05:24.010
+So the best place to
+start is a tensor.
+
+00:05:24.010 --> 00:05:27.510
+So tensors are the building
+block for storing everything
+
+00:05:27.510 --> 00:05:28.380
+in deep learning.
+
+00:05:28.380 --> 00:05:32.200
+Parameters, gradients, optimizer
+state, data, activations.
+
+00:05:32.200 --> 00:05:34.050
+There's these atoms.
+
+00:05:34.050 --> 00:05:37.590
+You can read lots of
+documentation about them.
+
+00:05:37.590 --> 00:05:40.960
+You're probably very familiar
+with how to create tensors.
+
+00:05:40.960 --> 00:05:44.160
+There's creating
+tensors different ways.
+
+00:05:44.160 --> 00:05:47.070
+You can also create a
+tensor and not initialize it
+
+00:05:47.070 --> 00:05:50.540
+and use some special
+initialization
+
+00:05:50.540 --> 00:05:55.910
+for the parameters, if you want.
+
+00:05:55.910 --> 00:05:58.054
+So those are tensors.
+
+00:06:00.800 --> 00:06:06.000
+So let's talk about memory and
+how much memory tensors take up.
+
+00:06:06.000 --> 00:06:10.490
+So every tensor that will
+probably be interested in
+
+00:06:10.490 --> 00:06:12.540
+is as a floating point number.
+
+00:06:12.540 --> 00:06:15.720
+And so there's many ways to
+represent floating point.
+
+00:06:15.720 --> 00:06:20.450
+So the most default
+way is float32.
+
+00:06:20.450 --> 00:06:24.060
+And float32 has 32 bits.
+
+00:06:24.060 --> 00:06:27.020
+They're allocated one for
+sign, eight for exponent,
+
+00:06:27.020 --> 00:06:29.970
+and 23 for the fraction.
+
+00:06:29.970 --> 00:06:32.010
+So exponent gives
+you dynamic range,
+
+00:06:32.010 --> 00:06:35.660
+and fraction gives you
+different basically specifies
+
+00:06:35.660 --> 00:06:37.430
+different values.
+
+00:06:37.430 --> 00:06:43.550
+So float32 is also known
+as FP32 or single precision
+
+00:06:43.550 --> 00:06:48.960
+is the gold standard
+on computing.
+
+00:06:48.960 --> 00:06:52.530
+Some people also refer to
+float32 as full precision.
+
+00:06:52.530 --> 00:06:55.670
+That's a little bit confusing
+because full is really depending
+
+00:06:55.670 --> 00:06:57.380
+on who you're talking to.
+
+00:06:57.380 --> 00:06:59.730
+If you're talking to a
+scientific computing person,
+
+00:06:59.730 --> 00:07:02.090
+they will laugh at
+when you say float32
+
+00:07:02.090 --> 00:07:07.085
+is really full because they'll
+use float64 or even more.
+
+00:07:07.085 --> 00:07:09.210
+But if you're talking to
+a machine learning person,
+
+00:07:09.210 --> 00:07:12.690
+float32 is the max you'll
+ever probably need to go.
+
+00:07:12.690 --> 00:07:17.240
+Because deep learning
+is sloppy like that.
+
+00:07:17.240 --> 00:07:19.920
+OK, so let's look at the memory.
+
+00:07:19.920 --> 00:07:21.975
+So the memory is
+it's very simple.
+
+00:07:21.975 --> 00:07:23.600
+It's determined by
+the number of values
+
+00:07:23.600 --> 00:07:26.480
+you have in your tensor and
+the data type of each value
+
+00:07:26.480 --> 00:07:29.060
+OK, so if you create
+a Torch tensor of 4
+
+00:07:29.060 --> 00:07:35.900
+by 8 matrix, the default it
+will give you a type of float32.
+
+00:07:35.900 --> 00:07:42.210
+The size is 4 by 8 and the
+number of elements is 32.
+
+00:07:42.210 --> 00:07:47.840
+Each element size is 4
+bytes, 32 bits is 4 bytes.
+
+00:07:47.840 --> 00:07:51.080
+And the memory usage
+is simply the number
+
+00:07:51.080 --> 00:07:55.170
+of elements times the number
+of size of each element,
+
+00:07:55.170 --> 00:07:57.150
+and that will give
+you 128 bytes.
+
+00:07:57.150 --> 00:08:00.330
+OK, so this should
+be pretty easy.
+
+00:08:00.330 --> 00:08:02.360
+And just to give some
+intuition, if you
+
+00:08:02.360 --> 00:08:06.350
+get the one matrix in the
+feed forward layer of GPT-3
+
+00:08:06.350 --> 00:08:09.800
+is this number by this
+number, and that gives you
+
+00:08:09.800 --> 00:08:11.610
+2.3 gigabytes.
+
+00:08:11.610 --> 00:08:14.060
+So that's one matrix is--
+
+00:08:14.060 --> 00:08:18.470
+these matrices
+can be pretty big.
+
+00:08:18.470 --> 00:08:24.770
+So float32 is the default.
+But of course, these matrices
+
+00:08:24.770 --> 00:08:25.380
+get big.
+
+00:08:25.380 --> 00:08:29.010
+So you naturally you want
+to make them smaller,
+
+00:08:29.010 --> 00:08:30.323
+so you use less memory.
+
+00:08:30.323 --> 00:08:32.240
+And also it turns out
+if you make them smaller
+
+00:08:32.240 --> 00:08:36.656
+you also make it go faster too.
+
+00:08:36.656 --> 00:08:41.510
+So another type
+of representation
+
+00:08:41.510 --> 00:08:42.750
+is called float16.
+
+00:08:42.750 --> 00:08:47.290
+And as the name
+suggests, it's 16 bits
+
+00:08:47.290 --> 00:08:49.090
+where both the exponent
+and the fraction
+
+00:08:49.090 --> 00:08:56.710
+are shrunk down from
+8 to 5 and 23 to 10.
+
+00:08:56.710 --> 00:08:58.720
+So this is known
+as half precision
+
+00:08:58.720 --> 00:09:02.230
+and it cuts down
+half the memory.
+
+00:09:02.230 --> 00:09:08.080
+And that's all great,
+except for the dynamic range
+
+00:09:08.080 --> 00:09:10.850
+for these float16 isn't great.
+
+00:09:10.850 --> 00:09:17.620
+So for example, if you try to
+make a number like 1e minus 8
+
+00:09:17.620 --> 00:09:24.340
+in float16, it basically
+rounds down to zero and you get
+
+00:09:24.340 --> 00:09:25.690
+underflow.
+
+00:09:25.690 --> 00:09:29.650
+OK, so the float16 is not
+great for representing
+
+00:09:29.650 --> 00:09:34.030
+very small numbers or very big
+numbers, as a matter of fact.
+
+00:09:34.030 --> 00:09:39.110
+So if you use float16 for
+training, for small models
+
+00:09:39.110 --> 00:09:42.650
+it's probably going to be OK,
+but for large models when you're
+
+00:09:42.650 --> 00:09:45.440
+having lots of
+matrices and you can
+
+00:09:45.440 --> 00:09:51.200
+get instability or underflow or
+overflow and bad things happen.
+
+00:09:51.200 --> 00:09:56.730
+So one thing that has
+happened, which is nice,
+
+00:09:56.730 --> 00:10:00.870
+is there's been another
+representation of bfloat16,
+
+00:10:00.870 --> 00:10:02.930
+which stands for brain float.
+
+00:10:02.930 --> 00:10:06.200
+This was developed in
+2018 to address the issue
+
+00:10:06.200 --> 00:10:09.980
+that for deep
+learning, we actually
+
+00:10:09.980 --> 00:10:13.130
+care about dynamic
+range more than we
+
+00:10:13.130 --> 00:10:14.820
+care about this fraction.
+
+00:10:14.820 --> 00:10:18.170
+So basically bf16 allocates
+more to the exponent
+
+00:10:18.170 --> 00:10:20.180
+and less to the fraction.
+
+00:10:20.180 --> 00:10:24.570
+So it uses the same memory
+as floating point 16,
+
+00:10:24.570 --> 00:10:28.340
+but it has a dynamic
+range of float 32.
+
+00:10:28.340 --> 00:10:30.500
+So that sounds really good.
+
+00:10:30.500 --> 00:10:34.170
+And it actually-- the catch
+is that this resolution,
+
+00:10:34.170 --> 00:10:36.240
+which is determined by
+the fraction is worse.
+
+00:10:36.240 --> 00:10:39.390
+But this doesn't matter
+as much for deep learning.
+
+00:10:39.390 --> 00:10:46.000
+So now if you try to create a
+tensor with 1e minus 8 and bf16,
+
+00:10:46.000 --> 00:10:48.155
+then you get something
+that's not zero.
+
+00:10:51.240 --> 00:10:53.827
+So you can-- till I
+dive into the details,
+
+00:10:53.827 --> 00:10:55.410
+I'm not going to go
+into this, but you
+
+00:10:55.410 --> 00:10:57.750
+can stare at the
+actual full specs
+
+00:10:57.750 --> 00:11:01.530
+of all the different
+floating point operations.
+
+00:11:01.530 --> 00:11:06.270
+So bf16 is basically
+what you will typically
+
+00:11:06.270 --> 00:11:11.280
+use to do computations
+because it's good enough
+
+00:11:11.280 --> 00:11:12.910
+for feedforward computations.
+
+00:11:12.910 --> 00:11:17.770
+It turns out that for storing
+optimizer states and parameters,
+
+00:11:17.770 --> 00:11:21.840
+you still need
+float32, otherwise
+
+00:11:21.840 --> 00:11:26.040
+your training will go haywire.
+
+00:11:26.040 --> 00:11:28.390
+So if you're bald.
+
+00:11:28.390 --> 00:11:33.310
+So now we have something
+called FP8 or 8-bit.
+
+00:11:33.310 --> 00:11:40.510
+And as the name suggests, this
+was developed in 2022 by NVIDIA.
+
+00:11:40.510 --> 00:11:46.920
+So now they have essentially
+if you look at FP and bf16
+
+00:11:46.920 --> 00:11:47.830
+it's like this.
+
+00:11:47.830 --> 00:11:48.810
+And FP--
+
+00:11:48.810 --> 00:11:52.600
+Wow, you really don't have that
+many bits to store stuff right.
+
+00:11:52.600 --> 00:11:54.480
+So it's very crude.
+
+00:11:54.480 --> 00:11:57.540
+There's two variants
+depending on if you
+
+00:11:57.540 --> 00:12:02.580
+want to have more resolution
+or more dynamic range.
+
+00:12:02.580 --> 00:12:05.740
+And I'm not going to
+say too much about this,
+
+00:12:05.740 --> 00:12:08.080
+but FP8 is supported by H100.
+
+00:12:08.080 --> 00:12:12.720
+It's not really available
+on previous generation,
+
+00:12:12.720 --> 00:12:18.060
+but at a high level, training
+with float32, which is, I think
+
+00:12:18.060 --> 00:12:23.490
+is what you would do if you're
+not trying to optimize too much
+
+00:12:23.490 --> 00:12:25.360
+and it's safe.
+
+00:12:25.360 --> 00:12:27.810
+It requires more memory.
+
+00:12:27.810 --> 00:12:34.350
+You can go down to
+FP8 or bf16, but you
+
+00:12:34.350 --> 00:12:36.050
+can get some instability.
+
+00:12:36.050 --> 00:12:37.940
+Basically, I don't
+think you would probably
+
+00:12:37.940 --> 00:12:42.085
+want to use a float16 at
+this point for deep learning.
+
+00:12:44.660 --> 00:12:49.910
+And you can become more
+sophisticated by looking
+
+00:12:49.910 --> 00:12:53.820
+at particular places
+in your pipeline,
+
+00:12:53.820 --> 00:12:57.950
+either forward pass or backward
+pass or optimizers or gradient
+
+00:12:57.950 --> 00:13:00.860
+accumulation, and
+really figure out what
+
+00:13:00.860 --> 00:13:04.350
+the minimum precision you need
+at this particular places.
+
+00:13:04.350 --> 00:13:07.470
+And that's called-- gets into
+mixed precision training.
+
+00:13:07.470 --> 00:13:10.100
+So for example, some
+people like to use
+
+00:13:10.100 --> 00:13:14.000
+float32 for the
+attention to make sure
+
+00:13:14.000 --> 00:13:16.850
+that doesn't get messed up.
+
+00:13:16.850 --> 00:13:19.830
+But for simple feedforward
+passes with matmuls,
+
+00:13:19.830 --> 00:13:23.690
+bf16 is fine.
+
+00:13:23.690 --> 00:13:27.890
+OK, pause a bit for questions.
+
+00:13:27.890 --> 00:13:31.070
+So we talked about
+tensors and we looked at
+
+00:13:31.070 --> 00:13:34.410
+depending on what
+representation,
+
+00:13:34.410 --> 00:13:37.100
+how much storage they take.
+
+00:13:37.100 --> 00:13:37.700
+Yeah.
+
+00:13:37.700 --> 00:13:39.630
+Can you just clarify
+about the mixed position.
+
+00:13:39.630 --> 00:13:42.200
+When you would use
+the 32 and the b4?
+
+00:13:42.200 --> 00:13:50.090
+Yeah so the question is, when
+would you use float32 or bf16?
+
+00:13:50.090 --> 00:13:53.460
+I don't have time to get
+into the exact details,
+
+00:13:53.460 --> 00:13:56.010
+and it varies depending on
+the model size and everything.
+
+00:13:56.010 --> 00:14:00.780
+But generally for the
+parameters and optimizer states,
+
+00:14:00.780 --> 00:14:01.920
+you use float32.
+
+00:14:01.920 --> 00:14:03.470
+You can think about
+bf16 as something
+
+00:14:03.470 --> 00:14:05.430
+that's more transitory.
+
+00:14:05.430 --> 00:14:09.680
+You basically take your
+parameters, you cast it to bf16
+
+00:14:09.680 --> 00:14:11.970
+and you run ahead
+with that model.
+
+00:14:11.970 --> 00:14:14.910
+But then the thing that you're
+going to accumulate over time,
+
+00:14:14.910 --> 00:14:17.930
+you want to have
+higher precision.
+
+00:14:17.930 --> 00:14:20.870
+Yeah.
+
+00:14:20.870 --> 00:14:25.380
+OK, so now let's
+talk about compute.
+
+00:14:25.380 --> 00:14:27.980
+So that was memory.
+
+00:14:27.980 --> 00:14:34.770
+So compute obviously depends
+on what the hardware is.
+
+00:14:34.770 --> 00:14:36.930
+By default, tensors
+are stored in CPU.
+
+00:14:36.930 --> 00:14:39.650
+So for example if
+you just in PyTorch,
+
+00:14:39.650 --> 00:14:44.130
+say x equals Torch 0 is 3232,
+then it'll put it on your CPU,
+
+00:14:44.130 --> 00:14:47.630
+it'll be in the CPU memory.
+
+00:14:47.630 --> 00:14:50.665
+Now of course, that's no
+good because if you're not
+
+00:14:50.665 --> 00:14:52.040
+using your GPU,
+then you're going
+
+00:14:52.040 --> 00:14:53.910
+to be orders of
+magnitude too slow.
+
+00:14:53.910 --> 00:14:57.440
+So you need to explicitly
+say in PyTorch that you
+
+00:14:57.440 --> 00:14:59.340
+need to move it to the GPU.
+
+00:14:59.340 --> 00:15:03.920
+And this is it's
+actually just to make
+
+00:15:03.920 --> 00:15:07.410
+it very clear in pictures,
+there's a CPU, it has RAM,
+
+00:15:07.410 --> 00:15:12.120
+and that has to be
+moved over to the GPU.
+
+00:15:12.120 --> 00:15:18.830
+There's a data transfer,
+which takes some work,
+
+00:15:18.830 --> 00:15:20.420
+takes some time.
+
+00:15:20.420 --> 00:15:24.150
+So whenever you have
+a tensor in PyTorch,
+
+00:15:24.150 --> 00:15:25.950
+you should always
+keep in your mind.
+
+00:15:25.950 --> 00:15:27.420
+Where is this residing.
+
+00:15:27.420 --> 00:15:29.000
+Because just looking
+at the variable
+
+00:15:29.000 --> 00:15:30.167
+or just looking at the code.
+
+00:15:30.167 --> 00:15:31.190
+You can't always tell.
+
+00:15:31.190 --> 00:15:35.350
+And if you want to be careful
+about computation and data
+
+00:15:35.350 --> 00:15:39.310
+movement, you have to
+really know where it is.
+
+00:15:39.310 --> 00:15:41.950
+You can probably do
+things like assert
+
+00:15:41.950 --> 00:15:46.420
+where it is in various places
+in the code just to document
+
+00:15:46.420 --> 00:15:48.370
+or be sure.
+
+00:15:48.370 --> 00:15:55.760
+OK, so let's look at
+what hardware we have.
+
+00:15:55.760 --> 00:15:59.530
+So we have, in this
+case, we have one GPU.
+
+00:15:59.530 --> 00:16:02.230
+This was run on
+the H100 clusters
+
+00:16:02.230 --> 00:16:04.190
+that you guys have access to.
+
+00:16:04.190 --> 00:16:11.320
+And this GPU is
+H100 80 gigabytes
+
+00:16:11.320 --> 00:16:14.830
+of high bandwidth memory.
+
+00:16:14.830 --> 00:16:18.790
+And there's it gives you
+the cache size and so on.
+
+00:16:18.790 --> 00:16:27.640
+So, if you have remember
+the x is on CPU,
+
+00:16:27.640 --> 00:16:31.360
+you can move it just
+by specifying 2, which
+
+00:16:31.360 --> 00:16:34.300
+is a general PyTorch function.
+
+00:16:34.300 --> 00:16:36.470
+You can also create a
+tensor directly on the GPU,
+
+00:16:36.470 --> 00:16:39.370
+so you don't have
+to move it at all.
+
+00:16:39.370 --> 00:16:44.200
+And if everything goes well, I'm
+looking at the memory allocated
+
+00:16:44.200 --> 00:16:45.940
+before and after.
+
+00:16:45.940 --> 00:16:55.510
+The difference should be exactly
+2 by 32 by 32 matrices of 4
+
+00:16:55.510 --> 00:16:56.830
+by floats.
+
+00:16:56.830 --> 00:17:01.360
+So it's 8192.
+
+00:17:01.360 --> 00:17:05.200
+So this is just a sanity
+check that the code
+
+00:17:05.200 --> 00:17:09.910
+is doing what is advertised.
+
+00:17:09.910 --> 00:17:14.319
+So now you have your
+answers on the GPU.
+
+00:17:14.319 --> 00:17:16.250
+What do you do?
+
+00:17:16.250 --> 00:17:18.940
+So there's many
+operations that you'll
+
+00:17:18.940 --> 00:17:21.099
+be needing for assignment
+one, and in general
+
+00:17:21.099 --> 00:17:23.920
+to do any deep
+learning application.
+
+00:17:23.920 --> 00:17:27.569
+And most tensors you just
+create by performing operations
+
+00:17:27.569 --> 00:17:29.340
+on other tensors,
+and each operations
+
+00:17:29.340 --> 00:17:32.050
+has some memory and
+compute footprint.
+
+00:17:32.050 --> 00:17:36.030
+So let's make sure
+we understand that.
+
+00:17:36.030 --> 00:17:41.520
+So first of all, what is
+actually a tensor in PyTorch.
+
+00:17:41.520 --> 00:17:43.840
+Tensors are a
+mathematical object.
+
+00:17:43.840 --> 00:17:47.280
+In PyTorch, they're
+actually pointers
+
+00:17:47.280 --> 00:17:50.160
+into some allocated memory.
+
+00:17:50.160 --> 00:17:54.925
+So if you have,
+let's say, a matrix 4
+
+00:17:54.925 --> 00:18:01.380
+by 4 matrix, what it actually
+looks like is a long array.
+
+00:18:01.380 --> 00:18:04.410
+And what the tensor
+has is metadata
+
+00:18:04.410 --> 00:18:08.050
+that specifies how to get
+to address into that array.
+
+00:18:08.050 --> 00:18:13.230
+And the metadata is going to be,
+two numbers a stride for each
+
+00:18:13.230 --> 00:18:18.270
+or actually one number per
+dimension of the tensor.
+
+00:18:18.270 --> 00:18:23.160
+In this case, because
+there's two dimensions,
+
+00:18:23.160 --> 00:18:25.710
+stride zero and stride one.
+
+00:18:25.710 --> 00:18:31.990
+Stride zero specifies if
+you were in dimension zero,
+
+00:18:31.990 --> 00:18:36.760
+to get to the next row
+to increment that index,
+
+00:18:36.760 --> 00:18:38.290
+how many do you have to skip?
+
+00:18:38.290 --> 00:18:41.560
+And so going down the
+rows you skip four.
+
+00:18:41.560 --> 00:18:44.680
+So stride zero is four.
+
+00:18:44.680 --> 00:18:49.480
+And to go to the next
+column, you skip one.
+
+00:18:49.480 --> 00:18:53.010
+So stride one is one.
+
+00:18:53.010 --> 00:18:58.620
+So with that, you find an
+element let's say 1, 2.
+
+00:18:58.620 --> 00:19:02.640
+It's simply just multiply
+the indexes by the stride
+
+00:19:02.640 --> 00:19:07.500
+and you get to your
+index which is six here.
+
+00:19:07.500 --> 00:19:11.050
+So that would be here or here.
+
+00:19:11.050 --> 00:19:17.650
+So that's basically what's going
+underneath the hood for tensors.
+
+00:19:17.650 --> 00:19:24.800
+So this is relevant because you
+can have multiple tensors that
+
+00:19:24.800 --> 00:19:25.910
+use the same storage.
+
+00:19:25.910 --> 00:19:27.410
+And this is useful
+because you don't
+
+00:19:27.410 --> 00:19:30.180
+want to copy the tensor
+all over the place.
+
+00:19:30.180 --> 00:19:33.920
+So imagine you have
+a 2 by 3 matrix here.
+
+00:19:33.920 --> 00:19:38.113
+Many operations don't
+actually create a new tensor,
+
+00:19:38.113 --> 00:19:39.530
+they just create
+a different view.
+
+00:19:39.530 --> 00:19:41.660
+And it doesn't
+make a copy, so you
+
+00:19:41.660 --> 00:19:47.930
+have to make sure that, if
+you start mutating one tensor
+
+00:19:47.930 --> 00:19:50.900
+it's going to cause the
+other one to mutate.
+
+00:19:50.900 --> 00:19:58.590
+So for example, if
+you just get row 0--
+
+00:19:58.590 --> 00:20:02.180
+So remember y is this tensor--
+
+00:20:02.180 --> 00:20:09.960
+sorry x is 123456, and y is x0
+which is just the first row OK,
+
+00:20:09.960 --> 00:20:14.030
+and you can double check there's
+this function in row that
+
+00:20:14.030 --> 00:20:16.670
+says if you look at
+the underlying storage
+
+00:20:16.670 --> 00:20:19.770
+whether these two tensors have
+the same storage or not, OK.
+
+00:20:19.770 --> 00:20:23.340
+So this definitely
+doesn't copy the tensor,
+
+00:20:23.340 --> 00:20:26.060
+it just creates a view.
+
+00:20:26.060 --> 00:20:29.150
+You can get column 1.
+
+00:20:29.150 --> 00:20:33.140
+This also doesn't
+copy the tensor.
+
+00:20:33.140 --> 00:20:35.420
+Oops I don't need to do that.
+
+00:20:35.420 --> 00:20:38.690
+You can call a view function,
+which can take any tensor
+
+00:20:38.690 --> 00:20:47.720
+and look at it in terms of
+different dimensions, 2 by 3.
+
+00:20:47.720 --> 00:20:50.630
+Actually this should be maybe
+the other way around as a 3
+
+00:20:50.630 --> 00:20:53.300
+by 2 tensor.
+
+00:20:53.300 --> 00:20:58.430
+So that also doesn't
+change, do any copying.
+
+00:20:58.430 --> 00:21:03.290
+You can transpose,
+that also doesn't copy.
+
+00:21:03.290 --> 00:21:09.260
+And then, like I said, if you
+start mutating x then y actually
+
+00:21:09.260 --> 00:21:12.470
+gets mutated as well
+because x and y are just
+
+00:21:12.470 --> 00:21:15.560
+pointers into the same
+underlying storage.
+
+00:21:15.560 --> 00:21:20.900
+So one thing that you
+have to be careful of
+
+00:21:20.900 --> 00:21:24.240
+is that some views
+are contiguous,
+
+00:21:24.240 --> 00:21:26.220
+which means that if you
+run through the tensor,
+
+00:21:26.220 --> 00:21:32.270
+it's like just going through
+this array in your storage,
+
+00:21:32.270 --> 00:21:34.020
+but some are not.
+
+00:21:34.020 --> 00:21:38.150
+So in particular, if
+you transpose it, now
+
+00:21:38.150 --> 00:21:40.080
+what does it mean when
+you're transposing it?
+
+00:21:40.080 --> 00:21:42.420
+You're going down now.
+
+00:21:42.420 --> 00:21:45.330
+So if you imagine going
+through the tensor,
+
+00:21:45.330 --> 00:21:46.890
+you're skipping around.
+
+00:21:46.890 --> 00:21:50.150
+And if you have a
+non-contiguous tensor,
+
+00:21:50.150 --> 00:21:54.060
+then if you try to further
+view it in a different way,
+
+00:21:54.060 --> 00:21:57.050
+then this is not going to work.
+
+00:21:57.050 --> 00:22:01.700
+So in some cases, if you
+have a non-contiguous tensor
+
+00:22:01.700 --> 00:22:03.330
+you can make it
+contiguous first.
+
+00:22:03.330 --> 00:22:06.800
+And then you can apply
+whatever viewing operation
+
+00:22:06.800 --> 00:22:08.630
+you want to it.
+
+00:22:08.630 --> 00:22:12.860
+And then in this
+case x and y do not
+
+00:22:12.860 --> 00:22:16.900
+have the same storage because
+contiguous in this case
+
+00:22:16.900 --> 00:22:19.900
+makes a copy.
+
+00:22:19.900 --> 00:22:26.950
+So this is just ways of
+slicing and dicing a tensor.
+
+00:22:26.950 --> 00:22:30.110
+Views are free so
+feel free to use them.
+
+00:22:30.110 --> 00:22:33.730
+Define different variables
+to make it easier
+
+00:22:33.730 --> 00:22:36.850
+to read your code
+because they're not
+
+00:22:36.850 --> 00:22:39.280
+allocating any memory.
+
+00:22:39.280 --> 00:22:42.700
+But remember that
+contiguous or reshape
+
+00:22:42.700 --> 00:22:46.120
+which is basically
+contiguous.view
+
+00:22:46.120 --> 00:22:52.880
+can create a copy, and so just
+be careful what you're doing OK.
+
+00:22:52.880 --> 00:22:54.825
+questions before moving on?
+
+00:22:59.410 --> 00:23:00.320
+All right.
+
+00:23:00.320 --> 00:23:04.690
+So hopefully a lot of this
+will be review for those of you
+
+00:23:04.690 --> 00:23:07.730
+who have done a lot
+of PyTorch before,
+
+00:23:07.730 --> 00:23:10.930
+but it's helpful to just do
+it systematically and make
+
+00:23:10.930 --> 00:23:12.230
+sure we're on the same page.
+
+00:23:12.230 --> 00:23:18.280
+So here are some operations
+that do create new tensors
+
+00:23:18.280 --> 00:23:21.130
+and in particular
+element wise operations
+
+00:23:21.130 --> 00:23:22.940
+all create new
+tensors, obviously,
+
+00:23:22.940 --> 00:23:26.770
+because you need somewhere
+else to store the new value.
+
+00:23:26.770 --> 00:23:32.380
+There's a triangular u is
+also an element operation that
+
+00:23:32.380 --> 00:23:35.830
+comes in handy when you want
+to create a causal attention
+
+00:23:35.830 --> 00:23:39.970
+mask, which you'll need
+for your assignment,
+
+00:23:39.970 --> 00:23:43.573
+but nothing is that
+interesting here.
+
+00:23:46.540 --> 00:23:49.100
+So let's talk about matmuls.
+
+00:23:49.100 --> 00:23:51.220
+So the bread and
+butter of deep learning
+
+00:23:51.220 --> 00:23:53.060
+is matrix multiplications.
+
+00:23:53.060 --> 00:23:55.820
+And I'm sure all of you have
+done a matrix multiplication,
+
+00:23:55.820 --> 00:23:57.430
+but just in case
+this is what it looks
+
+00:23:57.430 --> 00:24:01.700
+like, you take 16 by 32
+times a 32 by 2 matrix,
+
+00:24:01.700 --> 00:24:04.630
+you get a 16 by 2 matrix.
+
+00:24:04.630 --> 00:24:13.260
+But in general when we do our
+machine learning application,
+
+00:24:13.260 --> 00:24:16.930
+all operations are you
+want to do in a batch.
+
+00:24:16.930 --> 00:24:18.820
+And in the case of
+language models,
+
+00:24:18.820 --> 00:24:21.720
+this usually means for
+every example in a batch
+
+00:24:21.720 --> 00:24:25.200
+and for every sequence in a
+batch, you want to do something.
+
+00:24:25.200 --> 00:24:29.395
+So generally what you're going
+to have instead of just a matrix
+
+00:24:29.395 --> 00:24:31.770
+is you're going to have a
+tensor where the dimensions are
+
+00:24:31.770 --> 00:24:33.580
+typically batch sequence.
+
+00:24:33.580 --> 00:24:36.910
+And then whatever thing you're
+trying to do, in this case,
+
+00:24:36.910 --> 00:24:42.000
+it's a matrix for every
+token in your data set.
+
+00:24:42.000 --> 00:24:47.710
+And so PyTorch is nice enough
+to make this work well for you.
+
+00:24:47.710 --> 00:24:52.870
+So when you take this
+four dimensional tensor,
+
+00:24:52.870 --> 00:24:57.000
+and this matrix, what
+actually ends up happening
+
+00:24:57.000 --> 00:25:01.030
+is that for every batch,
+every example and every token,
+
+00:25:01.030 --> 00:25:04.920
+you're multiplying
+these two matrices.
+
+00:25:04.920 --> 00:25:09.450
+And then the result is that
+you get your resulting matrix
+
+00:25:09.450 --> 00:25:13.080
+for each of the
+first two elements.
+
+00:25:13.080 --> 00:25:15.060
+There's nothing fancy
+going on, but this
+
+00:25:15.060 --> 00:25:20.315
+is just a pattern that I think
+is helpful to think about.
+
+00:25:23.820 --> 00:25:28.290
+So I'm going to take a
+little bit of a digression
+
+00:25:28.290 --> 00:25:31.470
+and talk about inops.
+
+00:25:31.470 --> 00:25:35.740
+And so the motivation for
+inops is the following.
+
+00:25:35.740 --> 00:25:41.290
+So normally in PyTorch
+you define some tensors.
+
+00:25:41.290 --> 00:25:43.300
+And then you see
+stuff like this,
+
+00:25:43.300 --> 00:25:47.680
+where you take x and multiply
+by y transpose minus 2 minus 1.
+
+00:25:47.680 --> 00:25:52.830
+And you look at this and you
+say, OK, what is minus 2?
+
+00:25:52.830 --> 00:25:55.540
+Well, I think that's
+this sequence.
+
+00:25:55.540 --> 00:25:57.570
+And then minus 1 is this
+hidden because you're
+
+00:25:57.570 --> 00:25:59.040
+indexing backwards.
+
+00:25:59.040 --> 00:26:00.810
+And it's really
+easy to mess this up
+
+00:26:00.810 --> 00:26:06.240
+because if you look at your code
+and you see minus 1 minus 2,
+
+00:26:06.240 --> 00:26:08.970
+if you're good, you write
+a bunch of comments.
+
+00:26:08.970 --> 00:26:12.080
+But then the comments can
+get out of date with the code
+
+00:26:12.080 --> 00:26:16.110
+and then you have a
+bad time debugging.
+
+00:26:16.110 --> 00:26:20.460
+So the solution is
+to use Einops here.
+
+00:26:20.460 --> 00:26:24.590
+So this is inspired by
+Einstein summation notation.
+
+00:26:24.590 --> 00:26:26.330
+And the idea is that
+we're just going
+
+00:26:26.330 --> 00:26:32.990
+to name all the dimensions
+instead of relying on indices
+
+00:26:32.990 --> 00:26:34.190
+essentially.
+
+00:26:34.190 --> 00:26:36.720
+So there's a library
+called Jax typing,
+
+00:26:36.720 --> 00:26:44.120
+which is helpful
+as a way to specify
+
+00:26:44.120 --> 00:26:46.530
+the dimensions in the types.
+
+00:26:46.530 --> 00:26:51.000
+So normally in PyTorch you would
+just define, write your code,
+
+00:26:51.000 --> 00:26:52.940
+and then you would
+comment Oh, here's
+
+00:26:52.940 --> 00:26:54.180
+what the dimensions would be.
+
+00:26:54.180 --> 00:26:56.810
+So if you use Jax
+typing then you
+
+00:26:56.810 --> 00:26:59.000
+have this notation
+where as a string
+
+00:26:59.000 --> 00:27:01.440
+you just write down
+what the dimensions are.
+
+00:27:01.440 --> 00:27:06.770
+So this is a slightly more
+natural way of documenting.
+
+00:27:06.770 --> 00:27:08.960
+Now notice that
+there's no enforcement
+
+00:27:08.960 --> 00:27:12.200
+here because PyTorch
+types are of a little bit
+
+00:27:12.200 --> 00:27:14.940
+of a liam in PyTorch.
+
+00:27:14.940 --> 00:27:15.680
+So--
+
+00:27:15.680 --> 00:27:16.700
+It can be enforced?
+
+00:27:16.700 --> 00:27:19.050
+You can use a checker?
+
+00:27:19.050 --> 00:27:19.550
+Yeah.
+
+00:27:19.550 --> 00:27:27.480
+You can write a check, but
+not by default, yeah OK,
+
+00:27:27.480 --> 00:27:30.840
+so let's look at the einsum.
+
+00:27:30.840 --> 00:27:34.760
+So einsum is basically matrix
+multiplication on steroids
+
+00:27:34.760 --> 00:27:37.010
+with good bookkeeping.
+
+00:27:37.010 --> 00:27:39.270
+So here's our example.
+
+00:27:39.270 --> 00:27:42.980
+Here we have x which is-- let's
+just think about this as you
+
+00:27:42.980 --> 00:27:44.040
+have a batch dimension.
+
+00:27:44.040 --> 00:27:47.610
+You have a sequence dimension,
+and you have four hit ends,
+
+00:27:47.610 --> 00:27:50.630
+and y is the same size.
+
+00:27:50.630 --> 00:27:54.380
+You originally had
+to do this thing.
+
+00:27:54.380 --> 00:27:58.760
+And now what you do
+instead is you basically
+
+00:27:58.760 --> 00:28:04.490
+write down the dimensions, names
+of the dimensions of the two
+
+00:28:04.490 --> 00:28:05.160
+tensors.
+
+00:28:05.160 --> 00:28:08.520
+So batch sequence 1 hidden,
+batch sequence 2 hidden,
+
+00:28:08.520 --> 00:28:11.810
+and you just write
+what your dimension
+
+00:28:11.810 --> 00:28:13.760
+should appear in the output.
+
+00:28:13.760 --> 00:28:16.790
+So I write batch here
+because I just want
+
+00:28:16.790 --> 00:28:20.940
+to basically carry that over.
+
+00:28:20.940 --> 00:28:24.710
+And then I write seq1
+and seq2, and notice
+
+00:28:24.710 --> 00:28:26.550
+that I don't write hidden.
+
+00:28:26.550 --> 00:28:28.790
+And any dimension that is
+not named in the output
+
+00:28:28.790 --> 00:28:30.000
+is just summed over.
+
+00:28:30.000 --> 00:28:36.110
+And any dimension that is
+named is just iterated over.
+
+00:28:36.110 --> 00:28:43.290
+So once you get used to this
+is actually very, very helpful.
+
+00:28:43.290 --> 00:28:45.690
+I mean, if you're seeing
+this for the first time,
+
+00:28:45.690 --> 00:28:48.600
+it might seem a bit strange
+and long, but trust me,
+
+00:28:48.600 --> 00:28:51.800
+once you get used to it, it'll
+be better than doing minus 2
+
+00:28:51.800 --> 00:28:53.900
+minus 1.
+
+00:28:53.900 --> 00:28:58.800
+If you're a little bit,
+slicker, you can use dot dot,
+
+00:28:58.800 --> 00:29:01.770
+dot to represent broadcasting
+over any number of dimensions.
+
+00:29:01.770 --> 00:29:06.080
+So in this case, instead
+of writing batch,
+
+00:29:06.080 --> 00:29:09.220
+I can just write dot dot dot,
+and this would handle the case
+
+00:29:09.220 --> 00:29:11.500
+where instead of
+maybe batch I have
+
+00:29:11.500 --> 00:29:17.560
+batch 1 batch 2 or some other
+arbitrary long sequence.
+
+00:29:17.560 --> 00:29:18.680
+Yeah, question?
+
+00:29:18.680 --> 00:29:20.900
+Does Torch compile this?
+
+00:29:20.900 --> 00:29:25.930
+Is it guaranteed to compile
+to a condition, I guess?
+
+00:29:25.930 --> 00:29:28.540
+So the question is it
+guaranteed to compile
+
+00:29:28.540 --> 00:29:32.125
+to something efficient?
+
+00:29:32.125 --> 00:29:35.140
+I think the short answer is yes.
+
+00:29:35.140 --> 00:29:37.720
+I don't know if you any nuances.
+
+00:29:37.720 --> 00:29:39.490
+Oh, to figure out the
+best way to reduce,
+
+00:29:39.490 --> 00:29:42.850
+the best order of dimensions
+to reduce, and then use that.
+
+00:29:42.850 --> 00:29:44.480
+If you're using
+within Torch compile,
+
+00:29:44.480 --> 00:29:46.060
+it'll only do that
+one time and then
+
+00:29:46.060 --> 00:29:48.190
+reuse the same implementation
+over and over again.
+
+00:29:48.190 --> 00:29:51.010
+It's usually better than
+anything designed by hand?
+
+00:29:51.010 --> 00:29:54.535
+Yeah, OK.
+
+00:29:58.150 --> 00:30:00.110
+So let's look at reduce.
+
+00:30:00.110 --> 00:30:01.870
+So reduce operates
+on one tensor,
+
+00:30:01.870 --> 00:30:06.220
+and it basically aggregates
+some dimension or dimensions
+
+00:30:06.220 --> 00:30:06.980
+of the tensor.
+
+00:30:06.980 --> 00:30:09.490
+So you have this
+tensor, before you
+
+00:30:09.490 --> 00:30:13.760
+would write mean to sum
+over the final dimension.
+
+00:30:13.760 --> 00:30:18.220
+And now you basically
+say actually, OK, so this
+
+00:30:18.220 --> 00:30:19.490
+replaces with sum.
+
+00:30:19.490 --> 00:30:25.570
+So reduce and again you
+say hidden and hidden
+
+00:30:25.570 --> 00:30:30.100
+has disappeared, so which
+means that you are aggregating
+
+00:30:30.100 --> 00:30:34.900
+over that dimension OK, so
+you can check that this indeed
+
+00:30:34.900 --> 00:30:36.165
+works over here.
+
+00:30:39.640 --> 00:30:44.470
+So maybe one final
+example of this
+
+00:30:44.470 --> 00:30:50.350
+is sometimes tensor
+1 dimensio, actually
+
+00:30:50.350 --> 00:30:52.420
+represents multiple
+dimensions, and you
+
+00:30:52.420 --> 00:30:55.210
+want to unpack that and
+operate over one of them
+
+00:30:55.210 --> 00:30:56.420
+and pack it back.
+
+00:30:56.420 --> 00:31:01.050
+So in this case, let's say
+you have batch sequence
+
+00:31:01.050 --> 00:31:05.100
+and then this eight
+dimensional vector is actually
+
+00:31:05.100 --> 00:31:07.770
+a flattened representation
+of number of heads
+
+00:31:07.770 --> 00:31:10.560
+times some hidden dimension
+
+00:31:10.560 --> 00:31:13.320
+OK, so and then you
+have a weight vector
+
+00:31:13.320 --> 00:31:17.470
+that needs to operate on
+that hidden dimension.
+
+00:31:17.470 --> 00:31:22.470
+So you can do this very
+elegantly using einops
+
+00:31:22.470 --> 00:31:26.230
+by calling rearrange.
+
+00:31:26.230 --> 00:31:29.110
+And this basically,
+you can think about it,
+
+00:31:29.110 --> 00:31:34.050
+we saw view before
+it's a fancier
+
+00:31:34.050 --> 00:31:36.180
+version, which basically
+looks at the same data
+
+00:31:36.180 --> 00:31:39.780
+but differently.
+
+00:31:39.780 --> 00:31:43.860
+So here it basically says
+this dimension is actually
+
+00:31:43.860 --> 00:31:46.170
+heads in hidden1, I'm
+going to explode that
+
+00:31:46.170 --> 00:31:49.410
+into two dimensions.
+
+00:31:49.410 --> 00:31:54.420
+And you have to specify
+the number of heads
+
+00:31:54.420 --> 00:31:59.500
+here because there's multiple
+ways to split a number into two.
+
+00:31:59.500 --> 00:32:02.860
+Let's see, this might
+be a little bit long.
+
+00:32:02.860 --> 00:32:06.700
+OK, maybe it's not worth
+looking at right now.
+
+00:32:06.700 --> 00:32:13.180
+And given that x you can
+perform your transformation
+
+00:32:13.180 --> 00:32:15.190
+using einsum.
+
+00:32:15.190 --> 00:32:19.090
+So this is something
+hidden1 which
+
+00:32:19.090 --> 00:32:20.900
+corresponds to x
+and then hidden1,
+
+00:32:20.900 --> 00:32:23.710
+hidden2 which corresponds
+to w, and that
+
+00:32:23.710 --> 00:32:27.580
+gives you something hidden2.
+
+00:32:27.580 --> 00:32:32.780
+OK, and then you
+can rearrange back.
+
+00:32:32.780 --> 00:32:36.080
+So this is just the
+inverse of breaking up.
+
+00:32:36.080 --> 00:32:39.760
+So you have your two dimensions
+and you group it into one.
+
+00:32:39.760 --> 00:32:41.800
+So that's just a
+flattening operation
+
+00:32:41.800 --> 00:32:47.280
+that's with everything all the
+other dimensions left alone.
+
+00:32:50.620 --> 00:32:55.670
+So there is a tutorial
+for this that I
+
+00:32:55.670 --> 00:32:59.970
+would recommend you go through
+and it gives you a bit more.
+
+00:32:59.970 --> 00:33:02.540
+You don't have to use this
+because you're building it
+
+00:33:02.540 --> 00:33:04.800
+from scratch, so you can
+do anything you want,
+
+00:33:04.800 --> 00:33:07.760
+but in the assignment 1,
+we do give you guidance
+
+00:33:07.760 --> 00:33:10.540
+and it's something
+probably to invest in.
+
+00:33:15.916 --> 00:33:24.860
+OK, so now let's talk
+about computation
+
+00:33:24.860 --> 00:33:27.390
+no cost, of tensor operations.
+
+00:33:27.390 --> 00:33:31.520
+So we introduce a
+bunch of operations,
+
+00:33:31.520 --> 00:33:33.720
+and how much do they cost?
+
+00:33:33.720 --> 00:33:40.670
+So a floating point operation
+is any operation floating point
+
+00:33:40.670 --> 00:33:43.170
+like addition or multiplication.
+
+00:33:43.170 --> 00:33:47.510
+These are them, and
+these are the main ones
+
+00:33:47.510 --> 00:33:52.640
+that are going to I think
+matter in terms of FLOP count.
+
+00:33:52.640 --> 00:33:57.660
+One thing that is a pet peeve of
+mine is that when you say FLOPs,
+
+00:33:57.660 --> 00:33:59.490
+it's actually unclear
+what you mean.
+
+00:33:59.490 --> 00:34:02.640
+So you could mean FLOPs
+with a lowercase s,
+
+00:34:02.640 --> 00:34:06.210
+which stands for number
+of floating operations.
+
+00:34:06.210 --> 00:34:09.420
+This measures amount of
+computation that you've done.
+
+00:34:09.420 --> 00:34:14.030
+Or you could mean FLOPS also
+written with an uppercase S
+
+00:34:14.030 --> 00:34:16.080
+which means floating
+points per second,
+
+00:34:16.080 --> 00:34:19.260
+which is used to measure
+the speed of hardware.
+
+00:34:19.260 --> 00:34:24.830
+So we're not going to in this
+class use uppercase S because I
+
+00:34:24.830 --> 00:34:29.420
+find that very confusing, and
+just write /s to denote that
+
+00:34:29.420 --> 00:34:33.812
+this is floating
+point per second, OK?
+
+00:34:33.812 --> 00:34:37.760
+OK, so just to give you
+some intuition about FLOPs,
+
+00:34:37.760 --> 00:34:47.100
+GPT 3 took about 323 FLOPs, GPT
+4 was 2025 FLOPs speculation.
+
+00:34:47.100 --> 00:34:50.600
+And there was a US executive
+order that any foundation model
+
+00:34:50.600 --> 00:34:54.500
+with over 126 FLOPs had to
+be reported to government,
+
+00:34:54.500 --> 00:35:02.900
+which now has been revoked, but
+the EU still has something that
+
+00:35:02.900 --> 00:35:09.320
+hasn't-- the EU AI act, which is
+1e25 which hasn't been revoked.
+
+00:35:09.320 --> 00:35:15.650
+So some intuitions, A100
+has a peak performance
+
+00:35:15.650 --> 00:35:20.630
+of 312 teraFLOP per second.
+
+00:35:20.630 --> 00:35:26.900
+And H100 has a peak
+performance of 1979 teraFLOP
+
+00:35:26.900 --> 00:35:32.420
+per second with sparsity and
+approximately 50% without.
+
+00:35:32.420 --> 00:35:38.510
+And if you look the NVIDIA has
+these specification sheets.
+
+00:35:38.510 --> 00:35:42.320
+So you can see that the
+FLOPs actually depends
+
+00:35:42.320 --> 00:35:44.430
+on what you're trying to do.
+
+00:35:44.430 --> 00:35:48.880
+So if you're using
+BF or FP32, it's
+
+00:35:48.880 --> 00:35:51.280
+actually really, really bad.
+
+00:35:51.280 --> 00:35:55.870
+If you run FP32 on H100,
+you're not getting--
+
+00:35:55.870 --> 00:36:02.830
+it's orders of magnitude worse
+than if you're doing FP16,
+
+00:36:02.830 --> 00:36:05.780
+and if you're willing
+to go down to FP8,
+
+00:36:05.780 --> 00:36:07.580
+then it can be even faster.
+
+00:36:07.580 --> 00:36:10.762
+And for my first read
+that I didn't realize,
+
+00:36:10.762 --> 00:36:13.220
+but there's an asterisk here,
+and this means with sparsity.
+
+00:36:13.220 --> 00:36:18.280
+So usually in a lot of the
+matrices we have in this class
+
+00:36:18.280 --> 00:36:20.060
+are dense, so you don't
+actually get this,
+
+00:36:20.060 --> 00:36:21.790
+you get something like--
+
+00:36:21.790 --> 00:36:23.780
+It's exactly half that number.
+
+00:36:23.780 --> 00:36:25.275
+Exactly half, OK.
+
+00:36:29.740 --> 00:36:36.590
+So now you can do a back
+of envelope calculations.
+
+00:36:36.590 --> 00:36:43.870
+Eight H100s for two weeks is
+just 8 times the number of FLOPs
+
+00:36:43.870 --> 00:36:47.950
+per second times the number
+of seconds in a week.
+
+00:36:47.950 --> 00:36:50.540
+Actually, this
+might be one week.
+
+00:36:50.540 --> 00:36:57.400
+So that's one week and
+that's 4.7 times e to the 21
+
+00:36:57.400 --> 00:37:00.260
+which is some number.
+
+00:37:00.260 --> 00:37:05.110
+And you can contextualize the
+FLOP counts with the other model
+
+00:37:05.110 --> 00:37:07.840
+counts, yeah.
+
+00:37:07.840 --> 00:37:09.040
+Absolutely.
+
+00:37:09.040 --> 00:37:11.420
+So that means if-- so
+what is sparsity mean?
+
+00:37:11.420 --> 00:37:14.050
+That means if your
+matrices are sparse.
+
+00:37:14.050 --> 00:37:16.130
+Is it specific for
+structured sparsity?
+
+00:37:16.130 --> 00:37:19.480
+It's like two out of four
+elements in each group of four
+
+00:37:19.480 --> 00:37:21.370
+elements is 0.
+
+00:37:21.370 --> 00:37:26.200
+That's the only case where
+you get that, no one uses it.
+
+00:37:26.200 --> 00:37:29.360
+Yeah, a marketing
+department uses it.
+
+00:37:32.881 --> 00:37:37.502
+OK, so let's go through
+a simple example.
+
+00:37:37.502 --> 00:37:39.710
+So remember we're not going
+to touch the transformer,
+
+00:37:39.710 --> 00:37:42.640
+but I think even a linear model
+gives us a lot of the building
+
+00:37:42.640 --> 00:37:44.030
+blocks, and intuitions.
+
+00:37:44.030 --> 00:37:46.990
+So suppose we have end points.
+
+00:37:46.990 --> 00:37:50.220
+Each point is D dimensional,
+and the linear model
+
+00:37:50.220 --> 00:37:53.700
+is just going to map each
+D dimensional vector to a K
+
+00:37:53.700 --> 00:37:55.560
+dimensional vector.
+
+00:37:55.560 --> 00:38:00.360
+So let's set some
+number of points, is B
+
+00:38:00.360 --> 00:38:05.040
+dimension is D K is
+the number of outputs.
+
+00:38:05.040 --> 00:38:08.580
+And let's create
+our data matrix x.
+
+00:38:08.580 --> 00:38:14.460
+Our weight matrix w,
+and the linear model
+
+00:38:14.460 --> 00:38:16.030
+is just a map model.
+
+00:38:16.030 --> 00:38:20.290
+So nothing too
+interesting going on,
+
+00:38:20.290 --> 00:38:28.350
+and the question is how
+many FLOPs was that?
+
+00:38:28.350 --> 00:38:33.820
+And the way you look
+at this is you say,
+
+00:38:33.820 --> 00:38:38.310
+well when you do the
+matrix multiplication,
+
+00:38:38.310 --> 00:38:42.150
+basically for every
+i, j, k triple,
+
+00:38:42.150 --> 00:38:46.110
+I have to multiply
+two numbers together,
+
+00:38:46.110 --> 00:38:52.350
+And I also have to add
+that number to the total.
+
+00:38:52.350 --> 00:38:59.160
+OK, so the answer is 2
+times basically the product
+
+00:38:59.160 --> 00:39:00.820
+of all the dimensions involved.
+
+00:39:00.820 --> 00:39:03.480
+So the left dimension,
+the middle dimension
+
+00:39:03.480 --> 00:39:07.250
+and the right dimension.
+
+00:39:07.250 --> 00:39:10.450
+So this is something that
+you should just remember.
+
+00:39:10.450 --> 00:39:12.250
+If you're doing a
+matrix multiplication,
+
+00:39:12.250 --> 00:39:15.930
+the number of FLOPs
+is 2 times the product
+
+00:39:15.930 --> 00:39:17.066
+of the three dimensions.
+
+00:39:21.080 --> 00:39:23.580
+OK, so the flops
+of other operations
+
+00:39:23.580 --> 00:39:31.110
+are usually linear in the
+size of the matrix or tensor.
+
+00:39:31.110 --> 00:39:32.880
+And in general,
+no other operation
+
+00:39:32.880 --> 00:39:34.350
+you'll encounter
+in deep learning
+
+00:39:34.350 --> 00:39:36.870
+is expensive as
+matrix multiplication
+
+00:39:36.870 --> 00:39:39.100
+for large enough matrices.
+
+00:39:39.100 --> 00:39:42.090
+So this is why I think
+a lot of the napkin math
+
+00:39:42.090 --> 00:39:44.490
+is very simple
+because we're only
+
+00:39:44.490 --> 00:39:48.090
+looking at the matrix
+multiplications that
+
+00:39:48.090 --> 00:39:51.390
+are performed by the model.
+
+00:39:51.390 --> 00:39:53.070
+Now of course, there
+are regimes where
+
+00:39:53.070 --> 00:39:55.810
+if your matrices
+are small enough,
+
+00:39:55.810 --> 00:39:58.000
+then the cost of other
+things starts to dominate.
+
+00:39:58.000 --> 00:40:00.390
+But generally, that's
+not a good regime
+
+00:40:00.390 --> 00:40:02.670
+you want to be in because
+the hardware is designed
+
+00:40:02.670 --> 00:40:08.320
+for big matrix multiplication,
+so it's a little bit circular,
+
+00:40:08.320 --> 00:40:13.170
+but we end up in this regime
+where we only consider models
+
+00:40:13.170 --> 00:40:19.410
+where the map models
+are the dominant cost.
+
+00:40:19.410 --> 00:40:24.930
+Any questions about this
+number, 2 times the product
+
+00:40:24.930 --> 00:40:26.110
+of the three dimensions.
+
+00:40:26.110 --> 00:40:28.050
+This is just a useful thing.
+
+00:40:28.050 --> 00:40:30.330
+Should the algorithm of
+matrix multiplication always
+
+00:40:30.330 --> 00:40:35.040
+be the same because the chip
+might have optimized it?
+
+00:40:35.040 --> 00:40:39.020
+Always only for the same.
+
+00:40:39.020 --> 00:40:43.490
+Yeah, so the question
+is essentially
+
+00:40:43.490 --> 00:40:48.620
+does this depend on the matrix
+multiplication algorithm?
+
+00:40:48.620 --> 00:40:54.470
+In general, I guess we'll
+look at this the next week
+
+00:40:54.470 --> 00:40:56.370
+or the week after when
+we look at kernels.
+
+00:40:56.370 --> 00:40:59.180
+I mean actually there's a
+lot of optimization that
+
+00:40:59.180 --> 00:41:01.460
+goes underneath under
+the hood when it comes
+
+00:41:01.460 --> 00:41:04.340
+to matrix multiplications.
+
+00:41:04.340 --> 00:41:06.320
+And there's a lot
+of specialization
+
+00:41:06.320 --> 00:41:09.590
+depending on the shape.
+
+00:41:09.590 --> 00:41:17.360
+I would say this is just a
+crude estimate that is basically
+
+00:41:17.360 --> 00:41:18.900
+the right order of magnitude.
+
+00:41:22.120 --> 00:41:25.610
+OK, so yeah?
+
+00:41:25.610 --> 00:41:28.220
+Additions and multiplications
+are considered equivalent?
+
+00:41:28.220 --> 00:41:29.840
+Yeah, additions
+and multiplications
+
+00:41:29.840 --> 00:41:33.770
+are considered equivalent.
+
+00:41:33.770 --> 00:41:37.890
+So one way I find helpful
+to interpret this.
+
+00:41:37.890 --> 00:41:40.530
+So at the end of the day, this
+is just a matrix multiplication,
+
+00:41:40.530 --> 00:41:44.930
+but I'm going to try to give a
+little bit of meaning to this,
+
+00:41:44.930 --> 00:41:47.900
+which is why I've set up
+this as a little toy machine
+
+00:41:47.900 --> 00:41:48.870
+learning problem.
+
+00:41:48.870 --> 00:41:53.430
+So B really stands for
+the number of data points,
+
+00:41:53.430 --> 00:41:56.910
+and D K is the
+number of parameters.
+
+00:41:56.910 --> 00:41:59.270
+So for this particular
+model, the number
+
+00:41:59.270 --> 00:42:01.430
+of flops that's required
+for a forward pass
+
+00:42:01.430 --> 00:42:03.890
+is 2 times the number
+of tokens or number
+
+00:42:03.890 --> 00:42:07.010
+of data points times the
+number of parameters.
+
+00:42:07.010 --> 00:42:10.490
+OK, so this turns out
+to actually generalize
+
+00:42:10.490 --> 00:42:11.580
+to transformers.
+
+00:42:11.580 --> 00:42:16.550
+There's an asterisk
+there because there's
+
+00:42:16.550 --> 00:42:19.080
+the sequence length
+and other stuff,
+
+00:42:19.080 --> 00:42:23.180
+but this is roughly
+right if your sequence
+
+00:42:23.180 --> 00:42:24.580
+length isn't too large.
+
+00:42:30.350 --> 00:42:34.880
+OK, so now this
+is just the number
+
+00:42:34.880 --> 00:42:38.140
+of floating point operations.
+
+00:42:38.140 --> 00:42:40.330
+So how does this
+actually translate
+
+00:42:40.330 --> 00:42:43.600
+to wall clock time, which
+is presumably the thing you
+
+00:42:43.600 --> 00:42:44.630
+actually care about?
+
+00:42:44.630 --> 00:42:47.290
+How long do you have
+to wait for your run?
+
+00:42:47.290 --> 00:42:50.330
+So let's time this.
+
+00:42:50.330 --> 00:43:00.400
+So I have this function that is
+just going to do it five times,
+
+00:43:00.400 --> 00:43:04.690
+and I'm going to perform the
+matrix multiply operation.
+
+00:43:04.690 --> 00:43:08.140
+We'll talk a little
+bit later about this,
+
+00:43:08.140 --> 00:43:11.530
+two weeks from now why
+the other code is here.
+
+00:43:11.530 --> 00:43:15.170
+But for now we get
+an actual time,
+
+00:43:15.170 --> 00:43:20.740
+so that matrix
+took 0.16 seconds,
+
+00:43:20.740 --> 00:43:25.990
+and the actual FLOPs per second,
+which is how many flops did it
+
+00:43:25.990 --> 00:43:31.750
+do per second is 5.4e13.
+
+00:43:31.750 --> 00:43:37.420
+So now you can compare this
+with the marketing materials,
+
+00:43:37.420 --> 00:43:45.560
+and for the A100 and H100, and
+as we look at the spec sheet,
+
+00:43:45.560 --> 00:43:48.830
+the flops depends
+on the data type.
+
+00:43:48.830 --> 00:43:52.780
+And we see that the
+promise of flops
+
+00:43:52.780 --> 00:44:01.180
+per second, which for H100, for
+I guess this is for float 32
+
+00:44:01.180 --> 00:44:06.980
+is 67 teraflops as we looked.
+
+00:44:06.980 --> 00:44:12.800
+And so that is the number
+of promised FLOPs per second
+
+00:44:12.800 --> 00:44:15.310
+we had.
+
+00:44:15.310 --> 00:44:19.510
+And now if you look at the--
+
+00:44:19.510 --> 00:44:22.630
+there's a helpful notion
+called model FLOPs
+
+00:44:22.630 --> 00:44:26.320
+utilization or MFU, which is
+the actual number of flops
+
+00:44:26.320 --> 00:44:28.960
+divided by the promised FLOPs.
+
+00:44:28.960 --> 00:44:31.390
+So you take the actual
+number of FLOPs,
+
+00:44:31.390 --> 00:44:35.530
+remember, which is what
+you actually witnessed,
+
+00:44:35.530 --> 00:44:37.500
+the number of floating
+point operations
+
+00:44:37.500 --> 00:44:43.170
+that are useful for
+your model, divided
+
+00:44:43.170 --> 00:44:46.080
+by the actual time it took
+divided by this promise
+
+00:44:46.080 --> 00:44:50.070
+flops per second, which is
+from the glossy brochure.
+
+00:44:50.070 --> 00:44:55.170
+You can get a MFU of 0.8.
+
+00:44:55.170 --> 00:45:00.330
+OK, so usually you see people
+talking about their MFUs,
+
+00:45:00.330 --> 00:45:04.980
+and something greater
+than 0.5 is usually
+
+00:45:04.980 --> 00:45:06.610
+considered to be good.
+
+00:45:06.610 --> 00:45:11.110
+And if you're 5% MFU that's
+considered to be really bad.
+
+00:45:11.110 --> 00:45:18.720
+Usually it can't get
+that close to 90 or 100
+
+00:45:18.720 --> 00:45:23.110
+because this is ignoring all
+communication and overhead,
+
+00:45:23.110 --> 00:45:28.260
+it's just the literal
+computation of the FLOPs.
+
+00:45:28.260 --> 00:45:32.160
+And usually MFU is much higher
+if the matrix multiplication
+
+00:45:32.160 --> 00:45:35.190
+is dominate.
+
+00:45:35.190 --> 00:45:41.010
+So that's MFU, any
+questions about this, yeah?
+
+00:45:41.010 --> 00:45:43.980
+You're using the
+promise flop per sec,
+
+00:45:43.980 --> 00:45:46.320
+not considering the sparsity.
+
+00:45:46.320 --> 00:45:52.230
+So this promise flop per sec is
+not considering this mismatch,
+
+00:45:52.230 --> 00:45:58.140
+yeah A note is like
+this is actually--
+
+00:45:58.140 --> 00:46:03.460
+there's also something called
+hardware to FLOPs utilization,
+
+00:46:03.460 --> 00:46:13.800
+and the motivation here is that
+we're trying to look at the--
+
+00:46:13.800 --> 00:46:15.930
+it's called model
+because we're looking
+
+00:46:15.930 --> 00:46:19.230
+at the number of effective
+useful operations
+
+00:46:19.230 --> 00:46:23.790
+that the model is
+performing, and so it's
+
+00:46:23.790 --> 00:46:25.330
+a way of standardizing.
+
+00:46:25.330 --> 00:46:27.300
+It's not the actual
+number of flops
+
+00:46:27.300 --> 00:46:31.650
+that are done because you
+could have optimization
+
+00:46:31.650 --> 00:46:33.870
+in your code that
+cache a few things
+
+00:46:33.870 --> 00:46:40.380
+or redo recomputation of some
+things, and in some sense
+
+00:46:40.380 --> 00:46:42.190
+you're still computing
+the same model.
+
+00:46:42.190 --> 00:46:44.940
+So what matters is
+that this is trying
+
+00:46:44.940 --> 00:46:46.740
+to look at the model
+complexity, and you
+
+00:46:46.740 --> 00:46:48.600
+shouldn't be penalized
+just because you
+
+00:46:48.600 --> 00:46:51.390
+were clever in your
+MFU if you were clever
+
+00:46:51.390 --> 00:46:57.090
+and you didn't actually do the
+FLOPs, but you said you did.
+
+00:46:57.090 --> 00:46:59.950
+OK, so you can also
+do the same with bf16.
+
+00:47:02.970 --> 00:47:10.090
+Oops, and here we
+see that for a bf
+
+00:47:10.090 --> 00:47:19.240
+the time is actually much
+better, so 0.03 instead of 0.16.
+
+00:47:19.240 --> 00:47:24.000
+So the actual FLOPs
+per second is higher.
+
+00:47:24.000 --> 00:47:26.100
+Even accounting
+for its sparsity,
+
+00:47:26.100 --> 00:47:29.610
+the promise FLOPs
+is still quite high,
+
+00:47:29.610 --> 00:47:32.960
+so the MFU is actually
+lower for bf16.
+
+00:47:36.410 --> 00:47:43.430
+This is maybe surprisingly low,
+but sometimes the promise FLOPs
+
+00:47:43.430 --> 00:47:45.024
+is a bit of optimistic.
+
+00:47:48.140 --> 00:47:52.190
+So always benchmark your
+code, and don't just
+
+00:47:52.190 --> 00:47:55.940
+assume that you're going to get
+certain levels of performance.
+
+00:47:55.940 --> 00:48:02.330
+So just to summarize,
+matrix multiplications
+
+00:48:02.330 --> 00:48:06.920
+dominate the compute, and
+the general rule of thumb
+
+00:48:06.920 --> 00:48:12.920
+is that it's 2 times the product
+of the dimensions, FLOPs.
+
+00:48:12.920 --> 00:48:17.930
+The FLOPs per second,
+Floating Points per second
+
+00:48:17.930 --> 00:48:22.770
+depends on the hardware
+and also the data type.
+
+00:48:22.770 --> 00:48:26.130
+So the fancier the hardware
+you have, the higher it is.
+
+00:48:26.130 --> 00:48:32.030
+The smaller the data type,
+usually the faster it is.
+
+00:48:32.030 --> 00:48:36.110
+And MFU is a useful
+notion to look
+
+00:48:36.110 --> 00:48:45.080
+at how well you're essentially
+squeezing your hardware, yeah?
+
+00:48:45.080 --> 00:48:48.570
+I've heard that often in order
+to get the maximum utilization,
+
+00:48:48.570 --> 00:48:51.390
+you want to use these
+tensor cores on the machine.
+
+00:48:51.390 --> 00:48:54.800
+And so this PyTorch by
+default use these tensor cores
+
+00:48:54.800 --> 00:48:58.530
+and are these calculations
+accounting for that?
+
+00:48:58.530 --> 00:48:59.030
+Yeah,
+
+00:48:59.030 --> 00:49:02.310
+So the question is, what
+about those tensor cores?
+
+00:49:02.310 --> 00:49:07.940
+So if you go to this
+spec sheet, you'll
+
+00:49:07.940 --> 00:49:13.800
+see that these are all
+on the tensor core.
+
+00:49:13.800 --> 00:49:17.630
+So the tensor core is basically
+a specialized hardware
+
+00:49:17.630 --> 00:49:18.883
+to do matmuls.
+
+00:49:26.860 --> 00:49:28.850
+So by default it should use it.
+
+00:49:28.850 --> 00:49:31.730
+And especially if you're
+using PyTorch in your compile,
+
+00:49:31.730 --> 00:49:36.795
+it will generate the code that
+will use the hardware properly.
+
+00:49:43.900 --> 00:49:48.530
+So let's talk a little
+bit about gradients.
+
+00:49:48.530 --> 00:49:51.640
+And the reason is
+that we've only
+
+00:49:51.640 --> 00:49:55.870
+looked at matrix multiplication
+or in other words, basically
+
+00:49:55.870 --> 00:49:59.740
+feedforward forward passes
+and the number of flops,
+
+00:49:59.740 --> 00:50:01.300
+but there's also
+a computation that
+
+00:50:01.300 --> 00:50:03.160
+comes from computing
+gradients, and we want
+
+00:50:03.160 --> 00:50:07.390
+to track down how much that is.
+
+00:50:07.390 --> 00:50:12.410
+OK, so just to consider
+a simple example,
+
+00:50:12.410 --> 00:50:15.910
+a simple linear
+model where you take
+
+00:50:15.910 --> 00:50:21.190
+the prediction of a
+linear model and you
+
+00:50:21.190 --> 00:50:23.420
+look at the MSC with
+respect to five.
+
+00:50:23.420 --> 00:50:25.900
+So not a very
+interesting loss, but I
+
+00:50:25.900 --> 00:50:31.180
+think it's illustrative for
+looking at the gradients.
+
+00:50:31.180 --> 00:50:31.730
+OK.
+
+00:50:31.730 --> 00:50:34.160
+So remember, in the forward
+pass you have your X,
+
+00:50:34.160 --> 00:50:38.950
+you have your W, which
+you want to compute
+
+00:50:38.950 --> 00:50:40.570
+the gradient with
+respect to-- you
+
+00:50:40.570 --> 00:50:44.660
+make a prediction by
+taking the linear product.
+
+00:50:44.660 --> 00:50:48.430
+And then you have your loss.
+
+00:50:48.430 --> 00:50:49.130
+OK.
+
+00:50:49.130 --> 00:50:53.510
+And in the backward pass,
+you just call loss backwards.
+
+00:50:53.510 --> 00:50:58.390
+And in this case,
+the gradient, which
+
+00:50:58.390 --> 00:51:02.155
+is this variable
+attached to the tensor
+
+00:51:02.155 --> 00:51:06.230
+turns out to be what you want.
+
+00:51:06.230 --> 00:51:12.820
+So everyone has done,
+gradients in PyTorch before.
+
+00:51:12.820 --> 00:51:16.870
+So let's look at how
+many flops are required
+
+00:51:16.870 --> 00:51:20.562
+for computing gradients.
+
+00:51:20.562 --> 00:51:21.062
+OK.
+
+00:51:21.062 --> 00:51:29.800
+So let's look at a slightly
+more complicated model.
+
+00:51:29.800 --> 00:51:34.860
+So now, it's a
+two-layer linear model,
+
+00:51:34.860 --> 00:51:43.020
+where you have x which is B by
+D, times W1 which is D by D.
+
+00:51:43.020 --> 00:51:44.980
+So that's the first layer.
+
+00:51:44.980 --> 00:51:49.290
+And then, you take your
+hidden activations H1
+
+00:51:49.290 --> 00:51:53.110
+and you pass it through
+another linear layer W2.
+
+00:51:53.110 --> 00:51:56.610
+And to get a K dimensional
+vector and you do some--
+
+00:51:56.610 --> 00:51:57.575
+compute some loss.
+
+00:52:00.750 --> 00:52:03.340
+So this is a two
+layer linear network.
+
+00:52:03.340 --> 00:52:06.090
+And just as a
+review, if you look
+
+00:52:06.090 --> 00:52:10.170
+at the number of forward
+flops, what you had to do
+
+00:52:10.170 --> 00:52:13.110
+was you have to multiply--
+
+00:52:13.110 --> 00:52:14.650
+look at W1.
+
+00:52:14.650 --> 00:52:21.940
+You have to multiply x by
+W1 and add it to your H1,
+
+00:52:21.940 --> 00:52:25.230
+and you have to take
+H1 and W2 and you
+
+00:52:25.230 --> 00:52:29.370
+have to add it to your H2.
+
+00:52:29.370 --> 00:52:31.860
+So the total number
+of flops again,
+
+00:52:31.860 --> 00:52:36.330
+is 2 times the product of all
+the dimensions in your matmul
+
+00:52:36.330 --> 00:52:39.570
+plus 2 times the product
+dimensions of your matmul
+
+00:52:39.570 --> 00:52:41.400
+for the second matrix.
+
+00:52:41.400 --> 00:52:44.310
+In other words, 2 times the
+total number of parameters,
+
+00:52:44.310 --> 00:52:46.560
+in this case.
+
+00:52:46.560 --> 00:52:50.260
+OK, so what about
+the backward pass.
+
+00:52:50.260 --> 00:52:54.960
+So this part will be a
+little bit more involved.
+
+00:52:54.960 --> 00:53:00.730
+So we can recall the Model
+x to H1 to H2 and the loss.
+
+00:53:00.730 --> 00:53:02.220
+So in the backward
+pass, you have
+
+00:53:02.220 --> 00:53:04.840
+to compute a bunch of gradients.
+
+00:53:04.840 --> 00:53:06.780
+And the gradients
+that are relevant
+
+00:53:06.780 --> 00:53:16.420
+is you have to compute the
+gradient with respect to H1, H2,
+
+00:53:16.420 --> 00:53:21.420
+W1 and W2 of the loss.
+
+00:53:21.420 --> 00:53:24.670
+So d loss each of
+these variables.
+
+00:53:24.670 --> 00:53:27.550
+OK, so how long does it
+take to compute that?
+
+00:53:27.550 --> 00:53:31.360
+Let's just look
+at W2, for now OK.
+
+00:53:31.360 --> 00:53:35.760
+So the things that touch
+W2, you can compute
+
+00:53:35.760 --> 00:53:38.970
+by looking at the chain rule.
+
+00:53:38.970 --> 00:53:43.180
+So W2 grad.
+
+00:53:43.180 --> 00:53:50.410
+So the gradient of
+d loss, D W2, is
+
+00:53:50.410 --> 00:53:59.880
+you sum H1 times the gradient
+of the loss with respect to H2.
+
+00:53:59.880 --> 00:54:01.095
+OK.
+
+00:54:01.095 --> 00:54:04.033
+So that's just the
+chain rule for W2.
+
+00:54:07.830 --> 00:54:11.010
+So all the gradients
+are the same size
+
+00:54:11.010 --> 00:54:15.560
+as the underlying of vectors.
+
+00:54:15.560 --> 00:54:20.390
+So this turns out to be--
+
+00:54:20.390 --> 00:54:24.240
+essentially, looks like
+a matrix multiplication.
+
+00:54:24.240 --> 00:54:27.860
+And so the same
+calculus holds, which
+
+00:54:27.860 --> 00:54:32.840
+is that it's 2 times the
+number of the product of all
+
+00:54:32.840 --> 00:54:38.070
+the dimensions B
+times D, times K. OK.
+
+00:54:38.070 --> 00:54:43.460
+But this is only the
+gradient with respect to W2.
+
+00:54:43.460 --> 00:54:46.250
+We also need to compute
+the gradient with respect
+
+00:54:46.250 --> 00:54:52.280
+to H1, because we have to keep
+on back propagating to W1 and so
+
+00:54:52.280 --> 00:54:52.940
+on.
+
+00:54:52.940 --> 00:55:07.790
+So that is going to be the
+product of W2 times H2.
+
+00:55:07.790 --> 00:55:13.910
+Sorry, I think this should
+be a grad of H2, H2 grad.
+
+00:55:13.910 --> 00:55:19.160
+So that turns out to
+also be essentially,
+
+00:55:19.160 --> 00:55:21.810
+looks like the matrix
+multiplication.
+
+00:55:21.810 --> 00:55:26.960
+And it's the same number
+of flops for computing
+
+00:55:26.960 --> 00:55:30.740
+the gradient of H1.
+
+00:55:30.740 --> 00:55:36.230
+So when you add the two
+so that's just for W2
+
+00:55:36.230 --> 00:55:38.190
+you do the same thing for W1.
+
+00:55:38.190 --> 00:55:41.430
+And that's which has
+D times D parameters.
+
+00:55:41.430 --> 00:55:46.070
+And when you add
+it all up, it's--
+
+00:55:46.070 --> 00:55:51.230
+so for this-- for W2 the
+amount of computation
+
+00:55:51.230 --> 00:55:54.870
+was four times B,
+times D, times K.
+
+00:55:54.870 --> 00:56:01.940
+And for W1 it's also 4
+times B, times D, times D,
+
+00:56:01.940 --> 00:56:09.520
+because W1 is D by D. OK.
+
+00:56:09.520 --> 00:56:12.890
+So I know there's a
+lot of symbols here.
+
+00:56:12.890 --> 00:56:17.630
+I'm going to try also to give
+you a visual account for this.
+
+00:56:17.630 --> 00:56:23.120
+So this is from a blog post
+that, I think, may work better.
+
+00:56:23.120 --> 00:56:24.520
+We'll see.
+
+00:56:24.520 --> 00:56:26.870
+OK, I have to wait for the
+animation to loop back.
+
+00:56:26.870 --> 00:56:30.040
+So basically, this is one
+layer of the neural net
+
+00:56:30.040 --> 00:56:33.190
+where it has the
+hiddens and then
+
+00:56:33.190 --> 00:56:35.510
+the weights to the next layer.
+
+00:56:35.510 --> 00:56:37.510
+And so I have to--
+
+00:56:37.510 --> 00:56:38.060
+OK.
+
+00:56:38.060 --> 00:56:40.065
+Problem with this animation
+is I have to wait.
+
+00:56:40.065 --> 00:56:41.680
+[LAUGHTER]
+
+00:56:41.680 --> 00:56:42.430
+OK.
+
+00:56:42.430 --> 00:56:44.210
+Ready, set, OK.
+
+00:56:44.210 --> 00:56:48.280
+So first, I have to
+multiply w and a,
+
+00:56:48.280 --> 00:56:49.700
+and I have to add it to this.
+
+00:56:49.700 --> 00:56:50.690
+That's a forward pass.
+
+00:56:50.690 --> 00:56:52.720
+And now, I'm going
+to multiply these two
+
+00:56:52.720 --> 00:56:55.040
+and then add it to that.
+
+00:56:55.040 --> 00:56:58.005
+And I'm going to multiply
+and then add it to that, OK.
+
+00:56:58.005 --> 00:57:00.670
+[LAUGHTER]
+
+00:57:00.670 --> 00:57:01.420
+Any questions?
+
+00:57:01.420 --> 00:57:03.280
+[LAUGHTER]
+
+00:57:03.280 --> 00:57:06.340
+I wish there's way
+to slow this down.
+
+00:57:06.340 --> 00:57:11.600
+But the details-- maybe
+I'll let you ruminate on,
+
+00:57:11.600 --> 00:57:14.050
+but the high level
+is that there's
+
+00:57:14.050 --> 00:57:17.045
+two times the number of
+parameters for the forward pass
+
+00:57:17.045 --> 00:57:18.670
+and four times the
+number of parameters
+
+00:57:18.670 --> 00:57:19.730
+for the backward pass.
+
+00:57:19.730 --> 00:57:24.230
+And we can just work it out
+via the chain rule here.
+
+00:57:24.230 --> 00:57:24.970
+Yeah.
+
+00:57:24.970 --> 00:57:27.630
+For the homeworks, are
+we also using the--
+
+00:57:27.630 --> 00:57:31.160
+you said some PyTorch
+implementation as well as some--
+
+00:57:31.160 --> 00:57:35.260
+are we allowed to use
+grad or we are doing the--
+
+00:57:35.260 --> 00:57:38.980
+entirely by hand
+doing the gradient?
+
+00:57:38.980 --> 00:57:41.090
+So the question is,
+in the homework,
+
+00:57:41.090 --> 00:57:43.340
+are you going to compute
+gradients by hand,
+
+00:57:43.340 --> 00:57:44.600
+and the answer is no.
+
+00:57:44.600 --> 00:57:47.210
+You're going to just
+use PyTorch gradient.
+
+00:57:47.210 --> 00:57:52.245
+This is just to break it down
+so we can do the counting flops.
+
+00:57:55.360 --> 00:57:58.140
+Any questions about
+this before I move on?
+
+00:58:05.100 --> 00:58:05.650
+OK.
+
+00:58:05.650 --> 00:58:08.040
+Just to summarize,
+the forward pass
+
+00:58:08.040 --> 00:58:12.900
+is, for this particular model
+is 2 times the number of data
+
+00:58:12.900 --> 00:58:14.650
+points, times the
+number of parameters,
+
+00:58:14.650 --> 00:58:17.340
+and backward is 4 times
+the number of data points,
+
+00:58:17.340 --> 00:58:19.710
+times the number of parameters,
+which means that total,
+
+00:58:19.710 --> 00:58:22.890
+it's six times the number of
+data points, times parameters.
+
+00:58:22.890 --> 00:58:26.580
+And that's explains
+why there was
+
+00:58:26.580 --> 00:58:30.900
+that 6 in the beginning when I
+asked the motivating question.
+
+00:58:30.900 --> 00:58:36.090
+So now, this is for a
+simple linear model.
+
+00:58:36.090 --> 00:58:40.410
+But it turns out that many
+models, this is basically,
+
+00:58:40.410 --> 00:58:44.100
+the bulk of the computation,
+when essentially
+
+00:58:44.100 --> 00:58:51.330
+every computation you do touches
+essentially new parameters,
+
+00:58:51.330 --> 00:58:52.710
+roughly.
+
+00:58:52.710 --> 00:58:56.017
+And obviously,
+this doesn't hold.
+
+00:58:56.017 --> 00:58:57.600
+You can find models
+where this doesn't
+
+00:58:57.600 --> 00:59:00.240
+hold because you can have one
+parameter through parameter
+
+00:59:00.240 --> 00:59:03.010
+sharing and have
+a billion flops,
+
+00:59:03.010 --> 00:59:06.500
+but that's generally what,
+not what models look like.
+
+00:59:09.300 --> 00:59:16.140
+OK, so let me move on.
+
+00:59:16.140 --> 00:59:21.480
+So far, I've basically finished
+talking about the resource
+
+00:59:21.480 --> 00:59:22.030
+accounting.
+
+00:59:22.030 --> 00:59:23.440
+So we looked at tensors.
+
+00:59:23.440 --> 00:59:25.360
+We looked at some
+computation on tensors.
+
+00:59:25.360 --> 00:59:28.950
+We looked at how
+much tensors take
+
+00:59:28.950 --> 00:59:32.730
+to store and also how
+many flops tensors
+
+00:59:32.730 --> 00:59:36.180
+take when you do various
+operations on them.
+
+00:59:36.180 --> 00:59:40.560
+Now, let's start building
+up different models.
+
+00:59:40.560 --> 00:59:44.940
+I think this part isn't
+necessarily going to be,
+
+00:59:44.940 --> 00:59:49.750
+that conceptually
+interesting or challenging,
+
+00:59:49.750 --> 00:59:53.400
+but it's more for maybe
+this completeness.
+
+00:59:53.400 --> 00:59:59.190
+So parameters in
+PyTorch are stored
+
+00:59:59.190 --> 01:00:04.320
+is as these
+nn.parameter objects.
+
+01:00:04.320 --> 01:00:08.820
+Let's talk a little bit about
+parameter initialization.
+
+01:00:08.820 --> 01:00:19.010
+So if you have, let's say,
+a parameter that has--
+
+01:00:19.010 --> 01:00:19.510
+OK.
+
+01:00:19.510 --> 01:00:22.620
+So you generate a--
+
+01:00:22.620 --> 01:00:23.350
+sorry.
+
+01:00:23.350 --> 01:00:25.590
+Your w parameter is
+an input dimension
+
+01:00:25.590 --> 01:00:28.457
+by hidden dimension matrix.
+
+01:00:28.457 --> 01:00:30.040
+You're still in the
+linear model case.
+
+01:00:30.040 --> 01:00:33.800
+So let's just say an input and
+let's feed it through the output
+
+01:00:33.800 --> 01:00:34.300
+OK.
+
+01:00:34.300 --> 01:00:41.370
+So Rand and unit
+Gaussian seems innocuous.
+
+01:00:41.370 --> 01:00:45.240
+What happens when you do this is
+that if you look at the output,
+
+01:00:45.240 --> 01:00:48.070
+you get some pretty
+large numbers.
+
+01:00:48.070 --> 01:00:51.660
+And this is because
+when you have
+
+01:00:51.660 --> 01:00:56.160
+the number of rows as
+essentially the square root
+
+01:00:56.160 --> 01:00:58.460
+of the hidden dimension.
+
+01:00:58.460 --> 01:01:03.120
+And so when you have large
+models this is going to blow up.
+
+01:01:03.120 --> 01:01:08.210
+And training can
+be a very unstable.
+
+01:01:08.210 --> 01:01:13.850
+So typically, what you want
+to do is initialize in a way
+
+01:01:13.850 --> 01:01:17.420
+that's invariant to
+hidden, or at least
+
+01:01:17.420 --> 01:01:20.220
+when you're guaranteed that
+it's not going to blow up.
+
+01:01:20.220 --> 01:01:24.680
+And one simple way to do
+this is just rescale by the 1
+
+01:01:24.680 --> 01:01:28.970
+over square root of
+number of inputs.
+
+01:01:28.970 --> 01:01:34.640
+So basically, let's redo this
+w equals a parameter where
+
+01:01:34.640 --> 01:01:40.160
+I simply divide by the square
+root of the input dimension.
+
+01:01:40.160 --> 01:01:43.580
+And then now, when you feed
+it through the output now,
+
+01:01:43.580 --> 01:01:46.430
+you get things that
+are stable around--
+
+01:01:46.430 --> 01:01:51.445
+this actually concentrate to
+something like normal zero, one.
+
+01:01:54.656 --> 01:01:58.760
+So this is basically-- this has
+been explored pretty extensively
+
+01:01:58.760 --> 01:02:02.240
+in deep learning literatures
+known up to a constant,
+
+01:02:02.240 --> 01:02:03.930
+this is Xavier initialization.
+
+01:02:03.930 --> 01:02:07.070
+And typically, I gets
+it's fairly common
+
+01:02:07.070 --> 01:02:08.862
+if you want to be extra safe.
+
+01:02:08.862 --> 01:02:10.820
+You don't trust the normal
+because that doesn't
+
+01:02:10.820 --> 01:02:12.900
+have it has unbounded tails.
+
+01:02:12.900 --> 01:02:14.992
+And you just say I'm
+going to truncate to -3,
+
+01:02:14.992 --> 01:02:17.520
+3 so I don't get
+any large values,
+
+01:02:17.520 --> 01:02:21.275
+and I don't want any
+to mess with that.
+
+01:02:21.275 --> 01:02:21.775
+OK.
+
+01:02:30.710 --> 01:02:35.720
+So let's build just
+a simple model.
+
+01:02:35.720 --> 01:02:41.070
+It's going to have D
+dimensions and two layers.
+
+01:02:41.070 --> 01:02:43.770
+There's this-- I just made
+up this name, cruncher,
+
+01:02:43.770 --> 01:02:47.930
+it's a custom model, which is
+a deep linear network, which
+
+01:02:47.930 --> 01:02:51.840
+has n num layers layers.
+
+01:02:51.840 --> 01:02:56.810
+And each layer is
+a linear model,
+
+01:02:56.810 --> 01:03:00.020
+which has essentially, it's
+just a matrix multiplication.
+
+01:03:04.780 --> 01:03:08.650
+So the parameters
+of this model looks
+
+01:03:08.650 --> 01:03:17.830
+like I have layers for--
+the first layer, which
+
+01:03:17.830 --> 01:03:19.900
+is a D by D matrix.
+
+01:03:19.900 --> 01:03:22.100
+The second layer, which
+is also D by D matrix.
+
+01:03:22.100 --> 01:03:27.670
+And then I have a
+head or a final layer.
+
+01:03:27.670 --> 01:03:33.820
+So if I get the number of
+parameters of this model
+
+01:03:33.820 --> 01:03:40.000
+then it's going to be D squared
+plus D squared, plus D. So
+
+01:03:40.000 --> 01:03:42.940
+nothing too surprising there.
+
+01:03:42.940 --> 01:03:45.250
+And I'm going to
+move it to the GPU
+
+01:03:45.250 --> 01:03:48.230
+because I want this to run fast.
+
+01:03:48.230 --> 01:03:51.430
+And I'm going to
+generate some random data
+
+01:03:51.430 --> 01:03:54.400
+and feed it through the
+data, and the forward pass
+
+01:03:54.400 --> 01:03:58.660
+is just going through
+the layers and then,
+
+01:03:58.660 --> 01:03:59.970
+finally applying the head.
+
+01:04:04.210 --> 01:04:07.930
+So with that model
+let's try to--
+
+01:04:07.930 --> 01:04:11.440
+I'm going to use this model
+and do some stuff with it.
+
+01:04:11.440 --> 01:04:14.800
+But just one general digression.
+
+01:04:14.800 --> 01:04:22.330
+Randomness is something that
+can be annoying in some cases,
+
+01:04:22.330 --> 01:04:24.830
+be it if you're trying to
+reproduce a bug, for example.
+
+01:04:24.830 --> 01:04:27.620
+It shows up in many places
+initialization, dropout,
+
+01:04:27.620 --> 01:04:32.440
+data ordering, and
+just a best practices.
+
+01:04:32.440 --> 01:04:37.150
+We recommend you always
+pass a fixed random seed.
+
+01:04:37.150 --> 01:04:43.060
+So you can reproduce your model,
+or at least, as well as you can.
+
+01:04:43.060 --> 01:04:46.750
+And in particular, having
+a different random seed
+
+01:04:46.750 --> 01:04:49.920
+for every source of
+randomness is nice
+
+01:04:49.920 --> 01:04:52.710
+because then you can, for
+example, fix the initialization
+
+01:04:52.710 --> 01:04:56.670
+or fix the data ordering,
+but very other things.
+
+01:04:56.670 --> 01:05:02.830
+Determinism is your friend when
+you're debugging and encode.
+
+01:05:02.830 --> 01:05:05.040
+Unfortunately,
+there's many places
+
+01:05:05.040 --> 01:05:11.040
+where you can use randomness and
+just be cognizant of which one
+
+01:05:11.040 --> 01:05:11.680
+you're using.
+
+01:05:11.680 --> 01:05:14.370
+And just if you want
+to be safe, just
+
+01:05:14.370 --> 01:05:16.355
+set the seed for all of them.
+
+01:05:19.290 --> 01:05:21.450
+Data loading.
+
+01:05:21.450 --> 01:05:23.180
+I guess I'll go
+through this quickly.
+
+01:05:26.250 --> 01:05:29.400
+it'll be useful for
+your assignment.
+
+01:05:29.400 --> 01:05:32.910
+So in language modeling,
+data is typically
+
+01:05:32.910 --> 01:05:34.390
+just a sequence of integers.
+
+01:05:34.390 --> 01:05:37.440
+Because this is remember
+output by the tokenizer.
+
+01:05:37.440 --> 01:05:40.740
+And you serialize them into--
+
+01:05:40.740 --> 01:05:44.220
+you can serialize them
+into numpy arrays.
+
+01:05:44.220 --> 01:05:51.840
+And one thing that's maybe
+useful is that you don't want
+
+01:05:51.840 --> 01:05:54.630
+to load all your data
+into memory at once
+
+01:05:54.630 --> 01:05:59.160
+because for example,
+the LLaMA data is 2.8TB,
+
+01:05:59.160 --> 01:06:03.810
+but you can pretend to load it
+by using this handy function
+
+01:06:03.810 --> 01:06:08.790
+called mmemap, which gives you
+essentially a variable that is
+
+01:06:08.790 --> 01:06:10.390
+mapped to a file.
+
+01:06:10.390 --> 01:06:16.080
+So when you try to access the
+data, it actually on demand
+
+01:06:16.080 --> 01:06:17.970
+loads the file.
+
+01:06:17.970 --> 01:06:21.300
+And then using that
+you can create a data
+
+01:06:21.300 --> 01:06:28.510
+loader that sample of
+data from your batch.
+
+01:06:28.510 --> 01:06:32.820
+So I'm going to skip over that,
+just in the interest of time.
+
+01:06:32.820 --> 01:06:35.800
+Let's talk a little
+bit about optimizers.
+
+01:06:35.800 --> 01:06:37.625
+So we've defined our model.
+
+01:06:41.130 --> 01:06:47.310
+So there's many
+optimizers just maybe
+
+01:06:47.310 --> 01:06:50.007
+going through the intuitions
+behind some of them.
+
+01:06:50.007 --> 01:06:52.090
+So of course, there's
+stochastic gradient descent.
+
+01:06:52.090 --> 01:06:53.980
+You compute the
+gradient of your batch,
+
+01:06:53.980 --> 01:06:57.300
+you take a step in that
+direction, no questions asked.
+
+01:06:57.300 --> 01:07:01.380
+There's a idea called momentum
+which dates back to Classic
+
+01:07:01.380 --> 01:07:07.140
+optimization, Nesterov , where
+you have a running average
+
+01:07:07.140 --> 01:07:09.670
+of your gradients.
+
+01:07:09.670 --> 01:07:13.110
+And you update against the
+running average instead
+
+01:07:13.110 --> 01:07:16.110
+of your instantaneous gradient.
+
+01:07:16.110 --> 01:07:23.370
+And then you have AdaGrad,
+which you scale the gradients
+
+01:07:23.370 --> 01:07:30.600
+by the average over
+the norms of your,
+
+01:07:30.600 --> 01:07:34.450
+or I guess not the norms,
+the square of the gradients.
+
+01:07:34.450 --> 01:07:39.390
+You also have RMSProp, which is
+an improved version of AdaGrad,
+
+01:07:39.390 --> 01:07:42.930
+which uses an exponential
+averaging rather than just
+
+01:07:42.930 --> 01:07:44.460
+a flat average.
+
+01:07:44.460 --> 01:07:46.550
+And then finally,
+Adam, which appeared
+
+01:07:46.550 --> 01:07:50.970
+in 2014, which is essentially
+combining RMSProp and momentum.
+
+01:07:50.970 --> 01:07:56.240
+So that's why you're maintaining
+both your running average
+
+01:07:56.240 --> 01:07:58.490
+of your gradients, but
+also running average
+
+01:07:58.490 --> 01:08:00.260
+of your gradient squared.
+
+01:08:00.260 --> 01:08:06.330
+So since you're going to
+implement Adam in homework 1,
+
+01:08:06.330 --> 01:08:07.380
+I'm not going to do that.
+
+01:08:07.380 --> 01:08:11.010
+Instead, I'm going
+to implement AdaGrad.
+
+01:08:11.010 --> 01:08:17.870
+So the way you implement
+the optimizer in PyTorch
+
+01:08:17.870 --> 01:08:20.250
+is that you override
+the optimizer class.
+
+01:08:20.250 --> 01:08:27.560
+And you have to, let's
+see, maybe I'll and then
+
+01:08:27.560 --> 01:08:30.529
+I'll get to the implementation
+once we step through it.
+
+01:08:30.529 --> 01:08:37.069
+So let's define some data,
+compute the forward pass
+
+01:08:37.069 --> 01:08:38.640
+on the loss.
+
+01:08:38.640 --> 01:08:42.189
+And then you compute
+the gradients,
+
+01:08:42.189 --> 01:08:47.240
+and then, when you
+call optimizer.step,
+
+01:08:47.240 --> 01:08:52.500
+this is where the optimizer
+actually is active.
+
+01:08:52.500 --> 01:08:58.830
+So what this looks like is,
+your parameters are grouped by,
+
+01:08:58.830 --> 01:09:02.060
+for example, you have one for
+the layer 0, layer 1, and then
+
+01:09:02.060 --> 01:09:05.090
+the final weights.
+
+01:09:05.090 --> 01:09:13.490
+And you can access a state which
+is a dictionary from parameters
+
+01:09:13.490 --> 01:09:17.069
+to whatever you want to store.
+
+01:09:17.069 --> 01:09:21.140
+As the optimizer
+state, the gradient
+
+01:09:21.140 --> 01:09:23.660
+of that parameter
+you assume is already
+
+01:09:23.660 --> 01:09:28.850
+calculated by the backward pass.
+
+01:09:28.850 --> 01:09:35.420
+And now, you can do
+things like in AdaGrad,
+
+01:09:35.420 --> 01:09:39.450
+you're storing the sum
+of the gradient squared.
+
+01:09:39.450 --> 01:09:44.410
+So you can get that g2 variable
+and you can update that
+
+01:09:44.410 --> 01:09:46.189
+based on the square
+of the gradient.
+
+01:09:46.189 --> 01:09:50.000
+So this is the element wise
+squaring of the gradient.
+
+01:09:50.000 --> 01:09:52.750
+And you put it back
+into the state.
+
+01:09:52.750 --> 01:09:55.450
+So then your, obviously,
+your optimizer
+
+01:09:55.450 --> 01:09:58.400
+is responsible for
+updating the parameters.
+
+01:09:58.400 --> 01:10:01.420
+And this is just you
+update the learning
+
+01:10:01.420 --> 01:10:04.900
+rate times the gradient,
+divided by this scaling.
+
+01:10:04.900 --> 01:10:11.080
+So now, this state is kept over
+across multiple invocations
+
+01:10:11.080 --> 01:10:13.566
+of the optimizer.
+
+01:10:20.422 --> 01:10:23.350
+And then at the end
+of your optimizer step
+
+01:10:23.350 --> 01:10:27.730
+you can free up the
+memory just to--
+
+01:10:27.730 --> 01:10:30.250
+which is, I think,
+going to actually
+
+01:10:30.250 --> 01:10:33.010
+be more important
+when you look when we
+
+01:10:33.010 --> 01:10:35.440
+talk about model parallelism.
+
+01:10:35.440 --> 01:10:41.380
+So let's talk about the memory
+requirements of the optimizer
+
+01:10:41.380 --> 01:10:41.930
+states.
+
+01:10:41.930 --> 01:10:44.300
+And actually basically,
+at this point, everything.
+
+01:10:44.300 --> 01:10:50.680
+So you need the number of
+parameters in this model
+
+01:10:50.680 --> 01:10:53.440
+is D squared times
+the number of layers
+
+01:10:53.440 --> 01:10:56.800
+plus D for the final head.
+
+01:10:56.800 --> 01:10:57.300
+OK.
+
+01:10:59.830 --> 01:11:03.400
+The number of
+activations, so this
+
+01:11:03.400 --> 01:11:05.800
+is something we didn't
+do before, but now,
+
+01:11:05.800 --> 01:11:08.210
+for this simple model,
+it's fairly easy to do.
+
+01:11:08.210 --> 01:11:14.200
+It's just B times
+D, times the number
+
+01:11:14.200 --> 01:11:17.300
+of layers you have for every
+layer, for every data point,
+
+01:11:17.300 --> 01:11:18.230
+for every dimension.
+
+01:11:18.230 --> 01:11:21.580
+You have to hold
+the activations.
+
+01:11:21.580 --> 01:11:27.100
+For the gradients, this is the
+same as the number of parameters
+
+01:11:27.100 --> 01:11:30.520
+and the number of
+optimizer states,
+
+01:11:30.520 --> 01:11:34.360
+for AdaGrad, it's
+remember, we had
+
+01:11:34.360 --> 01:11:39.640
+to store the gradient squared.
+
+01:11:39.640 --> 01:11:42.090
+So that's another copy
+of the parameters.
+
+01:11:42.090 --> 01:11:48.330
+So putting it all together,
+we have the total memory
+
+01:11:48.330 --> 01:11:55.080
+is assuming FP32, which means
+four bytes, times the number
+
+01:11:55.080 --> 01:11:58.230
+of parameters, number of
+activations, number of gradients
+
+01:11:58.230 --> 01:12:00.500
+and number of optimizer states.
+
+01:12:00.500 --> 01:12:01.000
+OK.
+
+01:12:01.000 --> 01:12:09.930
+And that gives us some
+number, which is 496 here.
+
+01:12:09.930 --> 01:12:13.560
+So this is a fairly
+simple calculation,
+
+01:12:13.560 --> 01:12:16.170
+in the assignment
+1, you're going
+
+01:12:16.170 --> 01:12:17.790
+to do this for the
+transformer, which
+
+01:12:17.790 --> 01:12:20.220
+is a little bit more
+involved because you have
+
+01:12:20.220 --> 01:12:22.720
+to-- there's not just
+matrix multiplications,
+
+01:12:22.720 --> 01:12:24.730
+but there's many matrices.
+
+01:12:24.730 --> 01:12:26.980
+There is attention and there's
+all these other things.
+
+01:12:26.980 --> 01:12:31.780
+But the general form of the
+calculation is the same.
+
+01:12:31.780 --> 01:12:34.470
+You have parameters,
+activations, gradients
+
+01:12:34.470 --> 01:12:35.990
+and optimizer states.
+
+01:12:44.410 --> 01:12:48.690
+And the flops required,
+again, for this model
+
+01:12:48.690 --> 01:12:52.230
+is six times the
+number of tokens
+
+01:12:52.230 --> 01:12:55.480
+or the number of data points,
+times the number of parameters.
+
+01:12:55.480 --> 01:13:00.750
+And that's basically concludes
+the resource accounting
+
+01:13:00.750 --> 01:13:04.320
+for this particular model.
+
+01:13:04.320 --> 01:13:08.580
+And if for reference, if you're
+curious about working this out
+
+01:13:08.580 --> 01:13:13.055
+for transformers, you can
+consult some of these articles.
+
+01:13:15.861 --> 01:13:18.960
+So in the remaining
+time, I think
+
+01:13:18.960 --> 01:13:22.200
+maybe I'll pause for questions.
+
+01:13:22.200 --> 01:13:24.820
+And we talked about
+building up the tensors.
+
+01:13:24.820 --> 01:13:27.310
+And then we built
+a very small model.
+
+01:13:27.310 --> 01:13:32.670
+And we talked about
+optimization and how much
+
+01:13:32.670 --> 01:13:34.955
+memory and how much
+compute was required.
+
+01:13:38.530 --> 01:13:39.030
+Yeah.
+
+01:13:39.030 --> 01:13:41.970
+Do we really need
+to store activation?
+
+01:13:41.970 --> 01:13:45.070
+So the question is, why do you
+need to store the activations.
+
+01:13:45.070 --> 01:13:47.740
+So naively, you need to
+store the activations
+
+01:13:47.740 --> 01:13:52.660
+because when you're
+doing the backward pass,
+
+01:13:52.660 --> 01:13:56.100
+the gradients of let's
+say the first layer depend
+
+01:13:56.100 --> 01:13:57.010
+on the activation.
+
+01:13:57.010 --> 01:13:59.790
+So the gradients of the Ith
+layer depends on the activation
+
+01:13:59.790 --> 01:14:01.650
+there.
+
+01:14:01.650 --> 01:14:04.620
+Now, if you're
+smarter, you don't
+
+01:14:04.620 --> 01:14:06.390
+have to store the
+activations or you don't
+
+01:14:06.390 --> 01:14:07.570
+have to store all of them.
+
+01:14:07.570 --> 01:14:09.520
+You can recompute them.
+
+01:14:09.520 --> 01:14:11.370
+And that's something
+a technique will
+
+01:14:11.370 --> 01:14:14.405
+called activation checkpointing,
+which we can talk about later.
+
+01:14:19.380 --> 01:14:22.290
+So let's just do this quick--
+
+01:14:22.290 --> 01:14:24.460
+actually, there's
+not much to say here.
+
+01:14:24.460 --> 01:14:31.320
+But here's your typical training
+loop where you define the model,
+
+01:14:31.320 --> 01:14:35.960
+define the optimizer
+and you get the data.
+
+01:14:35.960 --> 01:14:43.070
+Feed forward, backward and
+take a step in parameter space.
+
+01:14:43.070 --> 01:14:49.910
+And I guess it'll be
+more interesting--
+
+01:14:49.910 --> 01:14:53.310
+I guess next time I should
+show like an actual 1D plot,
+
+01:14:53.310 --> 01:14:56.125
+which isn't available
+on this version.
+
+01:14:59.150 --> 01:15:04.640
+So one note about checkpointing.
+
+01:15:04.640 --> 01:15:07.790
+So training language
+models takes a long time
+
+01:15:07.790 --> 01:15:11.190
+and you certainly will
+crash at some point.
+
+01:15:11.190 --> 01:15:13.700
+So you don't want to
+lose all your progress.
+
+01:15:13.700 --> 01:15:16.290
+So you want to periodically
+save your model to disk.
+
+01:15:16.290 --> 01:15:19.730
+And just to be very clear,
+the thing you want to save
+
+01:15:19.730 --> 01:15:24.620
+is both the model,
+and the optimizer
+
+01:15:24.620 --> 01:15:28.350
+and probably which iteration
+you're on, you should add that.
+
+01:15:28.350 --> 01:15:32.660
+And then you can
+just load it up.
+
+01:15:32.660 --> 01:15:35.780
+One, maybe final
+note and I'll end
+
+01:15:35.780 --> 01:15:40.300
+is, I alluded to mix
+precision training.
+
+01:15:43.120 --> 01:15:46.620
+Choice of the data type
+has different trade-offs.
+
+01:15:46.620 --> 01:15:51.320
+If you have higher precision
+it's more accurate and stable,
+
+01:15:51.320 --> 01:15:55.970
+but it's more expensive and
+low precision is vice versa.
+
+01:15:55.970 --> 01:16:00.260
+And as we mentioned
+before, by default,
+
+01:16:00.260 --> 01:16:03.080
+the recommendation
+is use float32,
+
+01:16:03.080 --> 01:16:08.160
+but try to use bf16, or
+even FP8 whenever possible.
+
+01:16:08.160 --> 01:16:12.680
+So you can use lower precision
+for the feed forward pass,
+
+01:16:12.680 --> 01:16:15.710
+but float32 for the rest.
+
+01:16:15.710 --> 01:16:19.050
+And this is an idea that
+goes back to the 2017.
+
+01:16:19.050 --> 01:16:21.710
+There's exploring mixed
+precision training.
+
+01:16:21.710 --> 01:16:24.680
+Pytorch has some tools
+that automatically
+
+01:16:24.680 --> 01:16:28.660
+allow you to do mixed
+precision training,
+
+01:16:28.660 --> 01:16:31.510
+because it can be
+annoying to have
+
+01:16:31.510 --> 01:16:34.090
+to specify which
+parts of your model
+
+01:16:34.090 --> 01:16:37.330
+it needs to be what precision.
+
+01:16:37.330 --> 01:16:41.390
+Generally, you define your model
+as this clean, modular thing
+
+01:16:41.390 --> 01:16:46.090
+and specifying the
+precision is something
+
+01:16:46.090 --> 01:16:47.925
+that needs to cut across that.
+
+01:16:50.530 --> 01:16:54.670
+And I guess, maybe
+one general comment
+
+01:16:54.670 --> 01:16:58.240
+is that people are
+pushing the envelope
+
+01:16:58.240 --> 01:17:00.200
+on what precision is needed.
+
+01:17:00.200 --> 01:17:02.950
+There's some papers that
+show you can actually
+
+01:17:02.950 --> 01:17:06.600
+use FP8 all the way through.
+
+01:17:09.478 --> 01:17:12.465
+I guess one of the
+challenges is, of course,
+
+01:17:12.465 --> 01:17:13.840
+when you have
+lower precision, it
+
+01:17:13.840 --> 01:17:16.550
+gets very numerically unstable.
+
+01:17:16.550 --> 01:17:18.460
+But then you can
+do various tricks
+
+01:17:18.460 --> 01:17:22.510
+to control the
+numerics of your model
+
+01:17:22.510 --> 01:17:24.010
+during training
+so that you don't
+
+01:17:24.010 --> 01:17:26.390
+get into these bad regimes.
+
+01:17:26.390 --> 01:17:30.910
+So this is where I think
+the systems and the model
+
+01:17:30.910 --> 01:17:34.330
+architecture design
+are synergistic,
+
+01:17:34.330 --> 01:17:39.610
+because you want to design
+models now that we have--
+
+01:17:39.610 --> 01:17:42.680
+a lot of model design is
+just governed by hardware.
+
+01:17:42.680 --> 01:17:45.200
+So even the transformer,
+as we mentioned last time,
+
+01:17:45.200 --> 01:17:47.270
+is governed by having GPUs.
+
+01:17:47.270 --> 01:17:51.190
+And now, if we notice
+that NVIDIA chips have
+
+01:17:51.190 --> 01:17:56.140
+the property that if lower
+precision, even like int4
+
+01:17:56.140 --> 01:17:57.860
+for example, is one thing.
+
+01:17:57.860 --> 01:18:01.840
+Now, if you can make your
+model training actually
+
+01:18:01.840 --> 01:18:05.930
+work on int4, which
+is I think quite hard,
+
+01:18:05.930 --> 01:18:08.410
+then you can get
+massive speedups
+
+01:18:08.410 --> 01:18:11.980
+and your model will
+be more efficient.
+
+01:18:11.980 --> 01:18:15.820
+Now, there's
+another thing, which
+
+01:18:15.820 --> 01:18:18.220
+we'll talk about
+later, which is often
+
+01:18:18.220 --> 01:18:22.640
+you'll train your model using
+more sane floating point.
+
+01:18:22.640 --> 01:18:25.380
+But when it comes to
+inference, you can go crazy
+
+01:18:25.380 --> 01:18:27.660
+and you take your
+model, and then
+
+01:18:27.660 --> 01:18:30.690
+you can quantize it and
+get a lot of the gains
+
+01:18:30.690 --> 01:18:34.090
+from very, very
+aggressive quantization.
+
+01:18:34.090 --> 01:18:37.080
+So somehow training
+is a lot more
+
+01:18:37.080 --> 01:18:38.643
+difficult to do
+with low precision.
+
+01:18:38.643 --> 01:18:40.060
+But once you have
+a trained model,
+
+01:18:40.060 --> 01:18:44.160
+it's much easier to
+make it low precision.
+
+01:18:44.160 --> 01:18:47.320
+OK, so I will wrap up there.
+
+01:18:47.320 --> 01:18:52.920
+Just to conclude, we have talked
+about the different primitives
+
+01:18:52.920 --> 01:18:55.620
+to use to train a model
+building up from tensors all
+
+01:18:55.620 --> 01:18:56.920
+the way to the training loop.
+
+01:18:56.920 --> 01:19:01.170
+We talked about memory
+accounting and flops accounting
+
+01:19:01.170 --> 01:19:03.270
+for these simple models.
+
+01:19:03.270 --> 01:19:06.190
+Hopefully, once you go
+through assignment 1,
+
+01:19:06.190 --> 01:19:08.370
+all of these concepts
+will be really solid
+
+01:19:08.370 --> 01:19:11.610
+because you'll be
+applying these ideas
+
+01:19:11.610 --> 01:19:14.010
+for the actual transformer.
+
+01:19:14.010 --> 01:19:15.150
+OK.
+
+01:19:15.150 --> 01:19:17.150
+See you next time.

@@ -1,0 +1,7477 @@
+WEBVTT
+Kind: captions
+Language: en-US
+
+00:00:05.300 --> 00:00:08.480
+As you may have noticed, I'm
+a little bit less innovative
+
+00:00:08.480 --> 00:00:10.130
+in my lecturing them,
+Percy, so you're
+
+00:00:10.130 --> 00:00:12.290
+going to get PowerPoint
+slides rather
+
+00:00:12.290 --> 00:00:14.570
+than executable
+Python ones, but you
+
+00:00:14.570 --> 00:00:18.570
+should be able to find the
+PDFs on the website as well.
+
+00:00:18.570 --> 00:00:21.200
+So I've titled this lecture,
+"Everything You Didn't Want
+
+00:00:21.200 --> 00:00:23.340
+To Know About LM
+Architecture And Training,"
+
+00:00:23.340 --> 00:00:26.007
+because we're going to get into
+some of the nitty-gritty details
+
+00:00:26.007 --> 00:00:29.360
+that I think most other classes
+would spare you the details of.
+
+00:00:29.360 --> 00:00:31.740
+Like what should my
+hyperparameters be?
+
+00:00:31.740 --> 00:00:33.920
+And those kinds of questions.
+
+00:00:33.920 --> 00:00:35.990
+Some minor logistics.
+
+00:00:35.990 --> 00:00:37.590
+Also, if you're doing
+the assignments,
+
+00:00:37.590 --> 00:00:41.850
+we are updating assignments
+as we find mostly minor bugs.
+
+00:00:41.850 --> 00:00:47.510
+Make sure you pull updates to
+the assignments as you go along.
+
+00:00:47.510 --> 00:00:49.730
+So what we're going
+to do, we're going
+
+00:00:49.730 --> 00:00:52.560
+to start with a quick
+recap of a transformer.
+
+00:00:52.560 --> 00:00:55.380
+And I'll give you two variants
+of a standard transformer,
+
+00:00:55.380 --> 00:00:59.890
+one that's probably coming
+from the standard transformer
+
+00:00:59.890 --> 00:01:02.440
+lectures that you
+might see in 224N.
+
+00:01:02.440 --> 00:01:05.050
+And then I'll talk
+about what you implement
+
+00:01:05.050 --> 00:01:08.210
+and the modern consensus
+variant of a transformer.
+
+00:01:08.210 --> 00:01:10.750
+And then we're going to
+take a much more data-driven
+
+00:01:10.750 --> 00:01:13.715
+perspective to understanding
+transformer architectures.
+
+00:01:13.715 --> 00:01:15.340
+So the question that
+we're going to ask
+
+00:01:15.340 --> 00:01:18.890
+is people have trained
+lots of LLMs at this point,
+
+00:01:18.890 --> 00:01:21.340
+and you can go and read
+all of those papers
+
+00:01:21.340 --> 00:01:23.210
+and try to understand
+what has changed,
+
+00:01:23.210 --> 00:01:24.470
+what has been in common.
+
+00:01:24.470 --> 00:01:27.400
+And from that, almost an
+evolutionary analysis,
+
+00:01:27.400 --> 00:01:29.800
+try to understand what are
+the things that are really
+
+00:01:29.800 --> 00:01:31.460
+important to make
+transformers work.
+
+00:01:31.460 --> 00:01:34.270
+So today's theme is--
+the theme of the class
+
+00:01:34.270 --> 00:01:36.270
+is the best way to learn
+is hands-on experience.
+
+00:01:36.270 --> 00:01:37.978
+But the theme of this
+lecture, because we
+
+00:01:37.978 --> 00:01:39.490
+can't train all
+these transformers,
+
+00:01:39.490 --> 00:01:43.300
+is to learn from the
+experience of others.
+
+00:01:43.300 --> 00:01:46.900
+So the starting point is
+the original transformer.
+
+00:01:46.900 --> 00:01:51.070
+So just as a review, hopefully,
+you all remember this from 224N
+
+00:01:51.070 --> 00:01:52.850
+or your other NLP classes.
+
+00:01:52.850 --> 00:01:56.450
+You've got some simple position
+embeddings at the bottom.
+
+00:01:56.450 --> 00:01:58.390
+You've got multi-head attention.
+
+00:01:58.390 --> 00:02:00.618
+You've got LayerNorms
+afterwards.
+
+00:02:00.618 --> 00:02:02.410
+You've got a residual
+stream going upwards.
+
+00:02:02.410 --> 00:02:05.650
+You've got an MLP, and then
+a softmax at the very end.
+
+00:02:05.650 --> 00:02:08.550
+And we're going to see variants
+to all of these different pieces
+
+00:02:08.550 --> 00:02:11.850
+until we get to basically
+the most modern variants
+
+00:02:11.850 --> 00:02:13.000
+of the transformer.
+
+00:02:13.000 --> 00:02:14.610
+And the latest one
+I'll talk about
+
+00:02:14.610 --> 00:02:17.820
+will be just a
+few months before.
+
+00:02:17.820 --> 00:02:22.950
+So what you implemented is not
+the vanilla transformer variant
+
+00:02:22.950 --> 00:02:24.630
+from the original paper.
+
+00:02:24.630 --> 00:02:26.730
+We've modified a few things.
+
+00:02:26.730 --> 00:02:28.750
+We've put the LayerNorm
+in front of the block.
+
+00:02:28.750 --> 00:02:31.050
+So you can see on
+this slide over here
+
+00:02:31.050 --> 00:02:32.910
+that there's the
+norm is over here
+
+00:02:32.910 --> 00:02:36.570
+right before each of these
+blocks in the residual stream.
+
+00:02:36.570 --> 00:02:39.900
+We've asked you to implement
+rotary position embeddings.
+
+00:02:39.900 --> 00:02:43.080
+The feed-forward layers use
+something called a SwiGLU.
+
+00:02:43.080 --> 00:02:48.000
+And then linear layers
+now emit these bias terms.
+
+00:02:48.000 --> 00:02:50.100
+And you might ask,
+why have you forced
+
+00:02:50.100 --> 00:02:52.860
+us to implement this weird
+variant of a transformer instead
+
+00:02:52.860 --> 00:02:57.140
+of the original transformer
+is all you need transformer?
+
+00:02:57.140 --> 00:02:59.625
+And so we're going to go
+through some of those questions.
+
+00:02:59.625 --> 00:03:01.250
+And then yesterday,
+I was thinking, OK,
+
+00:03:01.250 --> 00:03:03.140
+I should catch up on
+all the developments
+
+00:03:03.140 --> 00:03:04.670
+that have happened
+in architectures
+
+00:03:04.670 --> 00:03:05.842
+over the last year.
+
+00:03:05.842 --> 00:03:07.800
+And Percy warned me about
+this because he said,
+
+00:03:07.800 --> 00:03:09.810
+you're going to have to
+redo the lecture every year.
+
+00:03:09.810 --> 00:03:10.800
+And so I started looking.
+
+00:03:10.800 --> 00:03:12.950
+And I was like, all right, yeah,
+there's a couple of good papers
+
+00:03:12.950 --> 00:03:13.450
+recently.
+
+00:03:13.450 --> 00:03:15.990
+There's Command A,
+there's 2 OLMo 2 Furious.
+
+00:03:15.990 --> 00:03:17.783
+There's SmolLM and Phi-4.
+
+00:03:17.783 --> 00:03:19.950
+And then you go looking,
+and you're like, wow, yeah,
+
+00:03:19.950 --> 00:03:22.910
+there's Gemma 3 and
+Qwen 2.5 and InternLM.
+
+00:03:22.910 --> 00:03:24.510
+And then we got more.
+
+00:03:24.510 --> 00:03:27.740
+I can't even cover the
+screen with these guys.
+
+00:03:27.740 --> 00:03:29.490
+There's a lot of models.
+
+00:03:29.490 --> 00:03:32.240
+There were about 19 new
+dense model releases
+
+00:03:32.240 --> 00:03:36.205
+in the last year, many of them
+with minor architecture tweaks.
+
+00:03:36.205 --> 00:03:37.580
+And on the one
+hand, it's kind of
+
+00:03:37.580 --> 00:03:39.260
+annoying to go through
+all these papers
+
+00:03:39.260 --> 00:03:42.920
+and say, like, what is
+happening in all of these?
+
+00:03:42.920 --> 00:03:45.230
+But also, it's like actually
+a wealth of information
+
+00:03:45.230 --> 00:03:47.010
+because not all of
+them do the same thing.
+
+00:03:47.010 --> 00:03:48.225
+And you can see--
+
+00:03:48.225 --> 00:03:49.850
+not all of you,
+especially in the back,
+
+00:03:49.850 --> 00:03:52.160
+can see the details
+of this slide.
+
+00:03:52.160 --> 00:03:54.430
+But I put together
+a little spreadsheet
+
+00:03:54.430 --> 00:03:56.330
+of what all these
+models are doing.
+
+00:03:56.330 --> 00:03:58.430
+And starting with all
+the way from 2017,
+
+00:03:58.430 --> 00:04:01.280
+the original transformer,
+all the way to 2025,
+
+00:04:01.280 --> 00:04:02.980
+what the newest
+models are doing.
+
+00:04:02.980 --> 00:04:05.060
+And we'll talk
+about this as we go.
+
+00:04:05.060 --> 00:04:08.140
+But you see certain kinds
+of architecture changes
+
+00:04:08.140 --> 00:04:09.350
+being explored.
+
+00:04:09.350 --> 00:04:11.438
+So here, on this column,
+is position embeddings.
+
+00:04:11.438 --> 00:04:12.980
+People used to do
+all sorts of stuff,
+
+00:04:12.980 --> 00:04:15.460
+like absolute,
+relative, RoPE There was
+
+00:04:15.460 --> 00:04:18.410
+a alibi phase for some people.
+
+00:04:18.410 --> 00:04:21.640
+But then, now, starting around
+2023, everyone just does RoPE.
+
+00:04:21.640 --> 00:04:23.950
+So you can see this
+convergent evolution
+
+00:04:23.950 --> 00:04:25.970
+almost of neural architectures.
+
+00:04:25.970 --> 00:04:27.460
+And we're going
+to talk about all
+
+00:04:27.460 --> 00:04:28.918
+of these different
+kinds of things.
+
+00:04:28.918 --> 00:04:33.190
+So the parts that
+I'll cover-- so this
+
+00:04:33.190 --> 00:04:35.913
+is a preview of the three
+major sections of this lecture.
+
+00:04:35.913 --> 00:04:37.330
+And if I have time,
+I'm also going
+
+00:04:37.330 --> 00:04:40.520
+to talk about different
+attention variants at the end.
+
+00:04:40.520 --> 00:04:43.190
+The first thing is going to
+be architecture variations.
+
+00:04:43.190 --> 00:04:44.690
+That's what I'm
+going to talk about.
+
+00:04:44.690 --> 00:04:46.910
+So activations, feed-forwards,
+attention variants,
+
+00:04:46.910 --> 00:04:49.060
+position embeddings,
+all of those things.
+
+00:04:49.060 --> 00:04:51.920
+And then having nailed down
+the architecture, what do we
+
+00:04:51.920 --> 00:04:52.420
+have to do?
+
+00:04:52.420 --> 00:04:54.420
+Well, we have to
+pick hyperparameters.
+
+00:04:54.420 --> 00:04:57.460
+How big do we make
+the hidden dimension?
+
+00:04:57.460 --> 00:05:01.375
+How big do we make the inner
+projection layer inside of MLP?
+
+00:05:01.375 --> 00:05:03.250
+What do we do about the
+number of dimensions?
+
+00:05:03.250 --> 00:05:04.360
+How many vocab elements?
+
+00:05:04.360 --> 00:05:06.030
+Those are all important
+things that you
+
+00:05:06.030 --> 00:05:08.610
+have to choose when you're
+actually training your language
+
+00:05:08.610 --> 00:05:10.290
+model.
+
+00:05:10.290 --> 00:05:12.450
+And you don't want to just
+pick these out of a hat.
+
+00:05:12.450 --> 00:05:15.040
+You want to select them in
+some fairly intelligent way.
+
+00:05:15.040 --> 00:05:20.250
+So we're going to start with
+architecture variations.
+
+00:05:20.250 --> 00:05:24.130
+And the two things that
+I'll mention right here--
+
+00:05:24.130 --> 00:05:26.320
+and I'll go back
+to them as I talk--
+
+00:05:26.320 --> 00:05:29.520
+the first one is, there's
+not that much consensus
+
+00:05:29.520 --> 00:05:30.910
+in a lot of the choices.
+
+00:05:30.910 --> 00:05:34.630
+There's been convergent
+evolution in the last few years,
+
+00:05:34.630 --> 00:05:37.050
+what I'll call LLaMA-like
+architectures at the very bottom
+
+00:05:37.050 --> 00:05:37.593
+here.
+
+00:05:37.593 --> 00:05:39.010
+But people do all
+sorts of things.
+
+00:05:39.010 --> 00:05:40.930
+They swap between
+LayerNorm and RMS Norm.
+
+00:05:40.930 --> 00:05:42.790
+They do serial versus
+parallel layers.
+
+00:05:42.790 --> 00:05:44.970
+There's one choice
+that basically everyone
+
+00:05:44.970 --> 00:05:47.880
+does since the very first GPT.
+
+00:05:47.880 --> 00:05:50.300
+And I'll talk about
+that in a bit.
+
+00:05:50.300 --> 00:05:52.280
+But there's lots of
+different variations
+
+00:05:52.280 --> 00:05:54.770
+that we can learn from here.
+
+00:05:54.770 --> 00:05:58.070
+The big one, I've already
+talked about this guy in 224N.
+
+00:05:58.070 --> 00:06:01.040
+So if you remember that lecture,
+this will be review for you
+
+00:06:01.040 --> 00:06:02.700
+rather than being totally new.
+
+00:06:02.700 --> 00:06:06.350
+I think the one thing basically
+everyone agrees on and agreed
+
+00:06:06.350 --> 00:06:09.230
+on almost from the
+very start, is the use
+
+00:06:09.230 --> 00:06:12.170
+of pre-norm versus post-norm.
+
+00:06:12.170 --> 00:06:15.050
+That terminology will get a
+little bit more confusing.
+
+00:06:15.050 --> 00:06:17.000
+But the original
+transformer paper
+
+00:06:17.000 --> 00:06:19.460
+did this thing on
+the left over here
+
+00:06:19.460 --> 00:06:22.280
+where you had your residual
+stream in the gray.
+
+00:06:22.280 --> 00:06:24.890
+And in addition to
+the residual stream,
+
+00:06:24.890 --> 00:06:27.740
+you had these LayerNorms
+after every subcomponent.
+
+00:06:27.740 --> 00:06:29.490
+So you would do your
+multi-head attention.
+
+00:06:29.490 --> 00:06:31.320
+You would add back to
+the residual stream.
+
+00:06:31.320 --> 00:06:32.550
+And then you would
+LayerNorm that.
+
+00:06:32.550 --> 00:06:35.180
+And then you would do the same
+thing with your fully connected
+
+00:06:35.180 --> 00:06:35.550
+layer.
+
+00:06:35.550 --> 00:06:36.967
+And then you would
+LayerNorm that.
+
+00:06:36.967 --> 00:06:40.850
+And very, very early
+on, people realized
+
+00:06:40.850 --> 00:06:43.280
+that moving this
+LayerNorm to the front
+
+00:06:43.280 --> 00:06:47.160
+of this non-residual part,
+so this block on the right
+
+00:06:47.160 --> 00:06:49.510
+did much better in
+many different ways.
+
+00:06:49.510 --> 00:06:52.710
+And basically, almost
+all modern LMs that I
+
+00:06:52.710 --> 00:06:55.590
+use this kind of pre-norm.
+
+00:06:55.590 --> 00:06:57.690
+There have been
+some new innovations
+
+00:06:57.690 --> 00:07:00.480
+recently that I'll
+touch on in two slides.
+
+00:07:00.480 --> 00:07:03.580
+But lots of models
+have moved to this.
+
+00:07:03.580 --> 00:07:07.710
+The one exception is
+OPT350M, which I'm guessing,
+
+00:07:07.710 --> 00:07:09.160
+they messed that one up.
+
+00:07:09.160 --> 00:07:11.800
+And that was orphaned
+when they were training.
+
+00:07:11.800 --> 00:07:15.960
+That was a fun find in my
+survey of architectures.
+
+00:07:15.960 --> 00:07:18.100
+So this pre versus
+post-norm thing,
+
+00:07:18.100 --> 00:07:20.790
+if you look into why it
+was originally developed,
+
+00:07:20.790 --> 00:07:24.840
+the arguments were that if you
+wanted to use this post norm
+
+00:07:24.840 --> 00:07:26.770
+stuff, it was much less stable.
+
+00:07:26.770 --> 00:07:29.550
+And so you would have to do some
+careful learning rate warm up
+
+00:07:29.550 --> 00:07:32.760
+style things to make it
+train in a stable way.
+
+00:07:32.760 --> 00:07:35.820
+And so if you look at some
+of the earlier papers arguing
+
+00:07:35.820 --> 00:07:39.990
+for this pre-norm approach,
+Salazar and Ngyuen and also
+
+00:07:39.990 --> 00:07:42.780
+this Xiong 2020 paper,
+you almost always
+
+00:07:42.780 --> 00:07:46.400
+see this comparison of,
+hey, if we use pre-norm
+
+00:07:46.400 --> 00:07:48.750
+and we do some other
+stability-inducing tricks,
+
+00:07:48.750 --> 00:07:51.230
+then we can remove
+warmup and these systems
+
+00:07:51.230 --> 00:07:53.390
+work just as well,
+if not better,
+
+00:07:53.390 --> 00:07:57.410
+than the post-normal
+LayerNorm with
+
+00:07:57.410 --> 00:07:58.980
+careful warmup-type approaches.
+
+00:07:58.980 --> 00:08:02.150
+And you see this in a machine
+translation setting here.
+
+00:08:02.150 --> 00:08:07.110
+You see this as well on the
+right on various other tasks,
+
+00:08:07.110 --> 00:08:11.420
+especially using BERT which
+was trained with post-norm.
+
+00:08:11.420 --> 00:08:15.462
+So there were many arguments
+about why this was helpful.
+
+00:08:15.462 --> 00:08:17.420
+There were arguments
+about gradient attenuation
+
+00:08:17.420 --> 00:08:18.003
+across layers.
+
+00:08:18.003 --> 00:08:21.110
+Like if you do pre-norm,
+then the gradient sizes
+
+00:08:21.110 --> 00:08:22.080
+will remain constant.
+
+00:08:22.080 --> 00:08:25.460
+Whereas if you did
+post-norm without warm-up,
+
+00:08:25.460 --> 00:08:27.900
+then it would blow up
+in this orange way.
+
+00:08:27.900 --> 00:08:29.250
+It's a reasonable argument.
+
+00:08:29.250 --> 00:08:32.299
+But I think a maybe more
+closer to modern intuition
+
+00:08:32.299 --> 00:08:35.299
+would be this argument that
+pre-norm is just a more
+
+00:08:35.299 --> 00:08:37.080
+stable architecture to train.
+
+00:08:37.080 --> 00:08:40.190
+And so some of the earlier
+work by Salazar and Ngyuen
+
+00:08:40.190 --> 00:08:43.720
+identified all these loss
+spikes that if you were training
+
+00:08:43.720 --> 00:08:47.500
+with pre-norm, in blue here, you
+would see a lot more loss spikes
+
+00:08:47.500 --> 00:08:51.067
+and the training would be
+kind of unstable as you
+
+00:08:51.067 --> 00:08:51.650
+were training.
+
+00:08:51.650 --> 00:08:53.980
+So you see the
+gradient norm here
+
+00:08:53.980 --> 00:08:57.640
+is spiking and generally higher
+than the one with pre-norm.
+
+00:08:57.640 --> 00:09:01.750
+And so, today, you see pre-norm
+and other LayerNorm tricks
+
+00:09:01.750 --> 00:09:07.510
+being used essentially as
+a stability-inducing aids
+
+00:09:07.510 --> 00:09:11.230
+for using training
+large neural networks.
+
+00:09:11.230 --> 00:09:16.468
+And so this brings us to one
+new fairly recent innovation.
+
+00:09:16.468 --> 00:09:18.010
+I think this didn't
+exist when I gave
+
+00:09:18.010 --> 00:09:22.450
+this lecture last year, which is
+this variant that I don't think
+
+00:09:22.450 --> 00:09:24.220
+really has a great
+name, but I'm just
+
+00:09:24.220 --> 00:09:26.750
+going to call it the double
+norm for the moment here.
+
+00:09:26.750 --> 00:09:29.260
+So this is the original
+figure that I showed you
+
+00:09:29.260 --> 00:09:30.200
+at the very beginning.
+
+00:09:30.200 --> 00:09:31.658
+And we know that
+putting LayerNorms
+
+00:09:31.658 --> 00:09:33.700
+in the residual stream is bad.
+
+00:09:33.700 --> 00:09:37.400
+But actually, someone in two
+224N this year asked, well,
+
+00:09:37.400 --> 00:09:39.770
+but why do you have to put
+the LayerNorm in the front?
+
+00:09:39.770 --> 00:09:42.460
+Why can't you put it after
+the feed-forward network?
+
+00:09:42.460 --> 00:09:43.750
+And of course, you can.
+
+00:09:43.750 --> 00:09:48.000
+And not only that, recent
+people have gone around and just
+
+00:09:48.000 --> 00:09:50.890
+add the LayerNorm after
+the blocks as well.
+
+00:09:50.890 --> 00:09:55.410
+And so Grok and Gemma 2 both
+take this approach of LayerNorms
+
+00:09:55.410 --> 00:09:57.840
+both in front and after.
+
+00:09:57.840 --> 00:10:00.660
+Olmo 2 two does
+only the LayerNorm
+
+00:10:00.660 --> 00:10:03.520
+after the feed-forward in
+the multi-head attention.
+
+00:10:03.520 --> 00:10:05.910
+And so this is actually
+an interesting change.
+
+00:10:05.910 --> 00:10:09.955
+Pre-norm has just been dominant
+and the only thing for a while.
+
+00:10:09.955 --> 00:10:11.830
+But things have been
+changed up a little bit.
+
+00:10:11.830 --> 00:10:13.840
+So now, there's a new variant.
+
+00:10:13.840 --> 00:10:16.350
+And there's been
+some evaluations
+
+00:10:16.350 --> 00:10:17.650
+of this kind of approach.
+
+00:10:17.650 --> 00:10:20.490
+People have argued it's a
+little bit more stable and nicer
+
+00:10:20.490 --> 00:10:23.400
+to train on these larger models.
+
+00:10:23.400 --> 00:10:26.920
+By the way, feel free to stop
+me and ask me questions as well.
+
+00:10:26.920 --> 00:10:30.160
+I have a tendency to keep
+going if no one stops me.
+
+00:10:30.160 --> 00:10:31.080
+So, yes?
+
+00:10:31.080 --> 00:10:33.930
+Why is LayerNorm in
+the residual bad?
+
+00:10:33.930 --> 00:10:35.770
+Why is LayerNorm in
+the residual bad?
+
+00:10:35.770 --> 00:10:37.480
+That's a good question.
+
+00:10:37.480 --> 00:10:39.710
+I don't think I
+can give you a this
+
+00:10:39.710 --> 00:10:41.340
+is the proof of why it's bad.
+
+00:10:41.340 --> 00:10:44.420
+I think one intuitive argument
+for why this might be bad
+
+00:10:44.420 --> 00:10:47.390
+is that the residual gives you
+this identity connection all
+
+00:10:47.390 --> 00:10:49.200
+the way from almost
+the top of the network,
+
+00:10:49.200 --> 00:10:50.550
+all the way to the bottom.
+
+00:10:50.550 --> 00:10:52.800
+And so if you're trying to
+train really deep networks,
+
+00:10:52.800 --> 00:10:55.070
+this makes gradient
+propagation very easy.
+
+00:10:55.070 --> 00:10:57.320
+So there's lots of
+arguments about how
+
+00:10:57.320 --> 00:11:00.260
+LSTMs and these other
+kinds of state space models
+
+00:11:00.260 --> 00:11:02.370
+have difficulty propagating
+gradients backwards.
+
+00:11:02.370 --> 00:11:04.770
+An identity connection does
+not have any such problems.
+
+00:11:04.770 --> 00:11:06.950
+And so putting
+LayerNorms in the middle
+
+00:11:06.950 --> 00:11:09.270
+might mess with that kind
+of gradient behavior.
+
+00:11:09.270 --> 00:11:11.460
+And that of course,
+you see back here.
+
+00:11:11.460 --> 00:11:13.340
+This is exactly the
+kind of plot you expect
+
+00:11:13.340 --> 00:11:16.890
+to see if that's happening.
+
+00:11:16.890 --> 00:11:19.550
+Cool.
+
+00:11:19.550 --> 00:11:23.030
+The other thing
+that people now do
+
+00:11:23.030 --> 00:11:27.030
+is in the original transformer,
+people did LayerNorm.
+
+00:11:27.030 --> 00:11:29.970
+And so LayerNorm is
+this equation over here.
+
+00:11:29.970 --> 00:11:33.300
+What you do is you have the
+activations x coming in.
+
+00:11:33.300 --> 00:11:35.490
+You subtract the empirical mean.
+
+00:11:35.490 --> 00:11:37.520
+So that's the average
+of the x's up top.
+
+00:11:37.520 --> 00:11:40.870
+And then you divide by the
+standard or the variance
+
+00:11:40.870 --> 00:11:42.590
+plus a little fudge
+factor epsilon.
+
+00:11:42.590 --> 00:11:43.840
+And then you square root that.
+
+00:11:43.840 --> 00:11:46.520
+So that you can roughly think
+of it as a standard deviation.
+
+00:11:46.520 --> 00:11:50.285
+So that's going to standardize
+your activations x.
+
+00:11:50.285 --> 00:11:51.910
+You're going to scale
+it up by a gamma.
+
+00:11:51.910 --> 00:11:53.210
+That's a learnable parameter.
+
+00:11:53.210 --> 00:11:54.680
+And then shift it by a beta.
+
+00:11:54.680 --> 00:11:56.060
+So this makes sense.
+
+00:11:56.060 --> 00:11:57.852
+You're going to normalize
+your activations.
+
+00:11:57.852 --> 00:11:59.602
+And then you're going
+to shift them around
+
+00:11:59.602 --> 00:12:00.940
+to whatever point you want.
+
+00:12:00.940 --> 00:12:03.350
+And many models use
+this LayerNorm thing.
+
+00:12:03.350 --> 00:12:04.720
+And it worked quite well.
+
+00:12:04.720 --> 00:12:08.092
+But many models have now
+moved on to RMS Norm.
+
+00:12:08.092 --> 00:12:09.800
+And this is one of
+the consensus changes.
+
+00:12:09.800 --> 00:12:13.420
+Basically, all the models have
+switched to using RMS Norm.
+
+00:12:13.420 --> 00:12:14.680
+And now, what do you do, You?
+
+00:12:14.680 --> 00:12:16.728
+Just drop the mean adjustment.
+
+00:12:16.728 --> 00:12:18.020
+So you don't subtract the mean.
+
+00:12:18.020 --> 00:12:19.750
+You don't add a bias term.
+
+00:12:19.750 --> 00:12:21.350
+And many notable models do this.
+
+00:12:21.350 --> 00:12:23.150
+The LLaMA-family PaLM,
+Chinchilla, T5's,
+
+00:12:23.150 --> 00:12:26.260
+they've all moved to RMS Norm.
+
+00:12:26.260 --> 00:12:28.000
+And what's the reason for this?
+
+00:12:28.000 --> 00:12:30.830
+One reason is that it doesn't
+really make a difference.
+
+00:12:30.830 --> 00:12:33.340
+It turns out if you train
+models with RMS Norm
+
+00:12:33.340 --> 00:12:35.950
+does just as well as
+training with LayerNorm.
+
+00:12:35.950 --> 00:12:38.820
+And so there's a
+simplification argument.
+
+00:12:38.820 --> 00:12:40.830
+But really, I think
+the argument that's
+
+00:12:40.830 --> 00:12:43.470
+often given in
+these papers, and I
+
+00:12:43.470 --> 00:12:46.630
+think it's good to appreciate
+the details of this argument,
+
+00:12:46.630 --> 00:12:51.880
+is that going to RMS Norm is--
+it's faster and just as good.
+
+00:12:51.880 --> 00:12:53.470
+So in what way is it faster?
+
+00:12:53.470 --> 00:12:56.470
+Well, if I don't subtract the
+mean, it's fewer operations.
+
+00:12:56.470 --> 00:12:59.500
+If I don't have to add
+that bias term beta back,
+
+00:12:59.500 --> 00:13:02.490
+it's fewer parameters that I
+have to load from memory back
+
+00:13:02.490 --> 00:13:03.790
+into my compute units.
+
+00:13:03.790 --> 00:13:07.890
+So I don't have to
+retrieve this state.
+
+00:13:07.890 --> 00:13:10.150
+And some of you might
+be thinking, but wait,
+
+00:13:10.150 --> 00:13:13.530
+you told me in 224N that nothing
+but matrix multiplies matter
+
+00:13:13.530 --> 00:13:14.940
+for the purpose of runtime.
+
+00:13:14.940 --> 00:13:16.690
+And this is not a
+matrix multiply.
+
+00:13:16.690 --> 00:13:19.120
+And so I shouldn't
+care about any of this.
+
+00:13:19.120 --> 00:13:20.980
+And that's a reasonable
+perspective to take.
+
+00:13:20.980 --> 00:13:25.500
+If you think about the number
+of the percentage of flops that
+
+00:13:25.500 --> 00:13:27.840
+is taken up by
+different operations
+
+00:13:27.840 --> 00:13:30.270
+in a transformer,
+this table, there's
+
+00:13:30.270 --> 00:13:34.400
+a nice paper by
+Ivanov et al 2023.
+
+00:13:34.400 --> 00:13:36.680
+I think the title is Memory
+Movement Is All You Need
+
+00:13:36.680 --> 00:13:40.490
+or something that does profiling
+of all the different components
+
+00:13:40.490 --> 00:13:42.090
+of a transformer.
+
+00:13:42.090 --> 00:13:43.860
+And you see that
+tensor contractions,
+
+00:13:43.860 --> 00:13:45.527
+which are like matrix
+multiplies, that's
+
+00:13:45.527 --> 00:13:49.380
+like 99.8% of the flops that
+happen in a transformer.
+
+00:13:49.380 --> 00:13:52.430
+And so saving
+0.17% of your flops
+
+00:13:52.430 --> 00:13:55.940
+doesn't seem like a huge win.
+
+00:13:55.940 --> 00:13:57.950
+But I think one of the
+things that's important
+
+00:13:57.950 --> 00:14:02.640
+for architecture design now is
+to not just think about flops.
+
+00:14:02.640 --> 00:14:05.720
+Because flops are important,
+but that's not the only resource
+
+00:14:05.720 --> 00:14:07.610
+that you have to think about.
+
+00:14:07.610 --> 00:14:12.470
+It's also that you have to think
+carefully about memory movement.
+
+00:14:12.470 --> 00:14:15.360
+And so even though
+tensor contraction,
+
+00:14:15.360 --> 00:14:17.310
+so this is things like
+matrix multiplies.
+
+00:14:17.310 --> 00:14:19.980
+That's like 99.8% of the flops.
+
+00:14:19.980 --> 00:14:23.880
+If you have things like the
+softmax operation or LayerNorms,
+
+00:14:23.880 --> 00:14:25.850
+all these normalization
+operations that
+
+00:14:25.850 --> 00:14:30.740
+happen in a transformer,
+there are 0.17% of the flops--
+
+00:14:30.740 --> 00:14:33.500
+actually, they're
+25% of the runtime.
+
+00:14:33.500 --> 00:14:37.150
+And a big reason for that is
+because these normalization
+
+00:14:37.150 --> 00:14:40.430
+operations still incur a lot
+of memory movement overhead.
+
+00:14:40.430 --> 00:14:42.970
+And so it does
+actually matter to try
+
+00:14:42.970 --> 00:14:46.040
+to optimize some of
+these lower level things
+
+00:14:46.040 --> 00:14:47.930
+because it's not
+just about flops,
+
+00:14:47.930 --> 00:14:49.370
+it's also about memory movement.
+
+00:14:49.370 --> 00:14:51.790
+I'm going to emphasize
+this quite a bit more as I
+
+00:14:51.790 --> 00:14:53.060
+get into the systems lecture.
+
+00:14:53.060 --> 00:14:54.688
+When we talk about
+GPU architectures,
+
+00:14:54.688 --> 00:14:56.230
+it's going to become
+very, very, very
+
+00:14:56.230 --> 00:14:59.990
+important to think about
+memory, not just about flops.
+
+00:14:59.990 --> 00:15:04.360
+And so this is one of the
+reasons why RMS Norm has now
+
+00:15:04.360 --> 00:15:07.430
+become much more popular.
+
+00:15:07.430 --> 00:15:11.050
+And so I went back and looked
+at some of the earlier RMS Norm
+
+00:15:11.050 --> 00:15:11.810
+papers.
+
+00:15:11.810 --> 00:15:15.130
+I think the sad thing is
+that there aren't quite
+
+00:15:15.130 --> 00:15:17.620
+as many papers published
+by industry labs
+
+00:15:17.620 --> 00:15:19.360
+with big, nice ablations.
+
+00:15:19.360 --> 00:15:21.550
+And so many of the
+ablations that I'll show you
+
+00:15:21.550 --> 00:15:24.070
+are going to be from a
+couple of years back.
+
+00:15:24.070 --> 00:15:27.340
+But Narang et al in 2020
+had this very nice ablation
+
+00:15:27.340 --> 00:15:29.180
+showing-- here's the
+vanilla transformer,
+
+00:15:29.180 --> 00:15:30.790
+here's the RMS Norm version.
+
+00:15:30.790 --> 00:15:33.150
+And you see the exact
+thing I told you.
+
+00:15:33.150 --> 00:15:35.640
+The number of steps per second
+that you can do in a vanilla
+
+00:15:35.640 --> 00:15:37.540
+transformer, 3.5 per second.
+
+00:15:37.540 --> 00:15:39.660
+With RMS Norm, you get 3.68.
+
+00:15:39.660 --> 00:15:42.640
+Not a huge gain, but that's,
+in some sense, for free.
+
+00:15:42.640 --> 00:15:47.340
+And you get a final loss
+that's lower than the vanilla
+
+00:15:47.340 --> 00:15:47.963
+transformer.
+
+00:15:47.963 --> 00:15:48.630
+So that's great.
+
+00:15:48.630 --> 00:15:51.510
+In some sense, we've
+gotten runtime improvements
+
+00:15:51.510 --> 00:15:53.580
+and we've gotten
+in fact, at least
+
+00:15:53.580 --> 00:15:55.540
+in this case, loss improvements.
+
+00:15:55.540 --> 00:15:59.670
+And so that's a win-win for us.
+
+00:15:59.670 --> 00:16:03.570
+The final thing that I'll say,
+which is very much in line
+
+00:16:03.570 --> 00:16:06.250
+with this RMS Norm
+thing in terms of theme,
+
+00:16:06.250 --> 00:16:10.140
+is that most modern transformers
+do not have bias terms.
+
+00:16:10.140 --> 00:16:14.076
+So the original transformer,
+if you look at the FFN,
+
+00:16:14.076 --> 00:16:15.430
+will look something like this.
+
+00:16:15.430 --> 00:16:16.540
+You have your inputs x.
+
+00:16:16.540 --> 00:16:18.670
+You're going to do a linear
+layer with a bias term.
+
+00:16:18.670 --> 00:16:19.600
+And then you ReLU it.
+
+00:16:19.600 --> 00:16:22.650
+And then you'll have a second
+linear layer wrapping around it.
+
+00:16:22.650 --> 00:16:26.852
+But most implementations--
+if they're not gated units,
+
+00:16:26.852 --> 00:16:28.310
+which I'll talk
+about in a moment--
+
+00:16:28.310 --> 00:16:29.727
+look actually
+something like this.
+
+00:16:29.727 --> 00:16:31.522
+They just drop the bias terms.
+
+00:16:31.522 --> 00:16:32.980
+And you can just
+make this argument
+
+00:16:32.980 --> 00:16:35.750
+from basically the same kinds
+of underlying principles.
+
+00:16:35.750 --> 00:16:37.960
+They perform just as well.
+
+00:16:37.960 --> 00:16:40.540
+Matrix multiplies are
+apparently all that you
+
+00:16:40.540 --> 00:16:42.430
+need to get these guys to work.
+
+00:16:42.430 --> 00:16:44.980
+And the other thing,
+which is maybe more subtle
+
+00:16:44.980 --> 00:16:48.460
+is actually
+optimization stability.
+
+00:16:48.460 --> 00:16:51.490
+I don't quite have the deepest
+understanding of why the bias
+
+00:16:51.490 --> 00:16:54.190
+terms are particularly
+bad for stability,
+
+00:16:54.190 --> 00:16:57.190
+but there's been really
+clear empirical observations
+
+00:16:57.190 --> 00:16:59.800
+that people have made that
+basically dropping these bias
+
+00:16:59.800 --> 00:17:02.980
+terms often stabilizes the
+training of these largest
+
+00:17:02.980 --> 00:17:03.830
+neural networks.
+
+00:17:03.830 --> 00:17:05.839
+And so now, a lot of
+the implementations
+
+00:17:05.839 --> 00:17:09.369
+now omit bias terms entirely and
+train only on these pure matrix
+
+00:17:09.369 --> 00:17:12.250
+multiply kind of settings.
+
+00:17:12.250 --> 00:17:16.089
+So that's the LayerNorm bit.
+
+00:17:16.089 --> 00:17:19.880
+And so there is two things
+that you should think of.
+
+00:17:19.880 --> 00:17:22.339
+This is nice because the
+story is pretty clear.
+
+00:17:22.339 --> 00:17:25.130
+Everyone does something, and
+so you should just know this.
+
+00:17:25.130 --> 00:17:26.640
+Basically, everyone
+does pre-norm.
+
+00:17:26.640 --> 00:17:29.070
+Or at least, they do
+the LayerNorms outside
+
+00:17:29.070 --> 00:17:30.040
+of the residual stream.
+
+00:17:30.040 --> 00:17:32.640
+That's kind of the iron rule.
+
+00:17:32.640 --> 00:17:34.780
+You get nicer
+gradient propagation.
+
+00:17:34.780 --> 00:17:36.430
+You get much more
+stable training.
+
+00:17:36.430 --> 00:17:38.970
+It just doesn't make sense
+to do it the other way.
+
+00:17:38.970 --> 00:17:44.550
+Most people or almost
+everybody does RMS Norm.
+
+00:17:44.550 --> 00:17:47.010
+In practice, it works almost
+as well, has fewer parameters
+
+00:17:47.010 --> 00:17:47.860
+to move around.
+
+00:17:47.860 --> 00:17:51.460
+And this idea of dropping bias
+terms just broadly applies.
+
+00:17:51.460 --> 00:17:55.270
+A lot of these models just don't
+have bias terms in most places.
+
+00:17:55.270 --> 00:17:57.550
+I think the one exception
+to this RMS Norm one,
+
+00:17:57.550 --> 00:17:59.680
+as I was reading
+yesterday, is, I think,
+
+00:17:59.680 --> 00:18:02.530
+Cohere both Command A
+and R+ use LayerNorm.
+
+00:18:02.530 --> 00:18:05.460
+Not quite sure why.
+
+00:18:05.460 --> 00:18:11.490
+Any questions on the LayerNorm,
+RMS Norm and bias terms
+
+00:18:11.490 --> 00:18:12.760
+stuff before I move on?
+
+00:18:12.760 --> 00:18:14.010
+Yes, question?
+
+00:18:14.010 --> 00:18:17.130
+Do you think there are some long
+term lessons you can take away
+
+00:18:17.130 --> 00:18:19.870
+from these details that are
+more future-proofed potentially,
+
+00:18:19.870 --> 00:18:21.270
+or do you think these are--
+
+00:18:21.270 --> 00:18:22.410
+yeah.
+
+00:18:22.410 --> 00:18:24.840
+So the question was, is there
+something more future-proof?
+
+00:18:24.840 --> 00:18:28.680
+And I think it's hard to
+have the biggest picture.
+
+00:18:28.680 --> 00:18:32.450
+In many ways, deep learning has
+been very empirical and bottom
+
+00:18:32.450 --> 00:18:33.540
+up rather than top down.
+
+00:18:33.540 --> 00:18:36.320
+But I do think there's some
+generalizable lessons that you
+
+00:18:36.320 --> 00:18:37.410
+could draw from here.
+
+00:18:37.410 --> 00:18:41.060
+I think the lesson of
+have very direct identity
+
+00:18:41.060 --> 00:18:44.150
+map residual connections is
+a story and a lesson that
+
+00:18:44.150 --> 00:18:46.070
+has played out in many,
+many different kinds
+
+00:18:46.070 --> 00:18:49.880
+of architectures, not just
+kinds of architectures.
+
+00:18:49.880 --> 00:18:51.620
+The effectiveness
+of LayerNorm we'll
+
+00:18:51.620 --> 00:18:54.350
+see, once again, later
+on in this lecture
+
+00:18:54.350 --> 00:18:55.650
+has been very effective.
+
+00:18:55.650 --> 00:18:58.700
+And so not letting your
+activations drift in scale
+
+00:18:58.700 --> 00:19:00.380
+is another thing that
+I think generally
+
+00:19:00.380 --> 00:19:03.470
+has been very effective
+for training stability.
+
+00:19:03.470 --> 00:19:07.160
+Those two seem like fairly
+generalizable lessons.
+
+00:19:07.160 --> 00:19:11.790
+We will also see the systems
+concerns come into play again.
+
+00:19:11.790 --> 00:19:13.430
+So this is another
+generalizable lesson
+
+00:19:13.430 --> 00:19:15.590
+of thinking really
+carefully about the impact
+
+00:19:15.590 --> 00:19:17.450
+of your architecture
+on the systems
+
+00:19:17.450 --> 00:19:21.190
+components of your design.
+
+00:19:21.190 --> 00:19:25.250
+So now, there's this
+other component,
+
+00:19:25.250 --> 00:19:26.690
+which is the activations.
+
+00:19:26.690 --> 00:19:29.800
+And there is a whole
+big zoo of activations--
+
+00:19:29.800 --> 00:19:32.840
+ReLU, GeLU, Swiss, ELU, GeGLU.
+
+00:19:32.840 --> 00:19:34.820
+And then, I mean, these
+aren't activations.
+
+00:19:34.820 --> 00:19:36.325
+There are different
+kinds of MLPs--
+
+00:19:36.325 --> 00:19:41.410
+GeGLU, ReGLU, SeLU,
+SwiGLU, and LiGLU.
+
+00:19:41.410 --> 00:19:45.160
+And yeah, I think this
+is exactly the kind thing
+
+00:19:45.160 --> 00:19:47.840
+that I didn't originally
+want to learn.
+
+00:19:47.840 --> 00:19:50.040
+When I got into doing
+deep learning, I was like,
+
+00:19:50.040 --> 00:19:51.332
+I don't care about activations.
+
+00:19:51.332 --> 00:19:52.510
+It's going to train anyway.
+
+00:19:52.510 --> 00:19:54.260
+But it really does matter.
+
+00:19:54.260 --> 00:19:56.600
+Unfortunately, for
+both you and me,
+
+00:19:56.600 --> 00:19:59.530
+that SwiGLU and
+other GLU variants
+
+00:19:59.530 --> 00:20:01.040
+just consistently work well.
+
+00:20:01.040 --> 00:20:02.500
+And so I will
+explain those to you.
+
+00:20:02.500 --> 00:20:04.750
+And you should think about
+them carefully because they
+
+00:20:04.750 --> 00:20:06.500
+do work and internalize that.
+
+00:20:06.500 --> 00:20:10.910
+So I think the ReLU,
+and maybe the GeLU,
+
+00:20:10.910 --> 00:20:12.610
+you all should already know.
+
+00:20:12.610 --> 00:20:15.820
+The ReLU, you learn in some of
+the most basic deep learning
+
+00:20:15.820 --> 00:20:16.450
+classes.
+
+00:20:16.450 --> 00:20:18.020
+You just take the max of 0.
+
+00:20:18.020 --> 00:20:20.170
+And in the case of the
+MLP, you've got your--
+
+00:20:20.170 --> 00:20:22.970
+I've dropped the bias
+terms here. x dot W1,
+
+00:20:22.970 --> 00:20:25.730
+you take the ReLU,
+and then you do W2.
+
+00:20:25.730 --> 00:20:27.340
+Fairly easy.
+
+00:20:27.340 --> 00:20:31.120
+A GeLU is a Gaussian
+error linear unit.
+
+00:20:31.120 --> 00:20:35.920
+This one multiplies the linear
+with a CDF of a Gaussian.
+
+00:20:35.920 --> 00:20:39.100
+And so it's basically
+going to be like the ReLU,
+
+00:20:39.100 --> 00:20:41.360
+but with a little
+bit of a bump here.
+
+00:20:41.360 --> 00:20:43.670
+Hopefully, you can
+see that over here.
+
+00:20:43.670 --> 00:20:45.880
+This is not just flat
+at the very bottom.
+
+00:20:45.880 --> 00:20:48.230
+This makes things a little
+bit more differentiable,
+
+00:20:48.230 --> 00:20:50.860
+which may or may not help.
+
+00:20:50.860 --> 00:20:53.240
+And the GPT family of models--
+
+00:20:53.240 --> 00:20:55.750
+1, 2, 3, and GPTJ and so on--
+
+00:20:55.750 --> 00:20:58.540
+all use the GeLU.
+
+00:20:58.540 --> 00:21:01.090
+And the original transformer
+and some of the older models
+
+00:21:01.090 --> 00:21:02.690
+used the ReLU.
+
+00:21:02.690 --> 00:21:05.230
+And really, almost
+all the modern models
+
+00:21:05.230 --> 00:21:08.320
+have switched to the gated
+linear units like SwiGLU
+
+00:21:08.320 --> 00:21:10.070
+and the GeGLU and others.
+
+00:21:10.070 --> 00:21:15.190
+And really, I think the Google
+folks really pushed for this,
+
+00:21:15.190 --> 00:21:17.780
+like PaLM, and T5 and others.
+
+00:21:17.780 --> 00:21:20.480
+But since it's been tried
+and true, basically,
+
+00:21:20.480 --> 00:21:27.140
+almost all the models post
+2023 use a gated linear unit.
+
+00:21:27.140 --> 00:21:30.620
+And so going back to that
+earlier question of what
+
+00:21:30.620 --> 00:21:32.630
+generalizable
+architecture things can
+
+00:21:32.630 --> 00:21:34.050
+we learn from this lecture?
+
+00:21:34.050 --> 00:21:36.170
+There are some things
+that have really
+
+00:21:36.170 --> 00:21:38.870
+consistently been very
+useful-- residual connections,
+
+00:21:38.870 --> 00:21:40.340
+LayerNorms.
+
+00:21:40.340 --> 00:21:42.030
+Gating is yet another one.
+
+00:21:42.030 --> 00:21:44.240
+And so this is another
+place where gating just
+
+00:21:44.240 --> 00:21:47.460
+appears and is a very
+good way of doing things.
+
+00:21:47.460 --> 00:21:51.010
+So, originally, this is
+our fully connected layer,
+
+00:21:51.010 --> 00:21:51.510
+right here.
+
+00:21:51.510 --> 00:21:52.770
+This is with a ReLU.
+
+00:21:52.770 --> 00:21:56.130
+Now, instead of doing
+just linear and a ReLU,
+
+00:21:56.130 --> 00:21:59.870
+what I'm going to do, is I'm
+going to gate the output here
+
+00:21:59.870 --> 00:22:02.490
+with entrywise linear term.
+
+00:22:02.490 --> 00:22:04.950
+So x dot V is going
+to give me a vector.
+
+00:22:04.950 --> 00:22:07.700
+And I'm going to
+multiply that entrywise
+
+00:22:07.700 --> 00:22:11.450
+with my original
+inside term of the MLP.
+
+00:22:11.450 --> 00:22:14.760
+And then I'm going to multiply
+the whole thing with W2.
+
+00:22:14.760 --> 00:22:16.720
+So the way to think
+about this, is
+
+00:22:16.720 --> 00:22:20.200
+I've gated the hidden
+part of the MLP.
+
+00:22:20.200 --> 00:22:22.930
+So I've got my original
+activation that takes my inputs
+
+00:22:22.930 --> 00:22:24.980
+and puts it into
+the hidden space.
+
+00:22:24.980 --> 00:22:27.280
+And then I'm going to
+gate that with x dot V.
+
+00:22:27.280 --> 00:22:30.070
+And then I'm going
+to project that back
+
+00:22:30.070 --> 00:22:33.260
+into the hidden
+dimensionality using W2.
+
+00:22:33.260 --> 00:22:36.260
+So there's this gating operation
+that happens entrywise.
+
+00:22:36.260 --> 00:22:38.990
+And that's really the basic
+thing that's happening here.
+
+00:22:38.990 --> 00:22:43.130
+And this is the GLU plus
+the ReLUs, the ReGLU.
+
+00:22:43.130 --> 00:22:44.590
+And then we have
+an extra parameter
+
+00:22:44.590 --> 00:22:46.220
+that we've added
+here for the gating.
+
+00:22:46.220 --> 00:22:48.460
+This is V.
+
+00:22:48.460 --> 00:22:50.200
+And so when someone
+says something like,
+
+00:22:50.200 --> 00:22:53.950
+oh, it's a GeGLU fully--
+
+00:22:53.950 --> 00:22:55.450
+there's nothing to
+laugh about that.
+
+00:22:55.450 --> 00:22:58.360
+There's the GeGLU
+fully-connected layer,
+
+00:22:58.360 --> 00:23:03.680
+what I've got here is, I've got
+the GeLU for the non-linearity.
+
+00:23:03.680 --> 00:23:06.260
+And I've still got the exact
+same gating here of x dot V.
+
+00:23:06.260 --> 00:23:08.410
+And this is the architecture
+that was used by many
+
+00:23:08.410 --> 00:23:15.090
+of the Google models like
+T5v1.1, Gemma 2, Gemma 3.
+
+00:23:15.090 --> 00:23:18.460
+And then another variants,
+there's a SwiGLU,
+
+00:23:18.460 --> 00:23:20.170
+and this has been
+very, very popular.
+
+00:23:20.170 --> 00:23:22.440
+Swish is x times the sigmoid.
+
+00:23:22.440 --> 00:23:23.950
+And this is the non-linearity.
+
+00:23:23.950 --> 00:23:25.888
+And sigmoid is like this.
+
+00:23:25.888 --> 00:23:26.680
+And x is like this.
+
+00:23:26.680 --> 00:23:30.090
+So it will look just like
+the Gaussian error unit.
+
+00:23:30.090 --> 00:23:32.040
+And then you do the
+same thing here.
+
+00:23:32.040 --> 00:23:33.610
+You have a gating
+over the swish.
+
+00:23:33.610 --> 00:23:35.890
+And then you get a fully
+connected layer here.
+
+00:23:35.890 --> 00:23:36.780
+Yes?
+
+00:23:36.780 --> 00:23:37.650
+I have a question.
+
+00:23:37.650 --> 00:23:41.670
+Below a certain negative value,
+the swish function and also
+
+00:23:41.670 --> 00:23:45.902
+the GeLU function, it's not
+monotonically increasing.
+
+00:23:45.902 --> 00:23:47.110
+And in fact, it's decreasing.
+
+00:23:47.110 --> 00:23:49.860
+And a lot of the argument about
+how gradient descent works
+
+00:23:49.860 --> 00:23:51.820
+in introductory machine
+learning is that, OK,
+
+00:23:51.820 --> 00:23:54.570
+you want to do gradient descent.
+
+00:23:54.570 --> 00:23:55.950
+But here, it seems
+like you would
+
+00:23:55.950 --> 00:23:59.520
+go in the opposite direction
+if you use GeLU or swish
+
+00:23:59.520 --> 00:24:00.700
+or their gated versions.
+
+00:24:00.700 --> 00:24:02.230
+So, I'm not--
+
+00:24:02.230 --> 00:24:06.370
+So the question was, this
+isn't monotonically decreasing.
+
+00:24:06.370 --> 00:24:09.150
+There's a bit on the
+very left of this 0 here
+
+00:24:09.150 --> 00:24:11.930
+that's flipping
+in the derivative.
+
+00:24:11.930 --> 00:24:14.390
+And isn't that going
+to be a problem?
+
+00:24:14.390 --> 00:24:16.732
+I think intuitively,
+you could have argued
+
+00:24:16.732 --> 00:24:17.940
+that this would be a problem.
+
+00:24:17.940 --> 00:24:20.930
+You might trap a bunch
+of activations at zeros.
+
+00:24:20.930 --> 00:24:24.620
+I think, in practice, if
+you look at neural network
+
+00:24:24.620 --> 00:24:26.990
+optimization dynamics,
+what's actually
+
+00:24:26.990 --> 00:24:29.810
+happening is often you're
+throwing very high learning
+
+00:24:29.810 --> 00:24:32.310
+rates with momentum
+into the optimizer.
+
+00:24:32.310 --> 00:24:36.000
+And so you're not really going
+to converge to the 0 point.
+
+00:24:36.000 --> 00:24:38.990
+These activations are going
+to be all over the place.
+
+00:24:38.990 --> 00:24:40.610
+And so in practice,
+I don't think
+
+00:24:40.610 --> 00:24:43.700
+this little tiny
+negative piece is really
+
+00:24:43.700 --> 00:24:46.250
+an effect that's going
+to be huge for the model,
+
+00:24:46.250 --> 00:24:47.230
+if that makes sense.
+
+00:24:49.940 --> 00:24:53.090
+And then going back
+to this, the SwiGLU
+
+00:24:53.090 --> 00:24:55.280
+is basically most models today.
+
+00:24:55.280 --> 00:24:57.770
+Like the LLaMA-family
+PaLM, OlMo--
+
+00:24:57.770 --> 00:24:59.910
+and I'll show you
+the big table later.
+
+00:24:59.910 --> 00:25:02.700
+But you'll see that the
+SwiGLU is very, very popular.
+
+00:25:02.700 --> 00:25:03.950
+And one thing to note--
+
+00:25:03.950 --> 00:25:06.440
+I'll talk about this again
+in the hyperparameters part--
+
+00:25:06.440 --> 00:25:10.180
+is now, remember, I've
+added this V term,
+
+00:25:10.180 --> 00:25:11.440
+this extra parameter.
+
+00:25:11.440 --> 00:25:15.130
+And so I want to think
+about how to size.
+
+00:25:15.130 --> 00:25:16.420
+This extra parameter.
+
+00:25:16.420 --> 00:25:19.140
+And what people do is
+gated models usually
+
+00:25:19.140 --> 00:25:20.800
+make this hidden size.
+
+00:25:20.800 --> 00:25:23.820
+The basically output
+dimensionality of W slightly
+
+00:25:23.820 --> 00:25:28.020
+smaller by a factor of 2/3
+in order to make sure that
+
+00:25:28.020 --> 00:25:31.590
+the total number of parameters
+of this whole thing remains
+
+00:25:31.590 --> 00:25:33.670
+the same as the
+non-gated counterparts.
+
+00:25:33.670 --> 00:25:36.150
+And that's a convention
+thing that most people do.
+
+00:25:36.150 --> 00:25:38.160
+If you don't quite
+understand what that is,
+
+00:25:38.160 --> 00:25:40.527
+I'll go back over
+that again later.
+
+00:25:40.527 --> 00:25:42.360
+But you can just keep
+in mind that basically
+
+00:25:42.360 --> 00:25:43.860
+for the gated linear
+units, you just
+
+00:25:43.860 --> 00:25:45.390
+make everything a
+little bit smaller
+
+00:25:45.390 --> 00:25:50.130
+to make sure things
+remain parameter matched.
+
+00:25:50.130 --> 00:25:52.930
+So, yes, question.
+
+00:25:52.930 --> 00:25:56.130
+This may be obvious or
+have gone over in the past.
+
+00:25:56.130 --> 00:25:59.340
+One of the benefits
+of ReLU is like, it's
+
+00:25:59.340 --> 00:26:02.140
+very easily differentiable
+by the input,
+
+00:26:02.140 --> 00:26:05.620
+but if you have the derivative
+of the CDF of the Gaussian,
+
+00:26:05.620 --> 00:26:07.980
+you have a squared with x.
+
+00:26:07.980 --> 00:26:11.180
+Does that not really
+slow things down?
+
+00:26:11.180 --> 00:26:12.780
+That's a very good question.
+
+00:26:12.780 --> 00:26:16.520
+I'm not 100% sure what the
+internal CUDA implementation
+
+00:26:16.520 --> 00:26:19.890
+of the SwiGLU or the GeGLU is.
+
+00:26:19.890 --> 00:26:22.670
+I think it's entirely possible
+that internally, they might be
+
+00:26:22.670 --> 00:26:25.040
+implemented with lookup tables.
+
+00:26:25.040 --> 00:26:25.610
+Go ahead.
+
+00:26:25.610 --> 00:26:28.140
+I mean, what really matters
+is the memory pressure here.
+
+00:26:28.140 --> 00:26:29.750
+And it will be the exact
+same because you're reading
+
+00:26:29.750 --> 00:26:30.950
+the same amount of elements.
+
+00:26:30.950 --> 00:26:34.140
+So the extra compute is
+negligible on [INAUDIBLE].
+
+00:26:34.140 --> 00:26:36.770
+That's probably
+a better argument
+
+00:26:36.770 --> 00:26:39.540
+that basically flops why
+this is negligible anyway.
+
+00:26:39.540 --> 00:26:44.305
+And actually, the memory
+calculus is the same, so.
+
+00:26:44.305 --> 00:26:44.805
+Cool.
+
+00:26:47.520 --> 00:26:49.980
+So, do gated linear units work?
+
+00:26:49.980 --> 00:26:52.263
+I will have more modern
+evidence for this as well.
+
+00:26:52.263 --> 00:26:53.930
+But I thought I should
+take you straight
+
+00:26:53.930 --> 00:26:58.370
+to the horse's mouth, Noam
+Shazeer's original paper, where
+
+00:26:58.370 --> 00:27:01.760
+he evaluates all
+these GLU variants.
+
+00:27:01.760 --> 00:27:04.020
+And this is somewhat
+older stuff.
+
+00:27:04.020 --> 00:27:06.910
+So you're seeing CoLA
+and SST-2 performance.
+
+00:27:06.910 --> 00:27:11.050
+But you do see basically that
+the GLU variants consistently
+
+00:27:11.050 --> 00:27:11.750
+perform better.
+
+00:27:11.750 --> 00:27:17.590
+GLU is 84.20,
+84.12, 84.36, 84.67.
+
+00:27:17.590 --> 00:27:19.550
+And wow, it's 2020s.
+
+00:27:19.550 --> 00:27:21.620
+They even give you the
+standard deviations
+
+00:27:21.620 --> 00:27:24.530
+so you can figure out how
+significant those results are.
+
+00:27:24.530 --> 00:27:26.450
+And they, in fact,
+are significant.
+
+00:27:26.450 --> 00:27:31.090
+And so this is some nice
+evidence to see here.
+
+00:27:31.090 --> 00:27:34.270
+There was also the Narang
+et al in 2020 paper, which
+
+00:27:34.270 --> 00:27:36.910
+is a very nice paper, studying
+all sorts of architecture
+
+00:27:36.910 --> 00:27:40.780
+variants, I think in the
+context of T5 style models.
+
+00:27:40.780 --> 00:27:43.840
+And once again, you see
+that the gated linear unit
+
+00:27:43.840 --> 00:27:47.890
+variants consistently
+achieve lower losses
+
+00:27:47.890 --> 00:27:48.980
+than their counterparts.
+
+00:27:48.980 --> 00:27:53.230
+You see that the bolded lines
+are exactly at the GLU variants.
+
+00:27:53.230 --> 00:27:57.640
+And this pattern has
+basically held up.
+
+00:27:57.640 --> 00:28:00.130
+So for gating and
+activations, there
+
+00:28:00.130 --> 00:28:03.960
+are lots of variants
+across different models.
+
+00:28:03.960 --> 00:28:06.060
+But the gated linear
+unit has become
+
+00:28:06.060 --> 00:28:07.870
+basically widespread
+and dominant,
+
+00:28:07.870 --> 00:28:09.720
+and I think for good reason.
+
+00:28:09.720 --> 00:28:13.930
+Of course, the GLU isn't
+necessary for a good model.
+
+00:28:13.930 --> 00:28:15.600
+It's important to
+separate the two.
+
+00:28:15.600 --> 00:28:18.420
+Just because it's probably
+the slightly better
+
+00:28:18.420 --> 00:28:21.240
+and everyone does it
+doesn't mean it's necessary.
+
+00:28:21.240 --> 00:28:24.280
+And you do see examples of
+very high performance models.
+
+00:28:24.280 --> 00:28:25.050
+not using a GLU.
+
+00:28:25.050 --> 00:28:27.490
+Like GPT-3 is one example.
+
+00:28:27.490 --> 00:28:32.110
+A more recent one, Nemotron
+340B uses a squared ReLU,
+
+00:28:32.110 --> 00:28:33.700
+which I had not seen before.
+
+00:28:33.700 --> 00:28:36.300
+And Falcon 211b uses a ReLU.
+
+00:28:36.300 --> 00:28:38.590
+Both of those are relatively
+high performance models.
+
+00:28:38.590 --> 00:28:41.230
+So you can see that it's
+not really necessary.
+
+00:28:41.230 --> 00:28:44.340
+And so evidence does point
+towards consistent gains
+
+00:28:44.340 --> 00:28:46.060
+from SwiGLU and GeGLU.
+
+00:28:46.060 --> 00:28:50.455
+And that's why we ask you to
+implement exactly that variant.
+
+00:28:50.455 --> 00:28:50.955
+Cool.
+
+00:28:54.270 --> 00:28:57.580
+The final thing that I want to
+talk about for architectures,
+
+00:28:57.580 --> 00:28:59.250
+and this is one final--
+
+00:28:59.250 --> 00:29:02.540
+major, I want to say,
+variation that we've seen.
+
+00:29:02.540 --> 00:29:05.750
+Normally, the transformer
+block is serial.
+
+00:29:05.750 --> 00:29:09.720
+In the sense that
+for each block,
+
+00:29:09.720 --> 00:29:12.360
+the outputs come
+in from the bottom.
+
+00:29:12.360 --> 00:29:14.750
+And then you do your
+attention, and then you
+
+00:29:14.750 --> 00:29:16.920
+pass the result of that
+computation forward.
+
+00:29:16.920 --> 00:29:18.680
+And then you do your
+MLP, and then you
+
+00:29:18.680 --> 00:29:21.035
+pass that computation forward.
+
+00:29:21.035 --> 00:29:22.410
+And so this is
+inherently serial.
+
+00:29:22.410 --> 00:29:24.350
+You do attention, and then MLP.
+
+00:29:24.350 --> 00:29:28.020
+But of course, this might have
+certain parallelism constraints.
+
+00:29:28.020 --> 00:29:31.820
+If you want to parallelize this
+over gigantic sets of GPUs,
+
+00:29:31.820 --> 00:29:36.110
+it might be harder to do so if
+you have the serial connection.
+
+00:29:36.110 --> 00:29:38.330
+The systems concerns might
+also be more difficult.
+
+00:29:38.330 --> 00:29:41.420
+You might get lower
+utilization from your GPUs.
+
+00:29:41.420 --> 00:29:44.090
+And so a few models
+have done this thing
+
+00:29:44.090 --> 00:29:46.910
+that I'll call parallel layers.
+
+00:29:46.910 --> 00:29:50.450
+Where, basically, instead
+of having serial computation
+
+00:29:50.450 --> 00:29:52.820
+of attention and then
+MLP, they will do them
+
+00:29:52.820 --> 00:29:54.380
+both at the same time.
+
+00:29:54.380 --> 00:29:57.150
+So you will get your x
+from your previous layer.
+
+00:29:57.150 --> 00:30:00.262
+You will compute both the MLP
+and the attention side by side,
+
+00:30:00.262 --> 00:30:01.720
+and then you will
+add them together
+
+00:30:01.720 --> 00:30:03.013
+into the residual stream.
+
+00:30:03.013 --> 00:30:04.430
+And then that will
+be your output.
+
+00:30:04.430 --> 00:30:09.220
+And this was pioneered by GPT-J,
+which was this open source
+
+00:30:09.220 --> 00:30:10.430
+replication effort.
+
+00:30:10.430 --> 00:30:13.270
+And the folks at
+Google doing PaLM
+
+00:30:13.270 --> 00:30:16.840
+were bold enough to do this
+at the really big scale.
+
+00:30:16.840 --> 00:30:19.330
+And many others
+have followed since.
+
+00:30:19.330 --> 00:30:21.080
+So if you're
+implementing this right,
+
+00:30:21.080 --> 00:30:23.470
+you can share a lot of
+stuff like the Layer Norms.
+
+00:30:23.470 --> 00:30:25.750
+And the matrix multiplies
+can get fused together.
+
+00:30:25.750 --> 00:30:29.500
+And you can get some systems
+efficiencies out of that.
+
+00:30:29.500 --> 00:30:31.690
+It hasn't been quite as
+popular since then, at least
+
+00:30:31.690 --> 00:30:32.540
+in the last year.
+
+00:30:32.540 --> 00:30:34.082
+I think most of the
+models that we've
+
+00:30:34.082 --> 00:30:36.582
+seen have been serial layers
+rather than parallel ones.
+
+00:30:36.582 --> 00:30:39.040
+I think the only exceptions to
+this are like Cohere Command
+
+00:30:39.040 --> 00:30:44.020
+A, Command R+, and
+a Falcon 2 11B.
+
+00:30:44.020 --> 00:30:48.670
+So now, I think we have the
+ability to go back to this big,
+
+00:30:48.670 --> 00:30:51.280
+hard to see chart, and
+then see what I was
+
+00:30:51.280 --> 00:30:53.180
+pointing at the very beginning.
+
+00:30:53.180 --> 00:30:55.343
+So this column here,
+you don't really
+
+00:30:55.343 --> 00:30:57.010
+need to be able to
+read any of the text.
+
+00:30:57.010 --> 00:30:59.135
+Because I think the colors
+will tell you everything
+
+00:30:59.135 --> 00:30:59.870
+you need to see.
+
+00:30:59.870 --> 00:31:03.200
+This check mark here, this is
+basically pre versus post-norm.
+
+00:31:03.200 --> 00:31:07.030
+The only two models I really
+know of in the early days that
+
+00:31:07.030 --> 00:31:10.090
+did post norm, this is
+the original transformer
+
+00:31:10.090 --> 00:31:13.197
+and GPT and BERT, if you want
+to include that into this table.
+
+00:31:13.197 --> 00:31:14.530
+And then almost everybody else--
+
+00:31:14.530 --> 00:31:18.080
+I think, basically, everyone
+else has done pre-norm.
+
+00:31:18.080 --> 00:31:19.660
+The only other non
+checked boxes here
+
+00:31:19.660 --> 00:31:23.380
+are models that are proprietary,
+and I don't have details for.
+
+00:31:23.380 --> 00:31:25.940
+This column here, on
+the leftmost thing,
+
+00:31:25.940 --> 00:31:27.860
+this is RMS Norm
+versus LayerNorm.
+
+00:31:27.860 --> 00:31:29.840
+The gray boxes
+are the LayerNorm.
+
+00:31:29.840 --> 00:31:31.580
+The blue ones are RMS Norm.
+
+00:31:31.580 --> 00:31:34.960
+Basically, most people have
+converged to RMS Norm as I said.
+
+00:31:34.960 --> 00:31:37.640
+This column next to it is
+serial and parallel layers.
+
+00:31:37.640 --> 00:31:39.350
+Once again, most
+people do serial,
+
+00:31:39.350 --> 00:31:41.355
+but you see other variants.
+
+00:31:41.355 --> 00:31:42.730
+What I'm going to
+talk about next
+
+00:31:42.730 --> 00:31:44.188
+is going to be
+position embeddings,
+
+00:31:44.188 --> 00:31:46.327
+and that will be more
+interesting in a moment here.
+
+00:31:46.327 --> 00:31:48.160
+Any questions about any
+of this architecture
+
+00:31:48.160 --> 00:31:49.603
+stuff before I move on?
+
+00:31:49.603 --> 00:31:51.520
+Hopefully, that gives
+you a bit of an overview
+
+00:31:51.520 --> 00:31:56.720
+of at least the major variations
+in architectures that we see.
+
+00:31:56.720 --> 00:32:00.080
+Is the serial layer more
+computationally efficient
+
+00:32:00.080 --> 00:32:01.040
+than parallel layer?
+
+00:32:01.040 --> 00:32:03.620
+So the question was
+whether serial is
+
+00:32:03.620 --> 00:32:05.040
+more efficient than parallel.
+
+00:32:05.040 --> 00:32:06.890
+It should be
+actually the reverse.
+
+00:32:06.890 --> 00:32:09.300
+That parallel is more
+efficient than serial.
+
+00:32:09.300 --> 00:32:11.340
+And that's why you're
+willing to do this.
+
+00:32:11.340 --> 00:32:13.190
+So in some sense, you
+might expect serial
+
+00:32:13.190 --> 00:32:15.248
+to be more expressive
+because you're
+
+00:32:15.248 --> 00:32:17.540
+composing two computations
+rather than just adding them
+
+00:32:17.540 --> 00:32:18.530
+together.
+
+00:32:18.530 --> 00:32:20.450
+But the benefit of
+parallel, in theory,
+
+00:32:20.450 --> 00:32:23.820
+is that if you write the
+right kinds of fused kernels,
+
+00:32:23.820 --> 00:32:25.950
+a lot of these operations
+can be done in parallel,
+
+00:32:25.950 --> 00:32:27.590
+or the computation
+is shared across
+
+00:32:27.590 --> 00:32:31.490
+the different parallel parts.
+
+00:32:31.490 --> 00:32:34.550
+So, cool.
+
+00:32:34.550 --> 00:32:38.330
+So the last thing I want to talk
+about in architecture land--
+
+00:32:38.330 --> 00:32:40.400
+I think this is the last
+thing-- is variations
+
+00:32:40.400 --> 00:32:42.223
+in position embeddings.
+
+00:32:42.223 --> 00:32:43.640
+And I think this
+one's interesting
+
+00:32:43.640 --> 00:32:47.940
+because in the first
+few years of LMs land,
+
+00:32:47.940 --> 00:32:51.560
+there were a lot of different
+things that people were trying.
+
+00:32:51.560 --> 00:32:54.470
+Sign embeddings were from
+the original transformer.
+
+00:32:54.470 --> 00:32:56.440
+You should have
+learned this in 224N.
+
+00:32:56.440 --> 00:32:58.660
+There's sine and
+cosine positions.
+
+00:32:58.660 --> 00:33:00.580
+Many others did
+absolute embeddings,
+
+00:33:00.580 --> 00:33:03.370
+like the GPTs and OPT,
+all basically just
+
+00:33:03.370 --> 00:33:05.470
+added a position
+learned position vector
+
+00:33:05.470 --> 00:33:06.880
+to the embedding.
+
+00:33:06.880 --> 00:33:11.530
+Some others, like T5 and
+Gopher, did various kinds
+
+00:33:11.530 --> 00:33:13.510
+of relative embeddings
+that add vectors
+
+00:33:13.510 --> 00:33:15.580
+to the attention computation.
+
+00:33:15.580 --> 00:33:18.040
+And then, I think
+most models have
+
+00:33:18.040 --> 00:33:22.390
+converged to rope, which is
+relative position embeddings.
+
+00:33:22.390 --> 00:33:24.770
+And this, I think,
+actually started in GPTJ,
+
+00:33:24.770 --> 00:33:27.250
+once again, another open
+source contribution.
+
+00:33:27.250 --> 00:33:31.750
+It has really rapidly been
+picked up by most of the models.
+
+00:33:31.750 --> 00:33:34.330
+And so the high level
+thought process behind RoPE
+
+00:33:34.330 --> 00:33:38.380
+is that the thing that
+matters is relative positions
+
+00:33:38.380 --> 00:33:39.710
+of these vectors.
+
+00:33:39.710 --> 00:33:45.790
+And so if I have an embedding f
+of x of i, where x is the word
+
+00:33:45.790 --> 00:33:48.410
+I'm trying to embed,
+and i is my position,
+
+00:33:48.410 --> 00:33:51.140
+then I should be able to
+write things down in this way.
+
+00:33:51.140 --> 00:33:55.055
+So there should exist the f,
+such that f of x, i, and f of y,
+
+00:33:55.055 --> 00:33:57.820
+j, if I take the inner
+product of these embeddings,
+
+00:33:57.820 --> 00:34:01.030
+then, I can write this down
+as some different function g,
+
+00:34:01.030 --> 00:34:03.120
+which is a function
+of the two words
+
+00:34:03.120 --> 00:34:05.500
+and the difference
+in their positions.
+
+00:34:05.500 --> 00:34:11.280
+So this is a definition
+that enforces basically
+
+00:34:11.280 --> 00:34:13.780
+position invariance or
+absolute position invariance.
+
+00:34:13.780 --> 00:34:17.969
+So you only pay attention to how
+far apart these two words are.
+
+00:34:17.969 --> 00:34:20.340
+And so you can do a
+brief check and see, OK,
+
+00:34:20.340 --> 00:34:23.400
+what happens with sines while
+you get these cross terms that
+
+00:34:23.400 --> 00:34:24.310
+are not relative?
+
+00:34:24.310 --> 00:34:27.480
+So you do still leak absolute
+position information.
+
+00:34:27.480 --> 00:34:29.730
+Absolute positions
+like it's in the name.
+
+00:34:29.730 --> 00:34:32.159
+It's not a relative
+position embedding.
+
+00:34:32.159 --> 00:34:36.060
+And relative embeddings,
+well, it is relative,
+
+00:34:36.060 --> 00:34:37.659
+but it's not an inner product.
+
+00:34:37.659 --> 00:34:40.050
+So it violates this constraint.
+
+00:34:40.050 --> 00:34:43.800
+And so RoPE is this kind
+of clever observation
+
+00:34:43.800 --> 00:34:46.980
+that we do know
+one thing, that is
+
+00:34:46.980 --> 00:34:50.968
+invariant to absolute
+things, which is rotations.
+
+00:34:50.968 --> 00:34:53.260
+And so we're going to exploit
+that structure to come up
+
+00:34:53.260 --> 00:34:55.030
+with our position embeddings.
+
+00:34:55.030 --> 00:34:59.437
+We know that inner products are
+invariant to arbitrary rotation.
+
+00:34:59.437 --> 00:35:00.770
+So we're going to leverage that.
+
+00:35:00.770 --> 00:35:03.170
+So on the left, this
+is the starting point.
+
+00:35:03.170 --> 00:35:05.230
+Let's say my embedding
+for the word "we"
+
+00:35:05.230 --> 00:35:07.310
+is this arrow over here.
+
+00:35:07.310 --> 00:35:08.920
+And my embedding
+for the word "no"
+
+00:35:08.920 --> 00:35:11.200
+is this other arrow over here.
+
+00:35:11.200 --> 00:35:14.350
+Now, I want to embed this
+sequence, "we know that."
+
+00:35:14.350 --> 00:35:16.760
+And I look at the
+word "we" and "no."
+
+00:35:16.760 --> 00:35:17.630
+So how do I do that?
+
+00:35:17.630 --> 00:35:19.460
+Well, we assume position 0.
+
+00:35:19.460 --> 00:35:21.970
+So I'm not going to
+rotate that guy at all.
+
+00:35:21.970 --> 00:35:27.400
+"No" is in position one, so I'm
+going to rotate him by one unit
+
+00:35:27.400 --> 00:35:28.310
+of rotation.
+
+00:35:28.310 --> 00:35:31.490
+And so now, I have this
+embedding for "we know."
+
+00:35:31.490 --> 00:35:34.700
+And now, let's say I want to
+embed this sequence, "Of course,
+
+00:35:34.700 --> 00:35:35.330
+we know."
+
+00:35:35.330 --> 00:35:38.170
+Now, "we" and "know" have
+the same relative positioning
+
+00:35:38.170 --> 00:35:38.900
+to each other.
+
+00:35:38.900 --> 00:35:40.640
+And so let's look
+at what happens.
+
+00:35:40.640 --> 00:35:42.550
+We get shifted by two positions.
+
+00:35:42.550 --> 00:35:43.990
+I rotate "we" by--
+
+00:35:43.990 --> 00:35:46.300
+I start in this
+vertical position,
+
+00:35:46.300 --> 00:35:48.490
+and I rotate them
+twice, 1 and 2.
+
+00:35:48.490 --> 00:35:53.190
+And then I rotate "no" by three
+positions because it's 1, 2, 3--
+
+00:35:53.190 --> 00:35:55.360
+sorry, 0, 1, 2, 3rd position.
+
+00:35:55.360 --> 00:35:58.500
+And so, now, if you look
+at these two arrows,
+
+00:35:58.500 --> 00:36:00.190
+they have the same
+relative angle right.
+
+00:36:00.190 --> 00:36:01.990
+So their inner
+products are preserved.
+
+00:36:01.990 --> 00:36:04.930
+And so this is the nice
+fun idea about RoPE.
+
+00:36:04.930 --> 00:36:07.030
+You just rotate the vectors.
+
+00:36:07.030 --> 00:36:10.470
+And the rotation angle is
+determined by the position
+
+00:36:10.470 --> 00:36:12.900
+of each word and rotations--
+
+00:36:12.900 --> 00:36:16.360
+the inner products don't care
+about relative rotations.
+
+00:36:16.360 --> 00:36:18.720
+And so these inner
+products are only
+
+00:36:18.720 --> 00:36:21.960
+going to look at the
+difference in distance.
+
+00:36:21.960 --> 00:36:25.200
+Now, it's easy to think about
+in 2D because rotations are kind
+
+00:36:25.200 --> 00:36:26.940
+of obvious in 2D.
+
+00:36:26.940 --> 00:36:29.340
+There's only one way
+to rotate a vector.
+
+00:36:29.340 --> 00:36:32.050
+But in high dimensional
+spaces where we operate,
+
+00:36:32.050 --> 00:36:35.620
+it's not obvious at all how we
+are going to do this rotation.
+
+00:36:35.620 --> 00:36:38.550
+So the RoPE folks came
+up with, in some ways,
+
+00:36:38.550 --> 00:36:41.410
+the simplest but also
+effective way of doing this.
+
+00:36:41.410 --> 00:36:44.280
+And the way to do it is you take
+your high dimensional vector.
+
+00:36:44.280 --> 00:36:47.010
+In this case, D. And I'm
+just going to cut it up
+
+00:36:47.010 --> 00:36:48.820
+into blocks of two dimensions.
+
+00:36:48.820 --> 00:36:52.750
+And every two dimension is going
+to be rotated by some theta.
+
+00:36:52.750 --> 00:36:55.080
+So there's going to
+be a rotation speed.
+
+00:36:55.080 --> 00:36:59.040
+And I'm going to rotate
+the pairs of dimensions.
+
+00:36:59.040 --> 00:37:01.170
+And so now, every
+pair of dimensions
+
+00:37:01.170 --> 00:37:03.970
+is encoding all of these
+relative positions.
+
+00:37:03.970 --> 00:37:06.310
+And much like in sine
+and cosine embeddings,
+
+00:37:06.310 --> 00:37:08.250
+I'm going to pick
+some set of thetas
+
+00:37:08.250 --> 00:37:11.010
+such that some embeddings
+are rotated quickly,
+
+00:37:11.010 --> 00:37:13.570
+and others are rotated
+much more slowly.
+
+00:37:13.570 --> 00:37:15.870
+So they can capture both
+high frequency information
+
+00:37:15.870 --> 00:37:19.780
+or close by information
+and very far away,
+
+00:37:19.780 --> 00:37:22.600
+lower frequency
+positioning information.
+
+00:37:22.600 --> 00:37:27.222
+And the actual
+RoPE math here is,
+
+00:37:27.222 --> 00:37:28.930
+if you're going to
+think about rotations,
+
+00:37:28.930 --> 00:37:31.140
+it's just going to be
+multiplying with various sine
+
+00:37:31.140 --> 00:37:32.740
+and cosine rotation matrices.
+
+00:37:32.740 --> 00:37:36.150
+Hopefully, you remember this
+from linear algebra and trig.
+
+00:37:36.150 --> 00:37:38.700
+And so you can think
+about this as an operation
+
+00:37:38.700 --> 00:37:41.280
+where you multiply
+your embedding vectors
+
+00:37:41.280 --> 00:37:45.610
+with these block 2
+by 2 block matrices.
+
+00:37:45.610 --> 00:37:49.580
+And there's no additive or
+cross terms that appear here.
+
+00:37:49.580 --> 00:37:53.950
+This is all purely relative.
+
+00:37:53.950 --> 00:37:58.150
+One thing that is different, if
+you're used to absolute position
+
+00:37:58.150 --> 00:38:00.310
+embeddings or sine
+and cosine embeddings
+
+00:38:00.310 --> 00:38:03.430
+here is that the RoPE
+is going to operate
+
+00:38:03.430 --> 00:38:04.870
+at the actual attention layer.
+
+00:38:04.870 --> 00:38:07.400
+You're not going to add position
+embeddings at the bottom.
+
+00:38:07.400 --> 00:38:08.950
+Whenever these
+attention computations
+
+00:38:08.950 --> 00:38:10.367
+are going to be
+done, you're going
+
+00:38:10.367 --> 00:38:11.900
+to intervene on that layer.
+
+00:38:11.900 --> 00:38:15.080
+And then that's going to give
+you your position information.
+
+00:38:15.080 --> 00:38:17.830
+And so I pulled this from I
+think the LLaMA implementation
+
+00:38:17.830 --> 00:38:18.500
+of RoPE.
+
+00:38:18.500 --> 00:38:20.770
+You've got the initial
+normal attention stuff
+
+00:38:20.770 --> 00:38:23.090
+at the very top like
+query keys and values.
+
+00:38:23.090 --> 00:38:25.930
+These are your normal
+linear projections.
+
+00:38:25.930 --> 00:38:29.990
+And then, you're going to come
+up with cosine and sine angles.
+
+00:38:29.990 --> 00:38:31.990
+These are rotation
+angles telling you
+
+00:38:31.990 --> 00:38:37.010
+how much to rotate different
+blocks of the query and key.
+
+00:38:37.010 --> 00:38:39.340
+And so you take your
+query and your key,
+
+00:38:39.340 --> 00:38:42.220
+and you're going to rotate
+them by the cosines and sines.
+
+00:38:42.220 --> 00:38:44.652
+And now, you've gotten
+rotated query and rotated key.
+
+00:38:44.652 --> 00:38:46.110
+And that's going
+to be what's going
+
+00:38:46.110 --> 00:38:48.400
+to go into the rest of
+your attention computation.
+
+00:38:48.400 --> 00:38:49.900
+So you don't do
+this at the bottom.
+
+00:38:49.900 --> 00:38:52.570
+You do it whenever you
+generate your queries and keys.
+
+00:38:52.570 --> 00:38:54.210
+Hopefully that's clear.
+
+00:38:54.210 --> 00:38:56.610
+That's really
+critical to enforcing
+
+00:38:56.610 --> 00:39:00.900
+this relative positioning
+only information.
+
+00:39:00.900 --> 00:39:01.800
+OK?
+
+00:39:01.800 --> 00:39:04.440
+Good.
+
+00:39:04.440 --> 00:39:06.990
+So one of the things
+I want to highlight
+
+00:39:06.990 --> 00:39:09.360
+is that RoPE is actually
+one of the things
+
+00:39:09.360 --> 00:39:11.680
+that it seems like
+everyone has converged on.
+
+00:39:11.680 --> 00:39:15.610
+I went through all 19 of
+those papers over the weekend.
+
+00:39:15.610 --> 00:39:18.210
+And basically, all
+of them now use RoPE
+
+00:39:18.210 --> 00:39:20.520
+for various different reasons.
+
+00:39:20.520 --> 00:39:23.340
+The reason that RoPE has now
+many different algorithms
+
+00:39:23.340 --> 00:39:25.120
+for extrapolating
+context length,
+
+00:39:25.120 --> 00:39:27.840
+and that's an important part
+of the modern productionized
+
+00:39:27.840 --> 00:39:29.400
+language model.
+
+00:39:29.400 --> 00:39:31.930
+But also, it seems to be
+empirically quite effective,
+
+00:39:31.930 --> 00:39:34.480
+even at fairly small scales
+and small context lengths.
+
+00:39:34.480 --> 00:39:37.080
+So it's kind of
+worn out on this--
+
+00:39:37.080 --> 00:39:40.790
+what's it called--
+position embedding battle.
+
+00:39:40.790 --> 00:39:43.460
+Any questions before I move on
+to some of the hyperparameter
+
+00:39:43.460 --> 00:39:43.710
+stuff?
+
+00:39:43.710 --> 00:39:44.210
+Yes.
+
+00:39:44.210 --> 00:39:46.370
+Is the rate of rotation
+is consistent across all
+
+00:39:46.370 --> 00:39:47.712
+of these models?
+
+00:39:47.712 --> 00:39:49.170
+I don't think
+they're all the same.
+
+00:39:49.170 --> 00:39:50.712
+There's some variation
+in the thetas.
+
+00:39:53.650 --> 00:39:54.150
+Yes.
+
+00:39:54.150 --> 00:39:59.690
+Are the thetas for each pair,
+are those hyperparameters
+
+00:39:59.690 --> 00:40:01.580
+or are they trained?
+
+00:40:01.580 --> 00:40:04.133
+The thetas that determine
+the rotation angles,
+
+00:40:04.133 --> 00:40:05.300
+they're not hyperparameters.
+
+00:40:05.300 --> 00:40:09.600
+Much like in the sines
+and cosines here,
+
+00:40:09.600 --> 00:40:12.320
+there's a schedule to
+the rotation angles
+
+00:40:12.320 --> 00:40:13.290
+that are determined.
+
+00:40:13.290 --> 00:40:16.020
+And it's in the same intuition
+as the sines and cosines.
+
+00:40:16.020 --> 00:40:18.650
+You want to cover different
+frequency ranges in order
+
+00:40:18.650 --> 00:40:24.020
+to get higher or lower
+frequency information.
+
+00:40:24.020 --> 00:40:24.980
+Yes.
+
+00:40:24.980 --> 00:40:28.050
+The rotations create any
+difficulty with training,
+
+00:40:28.050 --> 00:40:31.430
+I wonder like this,
+angular rotations.
+
+00:40:31.430 --> 00:40:33.990
+The rotations themselves don't
+really create any issues.
+
+00:40:33.990 --> 00:40:35.540
+Because one way of
+thinking about a rotation
+
+00:40:35.540 --> 00:40:37.040
+is that it's just
+a matrix multiply.
+
+00:40:37.040 --> 00:40:40.940
+Since thetas are fixed and
+the m's here are fixed,
+
+00:40:40.940 --> 00:40:42.790
+this is really
+just a fixed matrix
+
+00:40:42.790 --> 00:40:44.270
+that multiplies your vector.
+
+00:40:44.270 --> 00:40:46.340
+And so in that sense,
+it's not really an issue.
+
+00:40:46.340 --> 00:40:47.620
+If you were learning
+the thetas, then maybe
+
+00:40:47.620 --> 00:40:49.787
+you have issues because
+you're maybe differentiating
+
+00:40:49.787 --> 00:40:50.780
+through trig functions.
+
+00:40:50.780 --> 00:40:53.860
+But you're not
+doing that here, so.
+
+00:40:53.860 --> 00:40:56.410
+OK, cool.
+
+00:40:56.410 --> 00:41:00.310
+So now, I think we go even one
+more level into the details
+
+00:41:00.310 --> 00:41:00.920
+here.
+
+00:41:00.920 --> 00:41:03.610
+And we're going to talk
+about hyperparameters.
+
+00:41:03.610 --> 00:41:06.280
+I feel like when you have
+to-- you're dropped in,
+
+00:41:06.280 --> 00:41:09.363
+and you're asked to train
+a new language model.
+
+00:41:09.363 --> 00:41:11.780
+There's a lot of questions you
+have about hyperparameters,
+
+00:41:11.780 --> 00:41:13.343
+because there's
+quite a few of them.
+
+00:41:13.343 --> 00:41:15.010
+And one of the things
+that I've realized
+
+00:41:15.010 --> 00:41:16.690
+is that actually,
+only a few of these
+
+00:41:16.690 --> 00:41:19.868
+really get changed across
+different successful models.
+
+00:41:19.868 --> 00:41:21.910
+There's actually like
+fairly clear rules of thumb
+
+00:41:21.910 --> 00:41:25.660
+and fairly clear guidelines that
+people seem to be following.
+
+00:41:25.660 --> 00:41:28.330
+So there are some things
+like how much bigger should
+
+00:41:28.330 --> 00:41:29.620
+the feed-forward size be?
+
+00:41:29.620 --> 00:41:31.460
+Or how many heads should I have?
+
+00:41:31.460 --> 00:41:33.820
+Or what should my vocab size be?
+
+00:41:33.820 --> 00:41:36.040
+And so we'll talk about
+each of those things,
+
+00:41:36.040 --> 00:41:38.880
+and we'll try to constrain
+the space of hyperparameters
+
+00:41:38.880 --> 00:41:41.460
+that people have.
+
+00:41:41.460 --> 00:41:43.920
+So the starting
+point, we're going
+
+00:41:43.920 --> 00:41:46.030
+to look at a simple
+feed-forward layer.
+
+00:41:46.030 --> 00:41:48.810
+Just with the bias, let's say.
+
+00:41:48.810 --> 00:41:50.470
+This is a ReLU version of it.
+
+00:41:50.470 --> 00:41:52.930
+And so there's two
+hyperparameters here.
+
+00:41:52.930 --> 00:41:55.480
+There's d model, which is
+the dimensionality of x.
+
+00:41:55.480 --> 00:41:58.260
+That's the input
+coming into your MLP.
+
+00:41:58.260 --> 00:41:59.807
+And then you've got dff.
+
+00:41:59.807 --> 00:42:01.390
+So this is the
+feed-forward dimension.
+
+00:42:01.390 --> 00:42:05.170
+This is the output hidden
+dimension of your MLP.
+
+00:42:05.170 --> 00:42:07.900
+And from there, you're going
+to project back onto d model.
+
+00:42:07.900 --> 00:42:10.860
+So what should dff be?
+
+00:42:10.860 --> 00:42:12.300
+In general.
+
+00:42:12.300 --> 00:42:15.160
+These things are going
+to be up projections.
+
+00:42:15.160 --> 00:42:18.510
+You're going to have more hidden
+units than there were inputs.
+
+00:42:18.510 --> 00:42:19.660
+But how much bigger?
+
+00:42:19.660 --> 00:42:22.620
+Well, there is actually
+just like a consensus.
+
+00:42:22.620 --> 00:42:28.560
+Almost everybody that uses ReLU
+style MLPs are going to pick dff
+
+00:42:28.560 --> 00:42:32.760
+is equal to 4 times d model.
+
+00:42:32.760 --> 00:42:35.310
+I will show you some
+empirical evidence for why
+
+00:42:35.310 --> 00:42:37.470
+this is a sane number later.
+
+00:42:37.470 --> 00:42:39.570
+But as far as I
+can tell, there's
+
+00:42:39.570 --> 00:42:43.020
+no law of nature that
+says you have to pick 4.
+
+00:42:43.020 --> 00:42:45.430
+This is a convention
+that has really held up.
+
+00:42:45.430 --> 00:42:49.500
+Now, there are a few
+exceptions to this rule.
+
+00:42:49.500 --> 00:42:53.280
+Remember that the GLU variants
+are going to scale this down
+
+00:42:53.280 --> 00:42:54.700
+by a factor of 2/3.
+
+00:42:54.700 --> 00:42:58.050
+And if you scale it
+down by a factor of 2/3,
+
+00:42:58.050 --> 00:43:02.220
+you're going to have roughly
+the same number of parameters.
+
+00:43:02.220 --> 00:43:03.580
+You can do a little bit of math.
+
+00:43:03.580 --> 00:43:06.480
+And if you scale the GLU
+variants down by a factor
+
+00:43:06.480 --> 00:43:09.270
+of 2/3, you'll come to the
+conclusion that the way to do
+
+00:43:09.270 --> 00:43:12.788
+that is to set dff equal
+to 8 over 3d model.
+
+00:43:12.788 --> 00:43:14.830
+That's going to be the
+number that you end up at.
+
+00:43:14.830 --> 00:43:16.710
+And you guys convince yourself
+that that will give you
+
+00:43:16.710 --> 00:43:18.190
+the same number of parameters.
+
+00:43:18.190 --> 00:43:20.107
+And that's the ratio
+that you would get if you
+
+00:43:20.107 --> 00:43:22.440
+started with a ratio of 4.
+
+00:43:22.440 --> 00:43:24.400
+So if you look at
+many of the models,
+
+00:43:24.400 --> 00:43:26.850
+they actually do follow
+this rule of thumb.
+
+00:43:26.850 --> 00:43:29.910
+PaLM, for example--
+
+00:43:29.910 --> 00:43:31.910
+PaLM, Mistral, and LLaMA
+are slightly larger.
+
+00:43:31.910 --> 00:43:34.940
+These are GLU models, but they
+don't follow this 2.6 rule.
+
+00:43:34.940 --> 00:43:38.110
+But if you look at, for example,
+LLaMA-1, Qwen, DeepSeek,
+
+00:43:38.110 --> 00:43:43.810
+Yi, and T5, they all roughly
+follow this 2.6 ish rule.
+
+00:43:43.810 --> 00:43:46.960
+And I can put up
+the big table of LMs
+
+00:43:46.960 --> 00:43:48.770
+that I made later
+with hyperparameters.
+
+00:43:48.770 --> 00:43:52.730
+Many, many, many of them fall
+into this roughly 2.6 range.
+
+00:43:52.730 --> 00:43:58.240
+And that's the standard
+parameterization of a GLU unit.
+
+00:43:58.240 --> 00:44:00.110
+I'll go through one
+other exception.
+
+00:44:00.110 --> 00:44:04.540
+I really like this exception
+because I think, in many ways,
+
+00:44:04.540 --> 00:44:07.240
+big large language
+model training is
+
+00:44:07.240 --> 00:44:08.980
+a game of copying
+hyperparameters
+
+00:44:08.980 --> 00:44:09.817
+from other people.
+
+00:44:09.817 --> 00:44:11.150
+And so we don't learn very much.
+
+00:44:11.150 --> 00:44:13.000
+It's very conservative.
+
+00:44:13.000 --> 00:44:15.520
+But T5, I really like.
+
+00:44:15.520 --> 00:44:17.463
+Because in some sense,
+it's really bold.
+
+00:44:17.463 --> 00:44:18.880
+And I think Google
+people actually
+
+00:44:18.880 --> 00:44:20.830
+do some pretty bold stuff.
+
+00:44:20.830 --> 00:44:25.040
+And so if you look at the 11
+billion parameter T5 model,
+
+00:44:25.040 --> 00:44:27.860
+they have a pretty
+incredible setting.
+
+00:44:27.860 --> 00:44:30.240
+Their hidden dim is 1,024.
+
+00:44:30.240 --> 00:44:33.770
+But their dff, their
+up-projected dimension is
+
+00:44:33.770 --> 00:44:35.040
+65,000.
+
+00:44:35.040 --> 00:44:38.240
+And so that's going
+to give you a 64 times
+
+00:44:38.240 --> 00:44:42.540
+multiplier on the ratio
+of dff to d model.
+
+00:44:42.540 --> 00:44:44.600
+And of course, you
+compare to this, where
+
+00:44:44.600 --> 00:44:45.770
+PaLM is like a factor of 4.
+
+00:44:45.770 --> 00:44:47.550
+And everyone else
+is much smaller.
+
+00:44:47.550 --> 00:44:50.570
+This is a very large difference.
+
+00:44:50.570 --> 00:44:52.250
+And there's some
+other recent examples
+
+00:44:52.250 --> 00:44:55.430
+of using much
+bigger multipliers.
+
+00:44:55.430 --> 00:44:57.830
+Gemma 2 follows
+in these footsteps
+
+00:44:57.830 --> 00:44:59.280
+and does a factor of 8.
+
+00:44:59.280 --> 00:45:01.950
+And I'll talk a little bit
+about this exception later.
+
+00:45:01.950 --> 00:45:03.900
+Of course, T5 was a
+totally fine model.
+
+00:45:03.900 --> 00:45:06.290
+So this should tell you
+it is possible to train
+
+00:45:06.290 --> 00:45:11.090
+a model with such a
+much larger ratio.
+
+00:45:11.090 --> 00:45:14.270
+So one of the things that I
+think is quantitative evidence,
+
+00:45:14.270 --> 00:45:15.830
+I saw that 4x multiplier.
+
+00:45:15.830 --> 00:45:19.020
+And I thought, is that
+really the right thing to do,
+
+00:45:19.020 --> 00:45:21.020
+or is there some more
+quantitative experiment
+
+00:45:21.020 --> 00:45:24.470
+someone's done to convince
+me that that is a good idea?
+
+00:45:24.470 --> 00:45:28.595
+So one of the figures from
+Jared Kaplan's scaling law
+
+00:45:28.595 --> 00:45:30.220
+paper-- and most
+people know this paper
+
+00:45:30.220 --> 00:45:32.030
+for the scaling law component.
+
+00:45:32.030 --> 00:45:34.660
+But actually, there's also some
+really useful hyperparameter
+
+00:45:34.660 --> 00:45:36.340
+components to this paper.
+
+00:45:36.340 --> 00:45:38.800
+You'll actually see that
+they do exactly this thing
+
+00:45:38.800 --> 00:45:42.010
+that I'm talking about,
+the dff to d model ratio.
+
+00:45:42.010 --> 00:45:44.320
+And they plot essentially
+how much the loss
+
+00:45:44.320 --> 00:45:46.300
+increases as you vary this.
+
+00:45:46.300 --> 00:45:50.360
+And you see that
+there's a sweet spot.
+
+00:45:50.360 --> 00:45:55.670
+This is a ratio of 1, 2, 3, 4
+and then up to 10 or so here.
+
+00:45:55.670 --> 00:45:58.630
+And so there's a
+pretty wide basin here,
+
+00:45:58.630 --> 00:46:01.730
+anywhere between 1
+to maybe up to 10,
+
+00:46:01.730 --> 00:46:05.480
+where you can pick whatever
+feed-forward ratio you want.
+
+00:46:05.480 --> 00:46:08.020
+And it'll be roughly optimal.
+
+00:46:08.020 --> 00:46:12.410
+And 4 is not too far off from
+your optimal choices over here.
+
+00:46:12.410 --> 00:46:14.662
+It's 1, 2, 3, 4.
+
+00:46:14.662 --> 00:46:16.370
+It's like right here
+or maybe right here.
+
+00:46:16.370 --> 00:46:18.210
+So that's a pretty
+reasonable choice.
+
+00:46:21.400 --> 00:46:24.950
+So what can we learn from all
+of this hyperparameter stuff?
+
+00:46:24.950 --> 00:46:26.940
+I think a lot of the
+evidence points towards--
+
+00:46:26.940 --> 00:46:30.700
+you can pick the same defaults
+of, if you're not using a glue,
+
+00:46:30.700 --> 00:46:31.900
+you can multiply by 4.
+
+00:46:31.900 --> 00:46:35.700
+If you're using a glue,
+you can use roughly 2.66.
+
+00:46:35.700 --> 00:46:40.110
+And they can work pretty well
+for mostly all the modern LMs.
+
+00:46:40.110 --> 00:46:42.630
+T5, once again, does
+show that you don't
+
+00:46:42.630 --> 00:46:43.950
+have to follow these rules.
+
+00:46:43.950 --> 00:46:46.710
+You can be a rule breaker
+and do whatever you'd like.
+
+00:46:46.710 --> 00:46:48.880
+There's no hyperparameter
+choice written in stone.
+
+00:46:48.880 --> 00:46:52.290
+You can get reasonable LMs at
+many other hyperparameters.
+
+00:46:52.290 --> 00:46:55.890
+That said, I think the really
+funny epilogue to this story is
+
+00:46:55.890 --> 00:47:01.150
+that T5 has a follow up model
+called T5v1.1 that's improved.
+
+00:47:01.150 --> 00:47:04.420
+And it uses a much more standard
+2.5 multiplier on GeGLU.
+
+00:47:04.420 --> 00:47:06.420
+So you can read
+between the lines
+
+00:47:06.420 --> 00:47:09.550
+and say maybe they looked
+at the original T5 and said,
+
+00:47:09.550 --> 00:47:13.020
+actually, maybe we want to walk
+back that 64 times multiplier
+
+00:47:13.020 --> 00:47:14.423
+and pick a more standard one.
+
+00:47:14.423 --> 00:47:16.090
+And they did end up
+with a better model.
+
+00:47:16.090 --> 00:47:17.865
+So, cool.
+
+00:47:17.865 --> 00:47:20.280
+What is the relationship
+between the ratio
+
+00:47:20.280 --> 00:47:26.190
+and the model efficiency
+on [INAUDIBLE]?
+
+00:47:26.190 --> 00:47:28.020
+So I think that's
+a good question.
+
+00:47:28.020 --> 00:47:30.505
+So the question was,
+what's the ratio--
+
+00:47:30.505 --> 00:47:31.880
+or sorry, what's
+the relationship
+
+00:47:31.880 --> 00:47:35.480
+between this ratio that I'm
+talking about here and generally
+
+00:47:35.480 --> 00:47:36.480
+the impact on the model?
+
+00:47:36.480 --> 00:47:43.520
+And so if we go all
+the way back here,
+
+00:47:43.520 --> 00:47:47.120
+the ratio is controlling
+essentially how wide
+
+00:47:47.120 --> 00:47:49.830
+the hidden part of this MLP is.
+
+00:47:49.830 --> 00:47:51.770
+And so the original
+justification
+
+00:47:51.770 --> 00:47:54.980
+in the T5 paper for
+picking 64 was to say,
+
+00:47:54.980 --> 00:47:58.220
+actually, we can get bigger
+and fatter matrix multiplies
+
+00:47:58.220 --> 00:48:00.540
+if we make that dimension
+really, really large.
+
+00:48:00.540 --> 00:48:03.980
+And while that is kind of a
+true statement, the wider it is,
+
+00:48:03.980 --> 00:48:07.560
+you're getting more parallel
+computation, so to speak,
+
+00:48:07.560 --> 00:48:08.880
+rather than serial computation.
+
+00:48:08.880 --> 00:48:10.730
+So you're spending your
+flops and your parameters
+
+00:48:10.730 --> 00:48:13.313
+in a slightly different way than
+if you made your hidden units
+
+00:48:13.313 --> 00:48:15.450
+bigger, which would let
+you pass more information,
+
+00:48:15.450 --> 00:48:17.690
+or using more units,
+which would give you
+
+00:48:17.690 --> 00:48:19.350
+more serial computation.
+
+00:48:19.350 --> 00:48:21.440
+So you're spending your
+parameters and your flops
+
+00:48:21.440 --> 00:48:24.750
+in a slightly suboptimal
+way from expressive power,
+
+00:48:24.750 --> 00:48:29.120
+but you might get systems
+gains if your matrices are
+
+00:48:29.120 --> 00:48:29.635
+wide enough.
+
+00:48:33.260 --> 00:48:35.750
+Excellent.
+
+00:48:35.750 --> 00:48:38.960
+So another thing that is
+a surprising-- or maybe
+
+00:48:38.960 --> 00:48:41.750
+not surprising--
+consensus hyperparameter
+
+00:48:41.750 --> 00:48:45.620
+is the ratio between
+the model dimension
+
+00:48:45.620 --> 00:48:48.530
+and the head dimension
+times the number of heads.
+
+00:48:48.530 --> 00:48:51.200
+So I clipped this from 224N.
+
+00:48:51.200 --> 00:48:54.860
+But really, the basically
+canonical choice
+
+00:48:54.860 --> 00:48:57.890
+is to pick things so
+that the dimension d--
+
+00:48:57.890 --> 00:49:01.200
+that's a hidden dimension--
+and if you have multiple heads,
+
+00:49:01.200 --> 00:49:03.870
+you're just going to split
+up the number of dimensions
+
+00:49:03.870 --> 00:49:04.890
+each head gets.
+
+00:49:04.890 --> 00:49:07.070
+So you're going to keep
+the dimensions fixed
+
+00:49:07.070 --> 00:49:08.730
+as you add more heads.
+
+00:49:08.730 --> 00:49:10.088
+And you don't have to do that.
+
+00:49:10.088 --> 00:49:11.630
+As you add more
+heads, you could just
+
+00:49:11.630 --> 00:49:13.612
+keep the same number
+of dimensions per head,
+
+00:49:13.612 --> 00:49:15.320
+and you could just
+let the attention part
+
+00:49:15.320 --> 00:49:16.770
+take more and more parameters.
+
+00:49:16.770 --> 00:49:18.000
+You could do that.
+
+00:49:18.000 --> 00:49:19.620
+That's an option that you have.
+
+00:49:19.620 --> 00:49:23.190
+But most models, once again,
+do follow this guideline.
+
+00:49:23.190 --> 00:49:26.620
+We see GPT-3, T5,
+LaMDA, PaLM, and LLaMA2,
+
+00:49:26.620 --> 00:49:30.570
+they all have a ratio of
+one or almost exactly one.
+
+00:49:30.570 --> 00:49:33.490
+T5 is the one exception
+that breaks this rule.
+
+00:49:33.490 --> 00:49:36.660
+They tried the big ratio of 16.
+
+00:49:36.660 --> 00:49:41.050
+But otherwise, it is all fairly
+following this consensus.
+
+00:49:41.050 --> 00:49:43.260
+There's been a couple of
+papers that have argued
+
+00:49:43.260 --> 00:49:45.720
+against this 1 to 1 ratio.
+
+00:49:45.720 --> 00:49:47.290
+There's a notable one by--
+
+00:49:47.290 --> 00:49:48.790
+I don't know how
+to pronounce this--
+
+00:49:48.790 --> 00:49:51.420
+Bhojanapalli et
+al 2020, who have
+
+00:49:51.420 --> 00:49:54.850
+argued that if you have
+more and more heads,
+
+00:49:54.850 --> 00:49:57.270
+they're going to have
+lower and lower rank.
+
+00:49:57.270 --> 00:49:59.620
+And if you have very
+few dimensions per head,
+
+00:49:59.620 --> 00:50:01.710
+that's going to start
+affecting the expressiveness
+
+00:50:01.710 --> 00:50:03.540
+of the attention operation.
+
+00:50:03.540 --> 00:50:05.310
+But in practice,
+it doesn't really
+
+00:50:05.310 --> 00:50:08.010
+seem like we see too
+many significant low rank
+
+00:50:08.010 --> 00:50:09.660
+bottlenecks in practice.
+
+00:50:09.660 --> 00:50:13.450
+And most of the models with this
+ratio of 1 seem to do just fine.
+
+00:50:13.450 --> 00:50:15.120
+This is really a
+parameter that's
+
+00:50:15.120 --> 00:50:18.320
+generally been held constant
+by most of the models
+
+00:50:18.320 --> 00:50:19.137
+that we've seen.
+
+00:50:19.137 --> 00:50:20.720
+If I have time, I'll
+talk a little bit
+
+00:50:20.720 --> 00:50:23.210
+about different optimizations
+that people have made
+
+00:50:23.210 --> 00:50:25.520
+on this multi-head component.
+
+00:50:25.520 --> 00:50:30.710
+But hyperparameter wise, things
+have stayed fairly similar.
+
+00:50:30.710 --> 00:50:34.850
+I think one of the big ones
+in terms of hyperparameters
+
+00:50:34.850 --> 00:50:37.100
+is the aspect ratio.
+
+00:50:37.100 --> 00:50:39.680
+So we can think
+about deep networks.
+
+00:50:39.680 --> 00:50:41.090
+We can have more
+and more layers,
+
+00:50:41.090 --> 00:50:43.200
+or we can have wide networks.
+
+00:50:43.200 --> 00:50:45.600
+And generally, if you want
+one knob to control the width,
+
+00:50:45.600 --> 00:50:48.260
+that would be the
+hidden dimension
+
+00:50:48.260 --> 00:50:49.370
+of the residual stream.
+
+00:50:49.370 --> 00:50:51.037
+That would control
+essentially the width
+
+00:50:51.037 --> 00:50:53.340
+of almost all the
+operations at once.
+
+00:50:53.340 --> 00:50:57.033
+And so this seems like a
+pretty critical thing to tune.
+
+00:50:57.033 --> 00:50:58.700
+You might think that
+deeper networks are
+
+00:50:58.700 --> 00:51:00.620
+smarter and more expressive,
+or wider networks
+
+00:51:00.620 --> 00:51:02.300
+are more efficient.
+
+00:51:02.300 --> 00:51:05.360
+There is generally a
+sweet spot of ratios
+
+00:51:05.360 --> 00:51:07.160
+that people have picked.
+
+00:51:07.160 --> 00:51:09.000
+There have been outliers.
+
+00:51:09.000 --> 00:51:12.690
+Some of the early models used
+much smaller ratios here.
+
+00:51:12.690 --> 00:51:16.720
+So what that means
+is that they were
+
+00:51:16.720 --> 00:51:18.980
+much wider than they were deep.
+
+00:51:18.980 --> 00:51:21.880
+And then some models
+have gone really deep
+
+00:51:21.880 --> 00:51:25.300
+where they had way more-- sorry,
+the other way around-- really
+
+00:51:25.300 --> 00:51:28.760
+wide, where they had way
+more d model than n layer.
+
+00:51:28.760 --> 00:51:31.250
+And there's been generally
+a sweet spot of saying,
+
+00:51:31.250 --> 00:51:35.710
+we want about 128 hidden
+dimensions per layer.
+
+00:51:35.710 --> 00:51:38.380
+And that has been
+generally stuck to
+
+00:51:38.380 --> 00:51:42.010
+by a lot of the GPT-3
+and LLaMA variant models.
+
+00:51:42.010 --> 00:51:46.720
+And I'll talk a little bit about
+evidence for that in a second.
+
+00:51:46.720 --> 00:51:49.060
+There's considerations
+about aspect ratio
+
+00:51:49.060 --> 00:51:50.920
+that are quite important.
+
+00:51:50.920 --> 00:51:55.340
+They will control the amount
+of parallelism that we can do.
+
+00:51:55.340 --> 00:51:59.015
+So if you're doing something
+called pipeline parallel,
+
+00:51:59.015 --> 00:52:00.640
+what you're often
+going to do is you're
+
+00:52:00.640 --> 00:52:02.260
+going to take your
+different layers
+
+00:52:02.260 --> 00:52:03.700
+and you're going to
+cut them up and you're
+
+00:52:03.700 --> 00:52:05.950
+going to put them on different
+devices or different blocks
+
+00:52:05.950 --> 00:52:08.380
+of devices because you'll
+parallelize within each layer
+
+00:52:08.380 --> 00:52:09.550
+as well.
+
+00:52:09.550 --> 00:52:13.950
+And so there's going to be
+certain kinds of constraints
+
+00:52:13.950 --> 00:52:15.760
+that you're going to
+put on your model.
+
+00:52:15.760 --> 00:52:18.060
+And also, if you have
+really wide models,
+
+00:52:18.060 --> 00:52:20.310
+then you can do something
+called tensor parallel where
+
+00:52:20.310 --> 00:52:22.320
+you slice up the
+matrices, and then you
+
+00:52:22.320 --> 00:52:24.010
+distribute those on GPUs.
+
+00:52:24.010 --> 00:52:27.870
+And one thing that we'll learn
+in, I think, 1, 2, 3, 4 or 5
+
+00:52:27.870 --> 00:52:31.530
+lectures is that these different
+parallelism paradigms are going
+
+00:52:31.530 --> 00:52:33.030
+to have different constraints.
+
+00:52:33.030 --> 00:52:36.520
+You need really fast
+networking for tensor parallel.
+
+00:52:36.520 --> 00:52:40.140
+And you can maybe get away with
+slower networking or higher
+
+00:52:40.140 --> 00:52:42.460
+latency networking
+for pipeline parallel.
+
+00:52:42.460 --> 00:52:44.280
+And so your
+networking constraints
+
+00:52:44.280 --> 00:52:47.580
+might, in turn, drive
+some of these width-depth
+
+00:52:47.580 --> 00:52:48.760
+considerations.
+
+00:52:48.760 --> 00:52:50.940
+But setting that aside,
+you might abstractly
+
+00:52:50.940 --> 00:52:54.620
+ask, what is the impact
+of aspect ratio on model
+
+00:52:54.620 --> 00:52:55.120
+performance?
+
+00:52:55.120 --> 00:53:00.570
+And once again, Kaplan et al
+have a really nice visual aid
+
+00:53:00.570 --> 00:53:03.475
+showing how aspect ratio
+impacts performance.
+
+00:53:03.475 --> 00:53:05.100
+And so this is three
+different scales--
+
+00:53:05.100 --> 00:53:09.580
+50 million, 274 million,
+and 1.5 billion parameters.
+
+00:53:09.580 --> 00:53:12.290
+And the x-axis is aspect ratio.
+
+00:53:12.290 --> 00:53:16.490
+Y-axis is loss difference
+in percentage change.
+
+00:53:16.490 --> 00:53:20.360
+And you see, that around
+100, which is, once again, I
+
+00:53:20.360 --> 00:53:22.200
+told you was around
+the consensus
+
+00:53:22.200 --> 00:53:24.170
+choice of hyperparameters,
+is the minimum
+
+00:53:24.170 --> 00:53:25.410
+across different scales.
+
+00:53:25.410 --> 00:53:30.470
+So this is backed by some of
+this large scale hyperparameter
+
+00:53:30.470 --> 00:53:32.700
+data that's been
+published by Kaplan et al
+
+00:53:32.700 --> 00:53:34.410
+and roughly matches
+that intuition.
+
+00:53:34.410 --> 00:53:36.050
+And a really nice
+thing here, is it
+
+00:53:36.050 --> 00:53:39.290
+seems to be the case that
+aspect ratio optima does not
+
+00:53:39.290 --> 00:53:43.560
+shift too much across several
+orders of magnitude here.
+
+00:53:43.560 --> 00:53:45.990
+So if this holds up even
+more, that's very good news.
+
+00:53:45.990 --> 00:53:50.690
+You can keep training on
+one fixed aspect ratio.
+
+00:53:50.690 --> 00:53:55.250
+One thing I will know that is
+quite an interesting result is
+
+00:53:55.250 --> 00:53:59.600
+E Tay and others at Google had
+this very interesting paper
+
+00:53:59.600 --> 00:54:02.780
+studying the impact
+of depth versus width
+
+00:54:02.780 --> 00:54:04.650
+both upstream and downstream.
+
+00:54:04.650 --> 00:54:06.320
+And one of the things
+that they found
+
+00:54:06.320 --> 00:54:10.230
+was that if you're
+looking at losses, then,
+
+00:54:10.230 --> 00:54:11.430
+it doesn't really matter.
+
+00:54:11.430 --> 00:54:13.240
+Parameter is the only
+thing that matters.
+
+00:54:13.240 --> 00:54:15.210
+Deeper models don't help you.
+
+00:54:15.210 --> 00:54:17.460
+But the story is
+less clear if you're
+
+00:54:17.460 --> 00:54:18.837
+looking at downstream accuracy.
+
+00:54:18.837 --> 00:54:20.670
+At the time, they were
+looking at fine tuned
+
+00:54:20.670 --> 00:54:21.940
+superglue accuracy.
+
+00:54:21.940 --> 00:54:24.310
+They were arguing that for
+the same amount of flops,
+
+00:54:24.310 --> 00:54:25.570
+deeper models might be better.
+
+00:54:25.570 --> 00:54:27.580
+So I'll just leave it at that.
+
+00:54:27.580 --> 00:54:29.818
+There's not quite as much
+follow up to this work,
+
+00:54:29.818 --> 00:54:31.360
+at least in the
+open, that I've seen.
+
+00:54:31.360 --> 00:54:33.330
+But downstream
+performance may actually
+
+00:54:33.330 --> 00:54:35.880
+be slightly different in
+terms of the aspect ratio
+
+00:54:35.880 --> 00:54:36.785
+considerations here.
+
+00:54:41.850 --> 00:54:43.650
+Cool.
+
+00:54:43.650 --> 00:54:46.290
+The final thing that
+I want to talk about
+
+00:54:46.290 --> 00:54:48.870
+in this very low level
+hyperparameter world
+
+00:54:48.870 --> 00:54:53.010
+is what are the vocabulary sizes
+that you might want to pick.
+
+00:54:53.010 --> 00:54:57.510
+And in general, vocabulary sizes
+have been trending upwards.
+
+00:54:57.510 --> 00:55:01.350
+And I think a big part of
+why is because LLMs are
+
+00:55:01.350 --> 00:55:02.830
+being deployed out in the wild.
+
+00:55:02.830 --> 00:55:04.630
+They're becoming
+more useful services.
+
+00:55:04.630 --> 00:55:06.088
+And when that
+happens, you're going
+
+00:55:06.088 --> 00:55:08.690
+to interact with people speaking
+different languages, people
+
+00:55:08.690 --> 00:55:12.860
+using emojis, all sorts of
+other kinds of almost modalities
+
+00:55:12.860 --> 00:55:15.860
+or languages than
+what you might expect.
+
+00:55:15.860 --> 00:55:18.600
+And so I think some
+of the earlier models,
+
+00:55:18.600 --> 00:55:20.810
+and especially
+monolingual models,
+
+00:55:20.810 --> 00:55:25.950
+ranged around in the 30,000 to
+50,000 token vocabulary range.
+
+00:55:25.950 --> 00:55:29.210
+And you can see this in
+GPTs, the early LLaMAs.
+
+00:55:29.210 --> 00:55:31.400
+But if you look at
+the multilingual,
+
+00:55:31.400 --> 00:55:34.920
+or I would call production
+systems that have come out,
+
+00:55:34.920 --> 00:55:39.110
+they've all been shifting
+towards the 100,000 to 250,000
+
+00:55:39.110 --> 00:55:41.900
+range for their
+vocabulary sizes.
+
+00:55:41.900 --> 00:55:45.625
+And I looked at Command A,
+which is one of Cahere's models.
+
+00:55:45.625 --> 00:55:47.000
+They're a company
+that emphasizes
+
+00:55:47.000 --> 00:55:48.540
+a lot of multilingual stuff.
+
+00:55:48.540 --> 00:55:52.220
+You see very large
+vocab sizes from them.
+
+00:55:52.220 --> 00:55:56.060
+Even with GPT-4 and many others
+that have copied the GPT-4
+
+00:55:56.060 --> 00:55:59.150
+tokenizer are going to
+be around 100k tokens.
+
+00:55:59.150 --> 00:56:03.020
+And so that's the standard that
+a lot of people are operating
+
+00:56:03.020 --> 00:56:07.640
+at, roughly at 100k
+to 200k token size.
+
+00:56:07.640 --> 00:56:09.190
+And I think there's
+been work showing
+
+00:56:09.190 --> 00:56:12.160
+that as models get bigger,
+these models can, in some sense,
+
+00:56:12.160 --> 00:56:17.020
+handle more and more, or make
+good use of more and more vocab
+
+00:56:17.020 --> 00:56:17.660
+elements.
+
+00:56:17.660 --> 00:56:21.040
+And so you might see increasing
+trends to token counts
+
+00:56:21.040 --> 00:56:23.380
+as models get scaled up
+or more and more data
+
+00:56:23.380 --> 00:56:26.290
+is used to train them.
+
+00:56:26.290 --> 00:56:28.390
+Cool.
+
+00:56:28.390 --> 00:56:34.940
+So the last thing, this is no
+longer specific hyperparameters,
+
+00:56:34.940 --> 00:56:37.030
+but two other things
+that you might
+
+00:56:37.030 --> 00:56:40.000
+need to do before you
+set your model to run,
+
+00:56:40.000 --> 00:56:43.040
+which is dropout and other
+kinds of regularization.
+
+00:56:43.040 --> 00:56:45.670
+And I think this one was
+really interesting to me
+
+00:56:45.670 --> 00:56:48.160
+when I was originally doing
+the research for putting
+
+00:56:48.160 --> 00:56:49.840
+this lecture together.
+
+00:56:49.840 --> 00:56:52.230
+If you think about
+pre-training, pre-training
+
+00:56:52.230 --> 00:56:53.980
+is about the furthest
+place that you might
+
+00:56:53.980 --> 00:56:55.880
+think of from regularization.
+
+00:56:55.880 --> 00:56:59.820
+Because pre-training,
+you do usually one epoch.
+
+00:56:59.820 --> 00:57:01.570
+You can't even go
+through all of your data
+
+00:57:01.570 --> 00:57:02.903
+because you have too much of it.
+
+00:57:02.903 --> 00:57:05.130
+So you're going to do
+one epoch training,
+
+00:57:05.130 --> 00:57:07.290
+and you're almost
+certainly not overfitting
+
+00:57:07.290 --> 00:57:09.970
+the data in that one
+pass that you're doing.
+
+00:57:09.970 --> 00:57:12.390
+And so you might think, we
+don't need regularization
+
+00:57:12.390 --> 00:57:13.240
+for pre-training.
+
+00:57:13.240 --> 00:57:15.280
+Let's just set your
+optimizer loose.
+
+00:57:15.280 --> 00:57:18.030
+It's all about minimizing loss.
+
+00:57:18.030 --> 00:57:21.180
+And this is really
+good arguments
+
+00:57:21.180 --> 00:57:24.280
+for why you shouldn't
+need to regularize.
+
+00:57:24.280 --> 00:57:27.540
+But then, if you look
+at what people do,
+
+00:57:27.540 --> 00:57:31.110
+the story is actually
+kind of mixed.
+
+00:57:31.110 --> 00:57:34.020
+And this story actually
+is maybe even more mixed
+
+00:57:34.020 --> 00:57:36.520
+than what has turned out to be.
+
+00:57:36.520 --> 00:57:39.840
+But early days, people
+did a lot of dropout.
+
+00:57:39.840 --> 00:57:42.300
+And then there's a
+lot of weight decay
+
+00:57:42.300 --> 00:57:44.910
+that also seems to be happening.
+
+00:57:44.910 --> 00:57:47.220
+And these days, I think,
+a lot of the people
+
+00:57:47.220 --> 00:57:49.560
+have stopped publishing
+details on precisely they're
+
+00:57:49.560 --> 00:57:50.980
+training hyperparameters.
+
+00:57:50.980 --> 00:57:54.040
+But dropout has
+gone out of fashion.
+
+00:57:54.040 --> 00:57:57.270
+But weight decay has really been
+something that a lot of people
+
+00:57:57.270 --> 00:57:59.160
+continue to do.
+
+00:57:59.160 --> 00:58:00.430
+And why is that?
+
+00:58:00.430 --> 00:58:03.015
+That's a really odd
+thing to be doing.
+
+00:58:03.015 --> 00:58:04.640
+So I'll give you a
+moment to just think
+
+00:58:04.640 --> 00:58:06.170
+about this state of affairs.
+
+00:58:06.170 --> 00:58:09.470
+If you're training a
+really large neural network
+
+00:58:09.470 --> 00:58:12.870
+for one pass on SGD, on
+vast amounts of data,
+
+00:58:12.870 --> 00:58:16.230
+why would You use weight
+decay when you're doing that?
+
+00:58:16.230 --> 00:58:18.593
+So maybe some of the answer.
+
+00:58:18.593 --> 00:58:20.510
+But I think that's a
+kind of interesting thing
+
+00:58:20.510 --> 00:58:21.135
+to think about.
+
+00:58:21.135 --> 00:58:27.030
+It's very intuition
+violating, at least for me.
+
+00:58:27.030 --> 00:58:33.650
+So the reason is because it's
+not to control overfitting.
+
+00:58:33.650 --> 00:58:36.510
+In the sense that if you
+look at weight decay,
+
+00:58:36.510 --> 00:58:38.150
+different amounts
+of weight decay
+
+00:58:38.150 --> 00:58:41.930
+don't really seem to change
+the ratio of training loss
+
+00:58:41.930 --> 00:58:43.110
+to validation loss.
+
+00:58:43.110 --> 00:58:45.440
+So you can train with different
+amounts of weight decay
+
+00:58:45.440 --> 00:58:48.380
+if you train for long enough or
+you control your hyperparameters
+
+00:58:48.380 --> 00:58:50.900
+appropriately, you'll end
+up with the same train
+
+00:58:50.900 --> 00:58:52.140
+to val loss gap.
+
+00:58:52.140 --> 00:58:54.620
+So overfitting, nothing's
+happening here, even
+
+00:58:54.620 --> 00:58:55.890
+with zero weight decay.
+
+00:58:55.890 --> 00:58:58.910
+But what is interesting
+is that the weight decay
+
+00:58:58.910 --> 00:59:03.130
+seems to be interacting
+somewhat in a strange way
+
+00:59:03.130 --> 00:59:06.820
+with the learning rate
+schedules of the optimizers.
+
+00:59:06.820 --> 00:59:09.550
+And so what's happening
+is that if you
+
+00:59:09.550 --> 00:59:13.520
+look at a constant
+learning rate,
+
+00:59:13.520 --> 00:59:15.920
+so this is a model trained
+on constant learning rate.
+
+00:59:15.920 --> 00:59:19.850
+And then you suddenly decrease
+the learning rate to near zero.
+
+00:59:19.850 --> 00:59:23.440
+So you see this drop off as
+you decrease the learning rate.
+
+00:59:23.440 --> 00:59:27.250
+And then let's look at
+different kinds of weight decay
+
+00:59:27.250 --> 00:59:28.250
+that you could do.
+
+00:59:28.250 --> 00:59:30.250
+And what happens is
+with weight decay,
+
+00:59:30.250 --> 00:59:33.265
+the model is not training very
+well at this high learning rate.
+
+00:59:33.265 --> 00:59:35.140
+And then when you decrease
+the learning rate,
+
+00:59:35.140 --> 00:59:37.310
+it'll very rapidly drop off.
+
+00:59:37.310 --> 00:59:40.750
+And when you look at cosine
+learning rate decay, what
+
+00:59:40.750 --> 00:59:44.200
+happens is that the models
+with high weight decay
+
+00:59:44.200 --> 00:59:45.647
+start out very slow.
+
+00:59:45.647 --> 00:59:47.980
+But then as they cool down,
+that is, their learning rate
+
+00:59:47.980 --> 00:59:51.460
+decreases, they very
+rapidly optimize.
+
+00:59:51.460 --> 00:59:55.930
+And so there's some very complex
+interaction happening here
+
+00:59:55.930 --> 00:59:59.130
+between the optimizer
+and the weight decay
+
+00:59:59.130 --> 01:00:01.680
+and some of implicit
+acceleration
+
+01:00:01.680 --> 01:00:04.320
+that happens near the tail
+end of training that ends up
+
+01:00:04.320 --> 01:00:06.220
+giving you better models.
+
+01:00:06.220 --> 01:00:07.710
+And so the answer
+to the question
+
+01:00:07.710 --> 01:00:10.218
+I posed you is you
+don't weight decay
+
+01:00:10.218 --> 01:00:12.510
+because you want to regularize
+the model, which is kind
+
+01:00:12.510 --> 01:00:13.810
+of what it was designed for.
+
+01:00:13.810 --> 01:00:17.220
+Your weight decaying in order
+to get actually better training
+
+01:00:17.220 --> 01:00:18.070
+losses.
+
+01:00:18.070 --> 01:00:21.150
+And you end up doing that
+because of the various learning
+
+01:00:21.150 --> 01:00:23.910
+dynamics at the tail end of
+training, as you decrease
+
+01:00:23.910 --> 01:00:25.120
+your learning rates to 0.
+
+01:00:25.120 --> 01:00:28.800
+It's a very interesting
+and complex.
+
+01:00:28.800 --> 01:00:31.770
+And in some ways,
+troubling thing
+
+01:00:31.770 --> 01:00:33.670
+to be doing with
+language models.
+
+01:00:33.670 --> 01:00:37.748
+But now, you see why, if you
+look at a lot of the reports,
+
+01:00:37.748 --> 01:00:39.040
+you'll see we use weight decay.
+
+01:00:39.040 --> 01:00:42.115
+This is why that
+ends up happening.
+
+01:00:42.115 --> 01:00:42.615
+Cool.
+
+01:00:45.790 --> 01:00:50.430
+So putting all that together, so
+there are certain things that I
+
+01:00:50.430 --> 01:00:52.300
+think are just no-brainer.
+
+01:00:52.300 --> 01:00:55.000
+So if you're picking various
+hyperparameters for your model.
+
+01:00:55.000 --> 01:00:57.590
+You don't really need to
+think too deeply about them
+
+01:00:57.590 --> 01:00:59.270
+in the sense that
+they've been validated
+
+01:00:59.270 --> 01:01:00.853
+and basically everyone
+else does them.
+
+01:01:00.853 --> 01:01:04.250
+So this is things like
+the hidden size of MLP,
+
+01:01:04.250 --> 01:01:07.740
+the head dimensions of
+your multi-head attention,
+
+01:01:07.740 --> 01:01:11.480
+your aspect ratio, and your
+choice of regularization
+
+01:01:11.480 --> 01:01:12.480
+through weight decay.
+
+01:01:12.480 --> 01:01:14.760
+All of those,
+there's fairly good,
+
+01:01:14.760 --> 01:01:17.000
+I think, consensus
+evidence of how
+
+01:01:17.000 --> 01:01:18.950
+to pick most of these
+hyperparameters.
+
+01:01:18.950 --> 01:01:21.683
+And those defaults roughly
+give you the kinds of things
+
+01:01:21.683 --> 01:01:23.100
+that we suggest
+in the assignment.
+
+01:01:23.100 --> 01:01:25.308
+So you can follow along,
+and they'll roughly give you
+
+01:01:25.308 --> 01:01:27.650
+something similar to this.
+
+01:01:27.650 --> 01:01:33.830
+So any questions about
+the hyperparameter piece?
+
+01:01:33.830 --> 01:01:34.920
+Yes.
+
+01:01:34.920 --> 01:01:38.000
+Is there a reason why
+dropouts gone out of fashion?
+
+01:01:38.000 --> 01:01:39.620
+That's a good question.
+
+01:01:39.620 --> 01:01:40.970
+I don't think I've seen--
+
+01:01:40.970 --> 01:01:44.420
+the question was, why did
+dropout go out of fashion?
+
+01:01:44.420 --> 01:01:47.150
+I haven't quite seen
+a deep analysis of why
+
+01:01:47.150 --> 01:01:49.200
+dropout is or isn't helpful.
+
+01:01:49.200 --> 01:01:51.860
+I haven't seen any result that,
+for example, shows that it
+
+01:01:51.860 --> 01:01:53.120
+helps for training loss.
+
+01:01:53.120 --> 01:01:57.250
+And both this paper argues
+and logic would dictate,
+
+01:01:57.250 --> 01:02:00.340
+there's not really a
+training overfitting issue
+
+01:02:00.340 --> 01:02:02.080
+with these models
+that can't even
+
+01:02:02.080 --> 01:02:05.000
+do one epoch over
+their training data.
+
+01:02:05.000 --> 01:02:05.500
+Yes.
+
+01:02:08.380 --> 01:02:10.690
+Multilingual
+vocabularies actually
+
+01:02:10.690 --> 01:02:14.920
+contribute to improve
+performance in one language.
+
+01:02:14.920 --> 01:02:17.330
+So, [INAUDIBLE].
+
+01:02:17.330 --> 01:02:19.840
+So the question was, do
+multilingual vocabularies
+
+01:02:19.840 --> 01:02:22.400
+contribute to improving
+performance in one language?
+
+01:02:22.400 --> 01:02:23.858
+When you say one
+language, you mean
+
+01:02:23.858 --> 01:02:27.070
+do multilingual or larger
+vocabularies help performance
+
+01:02:27.070 --> 01:02:27.800
+in English?
+
+01:02:27.800 --> 01:02:28.980
+Is that the right question?
+
+01:02:28.980 --> 01:02:29.830
+Yeah.
+
+01:02:29.830 --> 01:02:34.310
+So I think in your high resource
+language, the impact is less.
+
+01:02:34.310 --> 01:02:38.020
+So if you're only thinking
+about English language language
+
+01:02:38.020 --> 01:02:41.360
+modeling, you can get away
+with smaller vocabularies.
+
+01:02:41.360 --> 01:02:43.660
+This much is kind of true.
+
+01:02:43.660 --> 01:02:47.140
+But the place where larger
+vocabularies is really helpful
+
+01:02:47.140 --> 01:02:48.740
+is when you're
+starting to get at,
+
+01:02:48.740 --> 01:02:50.630
+I wouldn't say the tail
+of your distribution,
+
+01:02:50.630 --> 01:02:53.650
+but when you get to languages
+that are more minority.
+
+01:02:53.650 --> 01:02:55.500
+And one great example
+of this, if you
+
+01:02:55.500 --> 01:02:57.990
+look at any of the
+Cohere announcements
+
+01:02:57.990 --> 01:03:00.300
+about their models
+or their tokenizers,
+
+01:03:00.300 --> 01:03:02.790
+they basically always argue
+that because of the way
+
+01:03:02.790 --> 01:03:04.770
+they have larger
+vocabularies and the way
+
+01:03:04.770 --> 01:03:08.550
+they train their tokenizer,
+non-English and low resource
+
+01:03:08.550 --> 01:03:11.890
+languages, they are packed
+into much fewer tokens.
+
+01:03:11.890 --> 01:03:17.190
+And so people using
+those pay much lower cost
+
+01:03:17.190 --> 01:03:21.407
+at inference time, which
+is a great benefit.
+
+01:03:21.407 --> 01:03:21.990
+Yes, question?
+
+01:03:21.990 --> 01:03:25.170
+[INAUDIBLE] if
+weight decay doesn't
+
+01:03:25.170 --> 01:03:27.960
+have a significant impact
+on the vali loss, why do we
+
+01:03:27.960 --> 01:03:30.960
+care about the training dynamics
+or the favorable [INAUDIBLE]
+
+01:03:30.960 --> 01:03:31.973
+dynamics?
+
+01:03:31.973 --> 01:03:33.390
+So the question
+was, if it doesn't
+
+01:03:33.390 --> 01:03:34.973
+have an impact on
+vali loss, why do we
+
+01:03:34.973 --> 01:03:36.630
+care about training dynamics?
+
+01:03:36.630 --> 01:03:41.500
+The goal is still, I want
+to get good training loss.
+
+01:03:41.500 --> 01:03:43.000
+This is the game
+that we're playing.
+
+01:03:43.000 --> 01:03:44.820
+And the surprising
+thing about weight decay
+
+01:03:44.820 --> 01:03:47.317
+is that somehow, it gets
+us better training losses.
+
+01:03:47.317 --> 01:03:48.900
+I think the intuitive
+thing that makes
+
+01:03:48.900 --> 01:03:50.720
+sense is, you do weight decay.
+
+01:03:50.720 --> 01:03:52.103
+It gives you better vali losses.
+
+01:03:52.103 --> 01:03:53.270
+But that's not what happens.
+
+01:03:53.270 --> 01:03:55.990
+What it's getting you is better
+training losses, which are also
+
+01:03:55.990 --> 01:03:57.100
+the same as vali losses.
+
+01:04:00.844 --> 01:04:02.230
+Yes.
+
+01:04:02.230 --> 01:04:05.740
+Are there differences in the
+architecture hyperparameter
+
+01:04:05.740 --> 01:04:07.930
+choices people make
+as they move towards
+
+01:04:07.930 --> 01:04:10.180
+multimodal
+architectures, if they're
+
+01:04:10.180 --> 01:04:12.460
+doing images as well as text?
+
+01:04:12.460 --> 01:04:14.990
+So the question was
+about multimodal models.
+
+01:04:14.990 --> 01:04:16.370
+That is a great question.
+
+01:04:16.370 --> 01:04:20.470
+My survey of multimodal
+models is very incomplete.
+
+01:04:20.470 --> 01:04:24.100
+What I can say is, a lot of the
+academic and open work that I've
+
+01:04:24.100 --> 01:04:26.710
+seen, they do what
+you might call
+
+01:04:26.710 --> 01:04:29.920
+like shallow or later
+fusion or earlier
+
+01:04:29.920 --> 01:04:31.760
+fusion of the modalities.
+
+01:04:31.760 --> 01:04:34.480
+And the way that works is
+you bolt the vision modality
+
+01:04:34.480 --> 01:04:35.985
+onto an existing language model.
+
+01:04:35.985 --> 01:04:38.110
+In those cases, the
+hyperparameter and architecture
+
+01:04:38.110 --> 01:04:39.910
+choices are fixed.
+
+01:04:39.910 --> 01:04:41.290
+One thing I will
+note, and I will
+
+01:04:41.290 --> 01:04:43.960
+talk about this in
+just a few slides,
+
+01:04:43.960 --> 01:04:46.420
+is that the multimodal
+models pioneered
+
+01:04:46.420 --> 01:04:49.740
+some pretty interesting
+techniques in stabilizing
+
+01:04:49.740 --> 01:04:50.860
+language model training.
+
+01:04:50.860 --> 01:04:52.330
+And that's been a
+really big theme,
+
+01:04:52.330 --> 01:04:53.955
+and I'll talk a little
+bit about those.
+
+01:04:53.955 --> 01:04:57.690
+So what is different is often
+when you bolt on this new vision
+
+01:04:57.690 --> 01:05:00.803
+piece and you retrain with that,
+that's a big shock to the model.
+
+01:05:00.803 --> 01:05:02.220
+And so you have
+to think carefully
+
+01:05:02.220 --> 01:05:04.150
+about how to stabilize
+that training process.
+
+01:05:04.150 --> 01:05:06.108
+And those innovations
+have actually seeped back
+
+01:05:06.108 --> 01:05:08.225
+into pure text language
+model training.
+
+01:05:11.613 --> 01:05:12.113
+Cool.
+
+01:05:15.510 --> 01:05:19.200
+So I went back
+through and I looked
+
+01:05:19.200 --> 01:05:20.530
+through all these new papers.
+
+01:05:20.530 --> 01:05:22.155
+And as I was trying
+to think about, OK,
+
+01:05:22.155 --> 01:05:23.880
+what's been new
+in the last year?
+
+01:05:23.880 --> 01:05:27.040
+And what new architecture and
+related things have happened?
+
+01:05:27.040 --> 01:05:30.220
+Actually, the core architecture
+hasn't changed much.
+
+01:05:30.220 --> 01:05:32.040
+But I think the one
+thing that stood out
+
+01:05:32.040 --> 01:05:35.640
+as being very emphasized
+in a lot of the releases
+
+01:05:35.640 --> 01:05:38.920
+has been what I would
+call stability tricks.
+
+01:05:38.920 --> 01:05:40.830
+And so these are
+things where you
+
+01:05:40.830 --> 01:05:44.790
+would like to train your model
+in much more stable ways.
+
+01:05:44.790 --> 01:05:46.830
+And as you make bigger
+and bigger models,
+
+01:05:46.830 --> 01:05:48.660
+you train for longer and longer.
+
+01:05:48.660 --> 01:05:51.270
+These kinds of issues start
+to appear more and more.
+
+01:05:51.270 --> 01:05:55.400
+So I've taken this
+from the OLMo 2 paper.
+
+01:05:55.400 --> 01:05:59.900
+And actually, that paper is a
+great set of academic results
+
+01:05:59.900 --> 01:06:02.660
+on LLM training stability.
+
+01:06:02.660 --> 01:06:06.510
+And one thing they start
+with is this figure.
+
+01:06:06.510 --> 01:06:08.520
+And you look at this
+blue curve over here.
+
+01:06:08.520 --> 01:06:12.240
+And you look at this, L2
+norm of the gradient graph.
+
+01:06:12.240 --> 01:06:14.730
+And this is terrifying
+graph to look at.
+
+01:06:14.730 --> 01:06:18.630
+Your loss curve kind of
+seems to be behaving OK.
+
+01:06:18.630 --> 01:06:21.270
+But you've got some bad
+spikes every now and then.
+
+01:06:21.270 --> 01:06:23.160
+And you open up
+your gradient norm,
+
+01:06:23.160 --> 01:06:24.830
+and it's this
+horrible plot where
+
+01:06:24.830 --> 01:06:27.500
+you've got spikes everywhere,
+where your norms are completely
+
+01:06:27.500 --> 01:06:28.940
+blowing up.
+
+01:06:28.940 --> 01:06:31.470
+And if you're training
+models like this,
+
+01:06:31.470 --> 01:06:33.500
+you're going to have a
+really tough time getting
+
+01:06:33.500 --> 01:06:35.010
+it to converge reasonably.
+
+01:06:35.010 --> 01:06:37.130
+At some point,
+it's going to hit--
+
+01:06:37.130 --> 01:06:39.680
+gradient norm explodes,
+and you can't do anything.
+
+01:06:39.680 --> 01:06:43.040
+And your training is done so
+you can't train any further.
+
+01:06:43.040 --> 01:06:45.760
+And so there's been a lot
+of emphasis basically trying
+
+01:06:45.760 --> 01:06:48.130
+to turn this blue curve
+into something that looks
+
+01:06:48.130 --> 01:06:49.877
+a lot like the orange curve.
+
+01:06:49.877 --> 01:06:52.210
+And of course, this loss is
+higher, but ignore that fact
+
+01:06:52.210 --> 01:06:53.627
+because I think
+they just switched
+
+01:06:53.627 --> 01:06:55.570
+data sets in between
+these two training runs.
+
+01:06:55.570 --> 01:06:59.943
+But this orange curve has nice
+low gradient norms throughout.
+
+01:06:59.943 --> 01:07:01.360
+And that's really
+the kind of plot
+
+01:07:01.360 --> 01:07:03.940
+that you would much rather see.
+
+01:07:03.940 --> 01:07:07.450
+And so you might ask, where
+do stability issues arise
+
+01:07:07.450 --> 01:07:08.420
+in transformers?
+
+01:07:08.420 --> 01:07:11.590
+And of course, they can
+arise basically everywhere.
+
+01:07:11.590 --> 01:07:13.960
+But if you look at the
+kind of interventions
+
+01:07:13.960 --> 01:07:16.540
+that people are
+making, there's really
+
+01:07:16.540 --> 01:07:20.180
+one place that really stands out
+as the kind of problem child.
+
+01:07:20.180 --> 01:07:22.330
+And that's the softmaxes.
+
+01:07:22.330 --> 01:07:24.370
+And it can be a problem
+because you're going
+
+01:07:24.370 --> 01:07:25.700
+to be taking exponentials.
+
+01:07:25.700 --> 01:07:29.080
+And those can be
+numerically badly behaved.
+
+01:07:29.080 --> 01:07:30.837
+You're also dividing
+two numbers.
+
+01:07:30.837 --> 01:07:32.420
+And so you might
+have a division by 0.
+
+01:07:32.420 --> 01:07:35.410
+So for many different
+reasons, this softmax piece
+
+01:07:35.410 --> 01:07:40.330
+is a part that you might
+have lots of issues with.
+
+01:07:40.330 --> 01:07:43.180
+And so, actually, one more
+thing I want to talk about.
+
+01:07:43.180 --> 01:07:46.090
+So where are the softmaxes
+in a transformer?
+
+01:07:46.090 --> 01:07:47.710
+Well, there's one
+at the very end.
+
+01:07:47.710 --> 01:07:50.260
+So you've got to be careful
+about that output softmax.
+
+01:07:50.260 --> 01:07:53.740
+And also, there's softmaxes
+in your self-attention.
+
+01:07:53.740 --> 01:07:55.513
+So there's two softmaxes
+that we're going
+
+01:07:55.513 --> 01:07:56.680
+to think a little bit about.
+
+01:07:56.680 --> 01:07:59.070
+And for each one,
+I'm going to mention
+
+01:07:59.070 --> 01:08:01.950
+stability intervention
+that has generally
+
+01:08:01.950 --> 01:08:05.290
+seemed to be effective.
+
+01:08:05.290 --> 01:08:08.520
+So the first one is
+called the z-loss.
+
+01:08:08.520 --> 01:08:11.440
+And it might desire to
+cite a paper that's older.
+
+01:08:11.440 --> 01:08:14.850
+I've gone back to
+Devlin in 2014,
+
+01:08:14.850 --> 01:08:18.120
+where in a machine
+translation paper,
+
+01:08:18.120 --> 01:08:22.800
+their goal was to try to make
+sure that this normalizer was
+
+01:08:22.800 --> 01:08:23.710
+near 1.
+
+01:08:23.710 --> 01:08:27.779
+So if you look at p of x, that's
+the output softmax over here.
+
+01:08:27.779 --> 01:08:29.649
+The output softmax is two terms.
+
+01:08:29.649 --> 01:08:31.529
+You exponentiate your
+logits, and then you
+
+01:08:31.529 --> 01:08:33.250
+divide by the normalizer z.
+
+01:08:33.250 --> 01:08:37.540
+And the z is just summing up
+the values across all the vocab.
+
+01:08:37.540 --> 01:08:39.880
+And so if you want
+this z of x, you
+
+01:08:39.880 --> 01:08:43.620
+want to train the network to
+have a z of x close to one.
+
+01:08:43.620 --> 01:08:45.840
+Well, then you can
+rewrite your loss,
+
+01:08:45.840 --> 01:08:47.779
+and you can add a
+little second term here
+
+01:08:47.779 --> 01:08:52.109
+to try to force log of z
+of xi to be close to 0.
+
+01:08:52.109 --> 01:08:54.109
+So you're going to end
+up with an auxiliary loss
+
+01:08:54.109 --> 01:08:57.479
+term that's alpha log
+squared z of xi right.
+
+01:08:57.479 --> 01:09:00.229
+You can see that derivation
+on the right here.
+
+01:09:00.229 --> 01:09:04.670
+And this is in some sense what
+people often call the z-loss.
+
+01:09:04.670 --> 01:09:06.859
+I think Jacob Devlin
+and others did
+
+01:09:06.859 --> 01:09:09.290
+this for machine translation
+for totally different reasons
+
+01:09:09.290 --> 01:09:11.359
+than what it's used for today.
+
+01:09:11.359 --> 01:09:14.689
+But this was, I think, the first
+instance of this in language
+
+01:09:14.689 --> 01:09:18.240
+modeling land was PaLM, who
+used this, as they called it,
+
+01:09:18.240 --> 01:09:21.470
+auxiliary loss of z-loss
+10 to the negative 4 log
+
+01:09:21.470 --> 01:09:24.680
+squared z to basically
+encourage the softmax normalizer
+
+01:09:24.680 --> 01:09:26.359
+to behave nicely.
+
+01:09:26.359 --> 01:09:29.960
+And you can reason through the
+behavior of this regularizer.
+
+01:09:29.960 --> 01:09:34.590
+If it succeeds and it forces
+log of z of x to always be 0,
+
+01:09:34.590 --> 01:09:37.990
+then the log and the
+exponential cancels,
+
+01:09:37.990 --> 01:09:40.310
+and you've basically
+just got U of r of x.
+
+01:09:40.310 --> 01:09:41.560
+And that's a good place to be.
+
+01:09:41.560 --> 01:09:43.790
+That's a nice numerically
+stable operation.
+
+01:09:43.790 --> 01:09:46.760
+So all of these problematic
+operations go away.
+
+01:09:46.760 --> 01:09:48.430
+And so you can
+think of the softmax
+
+01:09:48.430 --> 01:09:52.660
+as being well-behaved
+when z of x is close to 1.
+
+01:09:52.660 --> 01:09:55.378
+Or log of z is close to 0.
+
+01:09:55.378 --> 01:09:58.960
+And PaLM, in some sense,
+is very much a pioneer.
+
+01:09:58.960 --> 01:10:02.530
+Because they did this z
+loss trick, and many others
+
+01:10:02.530 --> 01:10:04.930
+didn't really do it for a long
+time, or at least the ones
+
+01:10:04.930 --> 01:10:06.508
+that had open papers.
+
+01:10:06.508 --> 01:10:08.050
+But then there was
+a kind of sequence
+
+01:10:08.050 --> 01:10:09.730
+of papers that have done this.
+
+01:10:09.730 --> 01:10:12.010
+Baichuan 2 is
+actually the earliest
+
+01:10:12.010 --> 01:10:13.190
+follow up that I know of.
+
+01:10:13.190 --> 01:10:16.300
+And then DCLM and OLMo
+2 and now several others
+
+01:10:16.300 --> 01:10:17.950
+have basically
+picked up on z-loss.
+
+01:10:17.950 --> 01:10:21.310
+So a very nice, convenient
+intervention for improving
+
+01:10:21.310 --> 01:10:23.500
+stability.
+
+01:10:23.500 --> 01:10:26.600
+And then, the other
+trick that we see,
+
+01:10:26.600 --> 01:10:31.250
+so that was how to stabilize
+the output softmax.
+
+01:10:31.250 --> 01:10:33.620
+But we've got another softmax
+we've got to deal with.
+
+01:10:33.620 --> 01:10:35.680
+The other softmax
+we have to deal with
+
+01:10:35.680 --> 01:10:38.440
+is in the attention operation.
+
+01:10:38.440 --> 01:10:41.740
+And so this is from
+an NVIDIA paper.
+
+01:10:41.740 --> 01:10:44.050
+I forgot to put the
+citation marker.
+
+01:10:44.050 --> 01:10:48.340
+But here, this is a block
+diagram of how attention works.
+
+01:10:48.340 --> 01:10:50.810
+You got your layer
+norm at the beginning.
+
+01:10:50.810 --> 01:10:52.510
+You got your QKVs.
+
+01:10:52.510 --> 01:10:54.140
+Ignore this for the moment.
+
+01:10:54.140 --> 01:10:56.870
+You might multiply
+your Qs and your Ks.
+
+01:10:56.870 --> 01:10:58.040
+You'll softmax it.
+
+01:10:58.040 --> 01:11:00.640
+You'll multiply the V, and
+then you'll project it.
+
+01:11:00.640 --> 01:11:02.890
+And then that's going to
+give you your fully connected
+
+01:11:02.890 --> 01:11:03.560
+and your output.
+
+01:11:03.560 --> 01:11:07.240
+So if you ignore this
+little piece over here,
+
+01:11:07.240 --> 01:11:11.140
+this looks just like your normal
+multi-head attention operation.
+
+01:11:11.140 --> 01:11:14.500
+So what's the difference here?
+
+01:11:14.500 --> 01:11:18.460
+So several folks came up with
+this idea or this approach
+
+01:11:18.460 --> 01:11:22.240
+called the QK norm, where you
+take the queries and the keys,
+
+01:11:22.240 --> 01:11:24.640
+and you pass them
+through a LayerNorm layer
+
+01:11:24.640 --> 01:11:27.490
+before you take their inner
+product for the softmax
+
+01:11:27.490 --> 01:11:28.750
+operation.
+
+01:11:28.750 --> 01:11:30.670
+And this is a very
+different kind
+
+01:11:30.670 --> 01:11:35.000
+of approach to controlling
+the behavior of the softmax.
+
+01:11:35.000 --> 01:11:37.260
+Here, you're not controlling
+the normalizer z.
+
+01:11:37.260 --> 01:11:39.860
+Instead, you're controlling
+the inputs to the softmax
+
+01:11:39.860 --> 01:11:42.030
+to be bounded in size.
+
+01:11:42.030 --> 01:11:45.440
+And that's going to naturally
+control the bad behaviors
+
+01:11:45.440 --> 01:11:47.210
+of the softmax.
+
+01:11:47.210 --> 01:11:49.040
+And as I said before,
+this is originally
+
+01:11:49.040 --> 01:11:53.510
+an innovation from the vision
+and multimodal model community.
+
+01:11:53.510 --> 01:11:56.910
+Dehgani in 2023, this
+was a paper on training,
+
+01:11:56.910 --> 01:11:59.180
+very large vision transformers.
+
+01:11:59.180 --> 01:12:03.620
+And then Chameleon and
+Idefcs from Hugging
+
+01:12:03.620 --> 01:12:07.550
+Face use these tricks for their
+multi-modal training components.
+
+01:12:07.550 --> 01:12:10.730
+And then it got picked
+up by several others
+
+01:12:10.730 --> 01:12:14.390
+like Gemma 2, DCLM,
+OLMo 2, all basically
+
+01:12:14.390 --> 01:12:17.990
+uses this kind of
+techniques in order
+
+01:12:17.990 --> 01:12:21.290
+to stabilize their training.
+
+01:12:21.290 --> 01:12:25.350
+And I think I'm allowed to
+add one joke per lecture.
+
+01:12:25.350 --> 01:12:27.470
+And so this is the one
+I'm going to go with here.
+
+01:12:27.470 --> 01:12:30.260
+I think one of the things
+that really has stood out
+
+01:12:30.260 --> 01:12:31.870
+in terms of stability
+interventions
+
+01:12:31.870 --> 01:12:35.480
+has been just how strikingly
+effective LayerNorms are.
+
+01:12:35.480 --> 01:12:39.970
+So we've seen going from
+LayerNorms just in the pre
+
+01:12:39.970 --> 01:12:43.240
+part of the block to
+both the beginning
+
+01:12:43.240 --> 01:12:45.680
+and the end of the non
+residual component.
+
+01:12:45.680 --> 01:12:49.510
+And now, we've also thrown it
+into the Q and the K component.
+
+01:12:49.510 --> 01:12:51.710
+At least in terms of
+improving stability,
+
+01:12:51.710 --> 01:12:55.300
+LayerNorms have been shockingly
+effective without affecting
+
+01:12:55.300 --> 01:12:57.610
+performance too much.
+
+01:12:57.610 --> 01:13:00.100
+The last trick that
+I'll note, I think
+
+01:13:00.100 --> 01:13:04.750
+this one has been not
+quite as frequently used,
+
+01:13:04.750 --> 01:13:10.610
+which is to soft-cap the logits
+that go into the softmax.
+
+01:13:10.610 --> 01:13:13.600
+So the other approach that you
+can take, so QK norm is in some
+
+01:13:13.600 --> 01:13:15.910
+sense a very heavy
+handed intervention
+
+01:13:15.910 --> 01:13:19.000
+because we're going to operate
+over the entire vector.
+
+01:13:19.000 --> 01:13:20.680
+But one thing you
+could do is after you
+
+01:13:20.680 --> 01:13:23.000
+take the inner products
+for self-attention,
+
+01:13:23.000 --> 01:13:26.420
+you could pass them through
+a soft maximum operation.
+
+01:13:26.420 --> 01:13:29.210
+So you can pass them through
+this equation over here.
+
+01:13:29.210 --> 01:13:31.130
+So you have your
+logits as your input.
+
+01:13:31.130 --> 01:13:33.060
+Divide it by the soft cap.
+
+01:13:33.060 --> 01:13:34.650
+Multiply by the soft cap.
+
+01:13:34.650 --> 01:13:35.520
+What does that do?
+
+01:13:35.520 --> 01:13:39.090
+Well, if your logits start
+exceeding the soft cap by a lot,
+
+01:13:39.090 --> 01:13:41.310
+the tanh is going to
+clip them off to one.
+
+01:13:41.310 --> 01:13:43.430
+And so you're going to
+have a maximum value
+
+01:13:43.430 --> 01:13:45.630
+of soft cap over here.
+
+01:13:45.630 --> 01:13:48.830
+So this is going to control,
+in some sense, soft clipping
+
+01:13:48.830 --> 01:13:54.290
+of the logits and Gemma 2, and
+I think OLMo 2 also do this.
+
+01:13:54.290 --> 01:13:58.680
+It hasn't been I think
+quite as popular otherwise.
+
+01:13:58.680 --> 01:14:02.690
+And I think the other evidence
+against this, the NVIDIA
+
+01:14:02.690 --> 01:14:04.880
+folks that I mentioned
+earlier, did actually
+
+01:14:04.880 --> 01:14:08.670
+quite a few different stability
+improving interventions.
+
+01:14:08.670 --> 01:14:11.850
+And what they find is you have
+your baseline model over here.
+
+01:14:11.850 --> 01:14:15.450
+This is the perplexity of
+the baseline model, 11.19.
+
+01:14:15.450 --> 01:14:17.160
+Soft capping makes it worse.
+
+01:14:17.160 --> 01:14:19.040
+QK norm actually makes
+it better because you
+
+01:14:19.040 --> 01:14:20.630
+can use more aggressive
+learning rates
+
+01:14:20.630 --> 01:14:22.465
+and push the optimizer further.
+
+01:14:25.400 --> 01:14:26.370
+Cool.
+
+01:14:26.370 --> 01:14:30.730
+So that's the end of the
+stability improving intervention
+
+01:14:30.730 --> 01:14:31.450
+stuff.
+
+01:14:31.450 --> 01:14:33.500
+Does anyone have any questions?
+
+01:14:33.500 --> 01:14:36.160
+I think that's been kind
+of the new development
+
+01:14:36.160 --> 01:14:37.040
+over the last year.
+
+01:14:37.040 --> 01:14:37.550
+Yes.
+
+01:14:37.550 --> 01:14:40.012
+So for the QKV
+norm, I understand
+
+01:14:40.012 --> 01:14:41.470
+that during training,
+you will have
+
+01:14:41.470 --> 01:14:42.910
+the LayerNorm being applied.
+
+01:14:42.910 --> 01:14:46.270
+At inference time, it's the
+layer norm still being kept?
+
+01:14:46.270 --> 01:14:46.850
+Yes.
+
+01:14:46.850 --> 01:14:48.200
+So the question was,
+at inference time,
+
+01:14:48.200 --> 01:14:49.400
+do you still use the norm?
+
+01:14:49.400 --> 01:14:50.480
+And the answer is yes.
+
+01:14:50.480 --> 01:14:53.470
+Because the layer norm
+has learned parameters.
+
+01:14:53.470 --> 01:14:55.540
+Like the whole
+action of the layer
+
+01:14:55.540 --> 01:14:58.400
+norm is it takes an activation,
+normalizes it to a unit,
+
+01:14:58.400 --> 01:14:59.900
+and then scales
+them to some size.
+
+01:14:59.900 --> 01:15:02.240
+If you take that out, that's
+a huge change to the model.
+
+01:15:02.240 --> 01:15:03.740
+It will have no
+idea what to do with
+
+01:15:03.740 --> 01:15:05.266
+those unnormalized activations.
+
+01:15:09.333 --> 01:15:09.833
+Cool.
+
+01:15:12.440 --> 01:15:16.480
+So I have this last
+bit, last few slides
+
+01:15:16.480 --> 01:15:17.960
+that I want to end with.
+
+01:15:17.960 --> 01:15:20.410
+If we go over
+then, we can always
+
+01:15:20.410 --> 01:15:22.488
+push this into the MOE lecture.
+
+01:15:22.488 --> 01:15:25.030
+But I think we also have a lot
+of content next time because I
+
+01:15:25.030 --> 01:15:27.840
+have to cover deep seq V3.
+
+01:15:27.840 --> 01:15:29.760
+So the last thing
+I want to cover
+
+01:15:29.760 --> 01:15:32.490
+is variations on
+the attention heads.
+
+01:15:32.490 --> 01:15:34.260
+So attention heads,
+I think, haven't
+
+01:15:34.260 --> 01:15:37.980
+had as much work done to them.
+
+01:15:37.980 --> 01:15:40.770
+But there have been a few,
+I think, important changes
+
+01:15:40.770 --> 01:15:42.270
+that you need to
+know about in order
+
+01:15:42.270 --> 01:15:44.950
+to understand the models
+that are being trained.
+
+01:15:44.950 --> 01:15:46.480
+So the one thing
+I'll talk about--
+
+01:15:46.480 --> 01:15:49.500
+the first thing I'll talk
+about is GQA and MQA.
+
+01:15:49.500 --> 01:15:52.512
+And these aren't really
+critical to the training time
+
+01:15:52.512 --> 01:15:53.970
+behavior of the
+models, but they're
+
+01:15:53.970 --> 01:15:57.150
+very important in understanding
+the inference costs
+
+01:15:57.150 --> 01:15:58.840
+and inference behavior
+of the models.
+
+01:15:58.840 --> 01:16:01.150
+And because this is an
+important architecture change,
+
+01:16:01.150 --> 01:16:03.210
+I'll mention them
+here in addition to
+
+01:16:03.210 --> 01:16:05.070
+probably being mentioned
+by Percy in some
+
+01:16:05.070 --> 01:16:06.840
+of the inference lectures.
+
+01:16:06.840 --> 01:16:09.480
+The other thing that's a
+new development I'll mention
+
+01:16:09.480 --> 01:16:12.930
+is how the most recent models,
+like LLaMA 4, if you've
+
+01:16:12.930 --> 01:16:16.300
+heard of it, supports supposedly
+10 million tokens of context.
+
+01:16:16.300 --> 01:16:17.260
+How does it do that?
+
+01:16:17.260 --> 01:16:20.340
+Well, it does so by messing
+with the attention pattern
+
+01:16:20.340 --> 01:16:22.050
+in very structured ways.
+
+01:16:22.050 --> 01:16:26.570
+So I'll talk about that as well.
+
+01:16:26.570 --> 01:16:31.650
+So GQA and MQA, if you looked
+at some of the larger models,
+
+01:16:31.650 --> 01:16:33.570
+like the big LLaMA
+models or others,
+
+01:16:33.570 --> 01:16:37.250
+you'll have heard or seen
+this term GQA or MQA.
+
+01:16:37.250 --> 01:16:40.260
+And I'll talk through
+what that means.
+
+01:16:40.260 --> 01:16:43.310
+So to set the stage, let's
+think about the compute
+
+01:16:43.310 --> 01:16:45.390
+that you need to do attention.
+
+01:16:45.390 --> 01:16:48.560
+So this is, once again,
+224N slides here.
+
+01:16:48.560 --> 01:16:52.380
+You're going to take your
+XQ, your query, and your XK.
+
+01:16:52.380 --> 01:16:55.370
+And then you're going to form
+your big quadratic attention
+
+01:16:55.370 --> 01:16:56.130
+matrix.
+
+01:16:56.130 --> 01:16:59.070
+And you can walk through each
+of these matrix multiplies.
+
+01:16:59.070 --> 01:17:01.400
+And you can convince yourself
+that the total number
+
+01:17:01.400 --> 01:17:05.690
+of arithmetic operations is
+going to be b times n times
+
+01:17:05.690 --> 01:17:06.450
+d squared.
+
+01:17:06.450 --> 01:17:09.710
+So that's going to be b
+is the batch dimension.
+
+01:17:09.710 --> 01:17:11.760
+n is the sequence length.
+
+01:17:11.760 --> 01:17:17.120
+And d squared is going to be
+the hidden dimension squared.
+
+01:17:17.120 --> 01:17:20.160
+And you can ask about the
+total memory accesses.
+
+01:17:20.160 --> 01:17:22.310
+And this is going to
+be b times n times d.
+
+01:17:22.310 --> 01:17:24.280
+And this is going to be,
+for example accessing
+
+01:17:24.280 --> 01:17:25.910
+just this matrix here.
+
+01:17:25.910 --> 01:17:28.370
+This XQ is going
+to be that size.
+
+01:17:28.370 --> 01:17:31.168
+And then the softmax is going
+to be b times h times n squared.
+
+01:17:31.168 --> 01:17:32.710
+And you can convince
+yourself of that
+
+01:17:32.710 --> 01:17:36.370
+by just thinking about the size
+of the softmax matrix, which
+
+01:17:36.370 --> 01:17:38.320
+is going to be batch
+times number of heads
+
+01:17:38.320 --> 01:17:40.630
+times all of the
+different softmax
+
+01:17:40.630 --> 01:17:41.930
+activations that you have.
+
+01:17:41.930 --> 01:17:43.775
+So that's n squared of them.
+
+01:17:43.775 --> 01:17:45.400
+And you've got a
+projection, and you've
+
+01:17:45.400 --> 01:17:48.700
+got d squared projection
+operations at the very end
+
+01:17:48.700 --> 01:17:50.020
+over here.
+
+01:17:50.020 --> 01:17:54.490
+And so we can take the ratio
+of total memory accesses
+
+01:17:54.490 --> 01:17:56.830
+and arithmetic operations.
+
+01:17:56.830 --> 01:17:58.210
+And this is going
+to be something
+
+01:17:58.210 --> 01:18:01.010
+that will be very important
+in a couple of lectures,
+
+01:18:01.010 --> 01:18:03.470
+this idea called
+arithmetic intensity.
+
+01:18:03.470 --> 01:18:06.530
+So we want our arithmetic
+intensity to be high.
+
+01:18:06.530 --> 01:18:08.080
+What that means
+is, we want to be
+
+01:18:08.080 --> 01:18:12.440
+doing a lot of compute for every
+single memory access that we do.
+
+01:18:12.440 --> 01:18:14.620
+And this is going to be
+because memory accesses are
+
+01:18:14.620 --> 01:18:17.270
+very expensive on a GPU,
+relatively speaking.
+
+01:18:17.270 --> 01:18:19.710
+And compute is relatively cheap.
+
+01:18:19.710 --> 01:18:23.720
+And so in this batch computation
+that I'm showing you here,
+
+01:18:23.720 --> 01:18:26.220
+the arithmetic intensity, if
+you take the ratio of those two
+
+01:18:26.220 --> 01:18:31.450
+things, is going to be 1 over
+k plus 1 over bn inverse.
+
+01:18:31.450 --> 01:18:32.970
+And so this is going
+to mean that we
+
+01:18:32.970 --> 01:18:35.473
+can keep our GPUs running.
+
+01:18:38.100 --> 01:18:40.500
+Because if we have of
+large number of heads
+
+01:18:40.500 --> 01:18:44.040
+and we have large batch size
+and large sequence length,
+
+01:18:44.040 --> 01:18:48.000
+those are all going to
+be good large numbers.
+
+01:18:48.000 --> 01:18:51.000
+Of course, this is what
+happens at training time.
+
+01:18:51.000 --> 01:18:52.900
+So the issue is
+that inference time,
+
+01:18:52.900 --> 01:18:56.380
+we do not have these big chunky
+matrices to multiply together.
+
+01:18:56.380 --> 01:18:58.110
+And so that's going
+to really change
+
+01:18:58.110 --> 01:19:01.360
+the nature of the behavior
+of our algorithms.
+
+01:19:01.360 --> 01:19:04.710
+So when we're generating
+text, remember that we
+
+01:19:04.710 --> 01:19:06.040
+have to generate a token.
+
+01:19:06.040 --> 01:19:08.290
+And then the transformer
+has to read that token.
+
+01:19:08.290 --> 01:19:09.880
+And then it has to process it.
+
+01:19:09.880 --> 01:19:12.203
+And now, we can get the
+next token distribution.
+
+01:19:12.203 --> 01:19:14.370
+And then we do the things
+autoregressively one token
+
+01:19:14.370 --> 01:19:14.920
+at a time.
+
+01:19:14.920 --> 01:19:18.370
+And by doing this, we can't
+parallelize this generation
+
+01:19:18.370 --> 01:19:18.870
+process.
+
+01:19:18.870 --> 01:19:21.980
+We need to go step by step
+for every single new token.
+
+01:19:21.980 --> 01:19:25.310
+And when we do this, we're going
+to need to incrementally compute
+
+01:19:25.310 --> 01:19:29.150
+attention, an idea that
+people call the KV cache.
+
+01:19:29.150 --> 01:19:30.980
+And so what do you do?
+
+01:19:30.980 --> 01:19:35.070
+This is a lovely animation of a
+KV cache that's been explained.
+
+01:19:35.070 --> 01:19:39.530
+So if you can look at this
+figure, what you're doing
+
+01:19:39.530 --> 01:19:42.800
+is you've got a query token.
+
+01:19:42.800 --> 01:19:45.810
+A query token here is you've
+generated a new token.
+
+01:19:45.810 --> 01:19:46.980
+You're conditioning on it.
+
+01:19:46.980 --> 01:19:49.430
+And now, you want to ask,
+what information should I
+
+01:19:49.430 --> 01:19:51.870
+look up in the past,
+past that query token?
+
+01:19:51.870 --> 01:19:54.173
+And your query tokens
+are shifting from 1
+
+01:19:54.173 --> 01:19:56.090
+through n because you're
+generating new tokens
+
+01:19:56.090 --> 01:19:57.290
+one at a time.
+
+01:19:57.290 --> 01:20:00.690
+You're building up this
+key cache over here,
+
+01:20:00.690 --> 01:20:04.590
+where, basically, I'm building
+up all of the past tokens keys.
+
+01:20:04.590 --> 01:20:07.520
+And the past tokens keys
+don't change because they only
+
+01:20:07.520 --> 01:20:09.120
+depend on things in the past.
+
+01:20:09.120 --> 01:20:12.590
+And so, incrementally, as I
+generate tokens, building up
+
+01:20:12.590 --> 01:20:14.370
+all of these past keys.
+
+01:20:14.370 --> 01:20:18.490
+And each time, I can compute
+one new element of Q dot K.
+
+01:20:18.490 --> 01:20:20.260
+So the big attention
+matrix is going
+
+01:20:20.260 --> 01:20:22.850
+to be this lower
+triangular matrix.
+
+01:20:22.850 --> 01:20:24.590
+I'm computing one row at a time.
+
+01:20:24.590 --> 01:20:27.190
+And that row is exactly
+what's necessary to generate
+
+01:20:27.190 --> 01:20:28.220
+the next token.
+
+01:20:28.220 --> 01:20:31.995
+So this KV cache idea, if
+you've not seen this before,
+
+01:20:31.995 --> 01:20:33.370
+is this idea of
+saying, I'm going
+
+01:20:33.370 --> 01:20:37.310
+to generate the K's and the
+V's incrementally as I go,
+
+01:20:37.310 --> 01:20:38.810
+as I generate each token.
+
+01:20:38.810 --> 01:20:42.700
+And I'm only going to
+compute QK that's absolutely
+
+01:20:42.700 --> 01:20:45.820
+necessary to do my operations.
+
+01:20:45.820 --> 01:20:47.860
+And so once again,
+you can go through
+
+01:20:47.860 --> 01:20:52.000
+and do the various
+arithmetic components
+
+01:20:52.000 --> 01:20:54.650
+of how many flops do we do?
+
+01:20:54.650 --> 01:20:56.900
+What's the total number
+of memory accesses?
+
+01:20:56.900 --> 01:20:59.200
+And if you think
+about the KV cache,
+
+01:20:59.200 --> 01:21:02.200
+I'm only multiplying the
+absolute necessary keys
+
+01:21:02.200 --> 01:21:02.900
+and values.
+
+01:21:02.900 --> 01:21:06.350
+Since I'm saving all of the
+intermediate computations,
+
+01:21:06.350 --> 01:21:10.480
+I'm not wasting any matrix
+or vector vector multiplies.
+
+01:21:10.480 --> 01:21:12.580
+The total number of
+arithmetic operations
+
+01:21:12.580 --> 01:21:15.640
+remains exactly the
+same, bnd squared.
+
+01:21:15.640 --> 01:21:19.360
+But the memory access
+patterns are now different.
+
+01:21:19.360 --> 01:21:20.260
+Why is that?
+
+01:21:20.260 --> 01:21:23.170
+Because when I do
+this KV caching thing,
+
+01:21:23.170 --> 01:21:26.100
+I'm going to have to move
+various kinds of parameters
+
+01:21:26.100 --> 01:21:27.790
+in and out of memory repeatedly.
+
+01:21:27.790 --> 01:21:31.510
+Whenever I multiply
+with a key matrix,
+
+01:21:31.510 --> 01:21:33.480
+I'm going to have to
+put that into memory,
+
+01:21:33.480 --> 01:21:36.065
+and then multiply by K. And
+then I need to put that away,
+
+01:21:36.065 --> 01:21:37.690
+and I need to compute
+some activations.
+
+01:21:37.690 --> 01:21:40.418
+And so I'm repeatedly loading
+in different matrices.
+
+01:21:40.418 --> 01:21:42.960
+And that's going to give me a
+much higher total memory access
+
+01:21:42.960 --> 01:21:46.020
+of b squared d plus nd squared.
+
+01:21:46.020 --> 01:21:49.500
+And so when you take this ratio,
+now, the arithmetic intensity
+
+01:21:49.500 --> 01:21:50.770
+is not so good.
+
+01:21:50.770 --> 01:21:54.840
+You're going to get n over
+d plus 1 over b inverse.
+
+01:21:54.840 --> 01:21:57.340
+And so if we reason
+through this--
+
+01:21:57.340 --> 01:22:00.300
+so if I want arithmetic
+intensity to be high,
+
+01:22:00.300 --> 01:22:02.470
+I want this thing
+inside to be very small.
+
+01:22:02.470 --> 01:22:04.420
+So I need really large batches.
+
+01:22:04.420 --> 01:22:07.337
+And I need n over d to be small.
+
+01:22:07.337 --> 01:22:08.170
+What does that mean?
+
+01:22:08.170 --> 01:22:11.340
+I need really short sequence
+lengths or really big model
+
+01:22:11.340 --> 01:22:12.390
+dimensions.
+
+01:22:12.390 --> 01:22:15.680
+And this n over d is
+really unfavorable
+
+01:22:15.680 --> 01:22:17.300
+because I don't
+want a bigger model,
+
+01:22:17.300 --> 01:22:19.350
+and I don't want a
+shorter sequence length.
+
+01:22:19.350 --> 01:22:21.740
+And so this is the
+core, in some sense,
+
+01:22:21.740 --> 01:22:24.360
+inference cost trade
+off that people face.
+
+01:22:24.360 --> 01:22:27.530
+You have this very bad
+memory access pattern
+
+01:22:27.530 --> 01:22:29.760
+where you have this
+one term, n over d,
+
+01:22:29.760 --> 01:22:32.060
+that's really
+killing you in terms
+
+01:22:32.060 --> 01:22:35.060
+of the throughput
+of your system.
+
+01:22:35.060 --> 01:22:38.750
+And so this motivates
+this thing called MQA.
+
+01:22:38.750 --> 01:22:41.840
+And the key idea
+here, hopefully, you
+
+01:22:41.840 --> 01:22:45.380
+see from this figure
+back here that, really,
+
+01:22:45.380 --> 01:22:49.020
+the part that's really bad
+is the keys and the values.
+
+01:22:49.020 --> 01:22:51.230
+They have this KV cache
+thing being built up,
+
+01:22:51.230 --> 01:22:53.070
+and there's memory
+moving in and out.
+
+01:22:53.070 --> 01:22:56.940
+So what you do is you can have
+multiple heads for the query,
+
+01:22:56.940 --> 01:23:00.470
+multiple query heads, but
+only one dimension or one
+
+01:23:00.470 --> 01:23:02.430
+head for the keys and values.
+
+01:23:02.430 --> 01:23:04.380
+This immensely
+simplifies things.
+
+01:23:04.380 --> 01:23:07.580
+Once you do this, now, you're
+moving much less information
+
+01:23:07.580 --> 01:23:08.820
+for the K's and the V's.
+
+01:23:08.820 --> 01:23:11.680
+And so K and V is shared.
+
+01:23:11.680 --> 01:23:13.760
+But query has many heads.
+
+01:23:13.760 --> 01:23:18.280
+And so you still have multi-head
+attention or multiple queries,
+
+01:23:18.280 --> 01:23:20.120
+but only single K's and V's.
+
+01:23:20.120 --> 01:23:22.610
+So that's why it's called
+multi-query attention.
+
+01:23:22.610 --> 01:23:25.540
+And now, when you do the same
+kind of arithmetic we have fewer
+
+01:23:25.540 --> 01:23:28.190
+memory accesses because we've
+shared the K's and the V's.
+
+01:23:28.190 --> 01:23:31.400
+And the arithmetic intensity
+is much, much better behaved.
+
+01:23:31.400 --> 01:23:34.480
+And so we can
+increase things like--
+
+01:23:34.480 --> 01:23:36.830
+we've decreased the first
+term by a factor of n.
+
+01:23:36.830 --> 01:23:39.020
+So longer sequence
+lengths are now viable.
+
+01:23:39.020 --> 01:23:41.900
+And the second term is now
+divided by the number of heads.
+
+01:23:41.900 --> 01:23:43.940
+So this term is also
+not so terrible.
+
+01:23:43.940 --> 01:23:46.190
+So all the different
+terms are controlled now.
+
+01:23:46.190 --> 01:23:50.470
+And MQA can give you
+much better behaviors.
+
+01:23:50.470 --> 01:23:55.270
+GQA or group query attention
+basically changes this slightly.
+
+01:23:55.270 --> 01:23:58.570
+Instead of having single query--
+
+01:23:58.570 --> 01:24:01.580
+or sorry, multiple
+query and single key,
+
+01:24:01.580 --> 01:24:04.670
+you can reduce the number
+of keys by some multiple.
+
+01:24:04.670 --> 01:24:06.250
+And so this will
+let you trade off
+
+01:24:06.250 --> 01:24:09.748
+between the inference time
+behaviors and the expressiveness
+
+01:24:09.748 --> 01:24:10.290
+of the model.
+
+01:24:10.290 --> 01:24:12.200
+Because maybe going
+from multi-head
+
+01:24:12.200 --> 01:24:17.480
+all the way to multi-query is
+a little bit too aggressive.
+
+01:24:17.480 --> 01:24:22.050
+Some works show that
+GQA doesn't hurt,
+
+01:24:22.050 --> 01:24:23.460
+but multi-head attention hurts.
+
+01:24:23.460 --> 01:24:25.080
+I'm not going to get into that.
+
+01:24:25.080 --> 01:24:28.070
+I'm just going to close off
+with this very last thing, which
+
+01:24:28.070 --> 01:24:30.230
+I think is a really
+interesting development
+
+01:24:30.230 --> 01:24:32.180
+in the last few months.
+
+01:24:32.180 --> 01:24:38.210
+So back in 2019, OpenAI had this
+cool paper basically arguing
+
+01:24:38.210 --> 01:24:40.890
+how to build longer
+attention models.
+
+01:24:40.890 --> 01:24:42.660
+And they were basically
+arguing, well,
+
+01:24:42.660 --> 01:24:47.150
+one way to do that is to come up
+with sparse attention patterns.
+
+01:24:47.150 --> 01:24:49.560
+So instead of paying
+attention to all the sequence,
+
+01:24:49.560 --> 01:24:51.268
+I'm going to pay
+attention to, let's say,
+
+01:24:51.268 --> 01:24:53.040
+a local window at each chunk.
+
+01:24:53.040 --> 01:24:56.900
+And then I can have
+other attention patterns
+
+01:24:56.900 --> 01:24:58.610
+that are like
+diagonals that help
+
+01:24:58.610 --> 01:25:00.342
+propagate information across.
+
+01:25:00.342 --> 01:25:02.300
+So you can build sparse
+or structured attention
+
+01:25:02.300 --> 01:25:05.820
+that trades off various kinds of
+expressiveness versus runtime.
+
+01:25:05.820 --> 01:25:08.140
+GPT-3 three uses
+exactly these kinds
+
+01:25:08.140 --> 01:25:10.840
+of tricks when they
+originally released it to get
+
+01:25:10.840 --> 01:25:13.480
+larger attention windows.
+
+01:25:13.480 --> 01:25:15.580
+Sliding window attention
+is another variant
+
+01:25:15.580 --> 01:25:18.650
+of this idea, where
+at each layer,
+
+01:25:18.650 --> 01:25:21.400
+you only pay attention
+to a small region
+
+01:25:21.400 --> 01:25:23.350
+around your current position.
+
+01:25:23.350 --> 01:25:26.680
+And this also is going to
+control the total amount
+
+01:25:26.680 --> 01:25:30.108
+of resources that you need--
+
+01:25:30.108 --> 01:25:31.900
+total amount of resources
+you need in order
+
+01:25:31.900 --> 01:25:32.960
+to do longer contacts.
+
+01:25:32.960 --> 01:25:36.640
+So your effective receptive
+field is now the local 1 times
+
+01:25:36.640 --> 01:25:39.730
+the layers.
+
+01:25:39.730 --> 01:25:43.280
+The final trick-- so those
+were the older ideas.
+
+01:25:43.280 --> 01:25:46.420
+But the way that this has kind
+of been modern instantiation
+
+01:25:46.420 --> 01:25:49.690
+is some of the recent
+papers like LLaMA 4
+
+01:25:49.690 --> 01:25:53.470
+and Gemma and Cohere
+command A have now
+
+01:25:53.470 --> 01:25:57.160
+come up with this very clever
+trick of basically having
+
+01:25:57.160 --> 01:26:00.410
+transformer blocks,
+where in this case,
+
+01:26:00.410 --> 01:26:03.440
+you have a set of four
+transformer blocks.
+
+01:26:03.440 --> 01:26:06.270
+The very bottom one
+uses full self-attention
+
+01:26:06.270 --> 01:26:07.870
+with no position embedding.
+
+01:26:07.870 --> 01:26:09.340
+So there's no RoPE, no nothing.
+
+01:26:09.340 --> 01:26:10.570
+It doesn't know about
+position at all.
+
+01:26:10.570 --> 01:26:11.778
+But it's full self-attention.
+
+01:26:11.778 --> 01:26:14.110
+And it only happens
+once every four blocks.
+
+01:26:14.110 --> 01:26:16.410
+And then the three
+blocks above it
+
+01:26:16.410 --> 01:26:19.000
+use sliding window
+attention with RoPE.
+
+01:26:19.000 --> 01:26:21.870
+And so this is actually
+a really clever trick
+
+01:26:21.870 --> 01:26:24.160
+to both control the
+systems aspect of things
+
+01:26:24.160 --> 01:26:27.990
+because the full attention only
+happens every now and then.
+
+01:26:27.990 --> 01:26:30.520
+And also, the length
+extrapolation aspect
+
+01:26:30.520 --> 01:26:33.690
+because RoPE only deals
+with local context windows.
+
+01:26:33.690 --> 01:26:35.460
+And anything that's
+really, really long
+
+01:26:35.460 --> 01:26:37.900
+range has no position
+embeddings at all
+
+01:26:37.900 --> 01:26:40.720
+so it could extrapolate
+very, very aggressively.
+
+01:26:40.720 --> 01:26:42.840
+Because you don't have
+to do this position
+
+01:26:42.840 --> 01:26:45.252
+extrapolation that you do
+with something like RoPE.
+
+01:26:45.252 --> 01:26:46.710
+So that's a really
+cool development
+
+01:26:46.710 --> 01:26:50.040
+that we've seen in the
+last couple of months.
+
+01:26:50.040 --> 01:26:52.380
+So I think we're
+coming up on time.
+
+01:26:52.380 --> 01:26:54.600
+Feel free to ask me
+questions about architecture
+
+01:26:54.600 --> 01:26:55.740
+or hyperparameters.
+
+01:26:55.740 --> 01:26:58.400
+I'll be happy to
+answer questions after.

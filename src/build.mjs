@@ -1,11 +1,11 @@
-import { cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises'
+import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
-import { parsePost } from './content.mjs'
+import { parsePost, parseWikiPage } from './content.mjs'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const siteUrl = process.env.SITE_URL || 'http://124.223.202.120:8088'
+const siteUrl = process.env.SITE_URL || 'https://blog.ai-captain.top'
 
 const escapeHtml = (value) => String(value)
   .replaceAll('&', '&amp;')
@@ -46,6 +46,7 @@ function layout({ title, description, content, pageClass = '' }) {
     </a>
     <nav aria-label="主导航">
       <a href="/#notes">文章</a>
+      <a href="/wiki/">AI Wiki</a>
       <a href="/#about">关于</a>
       <a class="feed-link" href="/feed.xml">RSS ↗</a>
     </nav>
@@ -107,6 +108,14 @@ function homePage(posts) {
 }
 
 function articlePage(post) {
+  const video = post.youtubeId ? `
+        <section class="video-panel reveal">
+          <div class="listen-copy"><span>OFFICIAL VIDEO</span><strong>英文原课视频</strong><small>Stanford CS336 / YouTube</small></div>
+          <div class="video-frame">
+            <iframe src="https://www.youtube.com/embed/${encodeURIComponent(post.youtubeId)}" title="${escapeHtml(post.title)}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+          </div>
+          <p>视频由官方 YouTube 播放器提供；本站不重新分发课程视频文件。<a href="${escapeHtml(post.youtubeUrl || `https://www.youtube.com/watch?v=${post.youtubeId}`)}">Open official YouTube ↗</a></p>
+        </section>` : ''
   const player = post.audio ? `
         <section class="listen-panel reveal" data-media-title="${escapeHtml(post.title)}" data-media-artist="David · AI 基础课">
           <div class="listen-copy"><span>LISTEN TO THIS LESSON</span><strong>开车听本课</strong><small>${escapeHtml(post.audioDuration || '音频版')}</small></div>
@@ -126,9 +135,30 @@ function articlePage(post) {
           <p class="article-deck">${escapeHtml(post.summary)}</p>
         </header>
         <div class="article-rule"><span></span><i></i></div>
+        ${video}
         ${player}
         <div class="prose">${post.html}</div>
         <footer class="article-end"><span>END OF NOTE</span><a href="/">继续阅读 →</a></footer>
+      </article>`,
+  })
+}
+
+function wikiPage(page) {
+  return layout({
+    title: `${page.title} · David Wiki`,
+    description: page.summary,
+    pageClass: 'article-page wiki-page',
+    content: `
+      <article class="article-shell">
+        <header class="article-header reveal">
+          <a class="back-link" href="/wiki/">← 返回 AI 学习 Wiki</a>
+          <div class="article-meta"><span>AI LEARNING WIKI</span><span>${page.tags.map((tag) => `#${escapeHtml(tag)}`).join(' · ')}</span></div>
+          <h1>${escapeHtml(page.title)}</h1>
+          <p class="article-deck">${escapeHtml(page.summary)}</p>
+        </header>
+        <div class="article-rule"><span></span><i></i></div>
+        <div class="prose">${page.html}</div>
+        <footer class="article-end"><span>WIKI PAGE</span><a href="/">返回首页 →</a></footer>
       </article>`,
   })
 }
@@ -153,6 +183,7 @@ function rss(posts) {
 
 export async function buildSite({
   postsDir = path.join(root, 'content/posts'),
+  wikiDir = path.join(root, 'content/wiki'),
   outputDir = path.join(root, 'dist'),
   publicDir = path.join(root, 'public'),
 } = {}) {
@@ -171,7 +202,41 @@ export async function buildSite({
     await mkdir(articleDir, { recursive: true })
     await writeFile(path.join(articleDir, 'index.html'), articlePage(post))
   }
+  if (wikiDir && await exists(wikiDir)) {
+    const wikiFiles = await listMarkdown(wikiDir)
+    const pages = await Promise.all(wikiFiles.map(async (file) => {
+      const rel = path.relative(wikiDir, file).replaceAll(path.sep, '/')
+      return parseWikiPage(rel, await readFile(file, 'utf8'))
+    }))
+    for (const page of pages) {
+      const pageDir = page.slug === 'index'
+        ? path.join(outputDir, 'wiki')
+        : path.join(outputDir, 'wiki', page.slug)
+      await mkdir(pageDir, { recursive: true })
+      await writeFile(path.join(pageDir, 'index.html'), wikiPage(page))
+    }
+  }
   return posts
+}
+
+async function exists(file) {
+  try {
+    await stat(file)
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function listMarkdown(dir) {
+  const entries = await readdir(dir, { withFileTypes: true })
+  const files = []
+  for (const entry of entries) {
+    const full = path.join(dir, entry.name)
+    if (entry.isDirectory()) files.push(...await listMarkdown(full))
+    else if (entry.isFile() && entry.name.endsWith('.md')) files.push(full)
+  }
+  return files
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] || '').href) {

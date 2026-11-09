@@ -1,0 +1,5319 @@
+WEBVTT
+Kind: captions
+Language: en-US
+
+00:00:04.970 --> 00:00:08.250
+So today's lecture is
+going to be on data.
+
+00:00:08.250 --> 00:00:10.770
+In the previous
+lectures, up until now,
+
+00:00:10.770 --> 00:00:13.620
+we've discussed how you
+train a model, given data.
+
+00:00:13.620 --> 00:00:15.420
+So we've talked about
+the architecture.
+
+00:00:15.420 --> 00:00:18.860
+We've talked about the
+optimizer, tokenization,
+
+00:00:18.860 --> 00:00:20.640
+scaling laws, parallelism.
+
+00:00:20.640 --> 00:00:23.130
+That's all given
+a fixed data set.
+
+00:00:23.130 --> 00:00:26.450
+And now, we're going to talk
+about what data do we train on.
+
+00:00:26.450 --> 00:00:30.740
+So my hot take is that data
+is the most important thing
+
+00:00:30.740 --> 00:00:32.729
+in getting language
+models right.
+
+00:00:32.729 --> 00:00:35.040
+So [INAUDIBLE] might
+disagree with this.
+
+00:00:35.040 --> 00:00:37.590
+He thinks scaling laws is
+the most important thing.
+
+00:00:37.590 --> 00:00:39.780
+But here's my justification.
+
+00:00:39.780 --> 00:00:41.270
+Let's see what
+companies actually
+
+00:00:41.270 --> 00:00:43.200
+disclose in their papers.
+
+00:00:43.200 --> 00:00:46.550
+So if you think about all the
+open-weight models, Llama 3
+
+00:00:46.550 --> 00:00:49.850
+and even DeepSeek, they
+obviously fully disclose
+
+00:00:49.850 --> 00:00:51.170
+their architecture.
+
+00:00:51.170 --> 00:00:56.150
+And in the papers, they actually
+talk a lot about the training
+
+00:00:56.150 --> 00:00:59.310
+and how the training works.
+
+00:00:59.310 --> 00:01:01.750
+But basically, they don't
+talk about the data.
+
+00:01:01.750 --> 00:01:03.870
+So if you look at the
+Llama 3 paper, which
+
+00:01:03.870 --> 00:01:07.260
+has a lot of details
+about a lot of things,
+
+00:01:07.260 --> 00:01:09.610
+this is basically what
+they say about their data.
+
+00:01:09.610 --> 00:01:12.600
+We create our data set from
+a variety of data sources
+
+00:01:12.600 --> 00:01:15.520
+containing knowledge
+until the end of 2023.
+
+00:01:15.520 --> 00:01:17.580
+Now, to be fair,
+they talk a bunch
+
+00:01:17.580 --> 00:01:21.370
+about how they filter the
+data, at least at a high level.
+
+00:01:21.370 --> 00:01:25.740
+But obviously, this is not
+really much information
+
+00:01:25.740 --> 00:01:29.250
+about the data set.
+
+00:01:29.250 --> 00:01:33.220
+And there's some reasons
+for this, secrecy.
+
+00:01:33.220 --> 00:01:35.790
+One is competitive dynamics.
+
+00:01:35.790 --> 00:01:39.420
+And the other is they
+don't want to get sued more
+
+00:01:39.420 --> 00:01:41.145
+than they already are, I guess.
+
+00:01:46.110 --> 00:01:47.820
+Before foundation
+models, I think
+
+00:01:47.820 --> 00:01:51.240
+data was clearly
+recognized to be important
+
+00:01:51.240 --> 00:01:53.310
+because you need
+to annotate data
+
+00:01:53.310 --> 00:01:55.630
+to drive supervised learning.
+
+00:01:55.630 --> 00:01:58.910
+Now, even though there's
+less annotation involved,
+
+00:01:58.910 --> 00:02:01.720
+there's still the data
+work, and it involves
+
+00:02:01.720 --> 00:02:03.500
+a lot of curation and cleaning.
+
+00:02:03.500 --> 00:02:07.780
+So somehow, we
+haven't moved much.
+
+00:02:07.780 --> 00:02:12.170
+Data is fundamentally this
+kind of long tail of problem.
+
+00:02:12.170 --> 00:02:17.380
+And I think the
+reason that people
+
+00:02:17.380 --> 00:02:20.630
+think about it so much is that
+it actually is very scalable.
+
+00:02:20.630 --> 00:02:22.300
+If you think about
+building a model that
+
+00:02:22.300 --> 00:02:24.040
+does all different
+types of things,
+
+00:02:24.040 --> 00:02:27.520
+you can easily hire a team
+of several hundred people
+
+00:02:27.520 --> 00:02:29.540
+who work on different
+aspects of the data,
+
+00:02:29.540 --> 00:02:31.750
+like multilinguality code.
+
+00:02:31.750 --> 00:02:35.800
+If you're multimodal, you can
+do different types of images
+
+00:02:35.800 --> 00:02:36.710
+and so on.
+
+00:02:36.710 --> 00:02:39.542
+Whereas architecture,
+there's one architecture.
+
+00:02:39.542 --> 00:02:41.750
+You have a small team that
+defines it, and that's it.
+
+00:02:41.750 --> 00:02:44.680
+Data is very parallelizable
+if you think about how are you
+
+00:02:44.680 --> 00:02:49.060
+going to allocate resources
+in your language modeling
+
+00:02:49.060 --> 00:02:51.280
+development team.
+
+00:02:51.280 --> 00:02:55.310
+So there's multiple
+stages of training.
+
+00:02:55.310 --> 00:02:59.410
+So there's pre-training which
+is the focus of majority
+
+00:02:59.410 --> 00:03:01.030
+of this class.
+
+00:03:01.030 --> 00:03:03.590
+And you train on raw data,
+usually from the web.
+
+00:03:03.590 --> 00:03:10.660
+There's mid-training, which
+is where you curate a smaller
+
+00:03:10.660 --> 00:03:15.280
+set of high-quality data
+documents aimed at targeting
+
+00:03:15.280 --> 00:03:19.070
+particular capabilities, such
+as math or code or long context.
+
+00:03:19.070 --> 00:03:21.610
+And then there's post-training,
+where you fine tune
+
+00:03:21.610 --> 00:03:24.650
+on instruction following
+data or chat data,
+
+00:03:24.650 --> 00:03:27.790
+or you do reinforcement learning
+to get the model to be actually
+
+00:03:27.790 --> 00:03:29.690
+something that you can talk to.
+
+00:03:29.690 --> 00:03:33.230
+This is where typically things
+like safety also fit in.
+
+00:03:33.230 --> 00:03:35.540
+But in practice, the
+lines are blurry.
+
+00:03:35.540 --> 00:03:40.040
+And often in the more recent
+models, there's more stages,
+
+00:03:40.040 --> 00:03:43.640
+but one does not know
+exactly what is there.
+
+00:03:43.640 --> 00:03:46.098
+But the basic idea,
+I think, is clear.
+
+00:03:46.098 --> 00:03:48.140
+You start with large
+amounts of low-quality data,
+
+00:03:48.140 --> 00:03:53.410
+and then you train on smaller
+amounts of high-quality data
+
+00:03:53.410 --> 00:03:55.520
+towards the end.
+
+00:03:55.520 --> 00:03:57.660
+Just a bit of terminology
+that you've seen.
+
+00:03:57.660 --> 00:04:00.978
+So base model typically
+refers to the checkpoint
+
+00:04:00.978 --> 00:04:03.020
+that you get after
+pre-training and mid-training,
+
+00:04:03.020 --> 00:04:06.320
+and then instruct models
+are after post-training.
+
+00:04:06.320 --> 00:04:09.180
+So let's take an example
+of what this looks like.
+
+00:04:09.180 --> 00:04:12.080
+So this is from AI2,
+which has been releasing
+
+00:04:12.080 --> 00:04:13.440
+a bunch of open-source models.
+
+00:04:13.440 --> 00:04:17.480
+So we know exactly
+what's in the data set.
+
+00:04:17.480 --> 00:04:21.200
+So pre-training, this is a
+typical pre-training data
+
+00:04:21.200 --> 00:04:25.100
+mix at least for
+open-source models.
+
+00:04:25.100 --> 00:04:28.743
+So there's some web pages from
+this thing called DCLM-baseline,
+
+00:04:28.743 --> 00:04:29.910
+which I'll talk about later.
+
+00:04:29.910 --> 00:04:31.950
+There's code, academic papers.
+
+00:04:31.950 --> 00:04:34.790
+There's math and Wikipedia.
+
+00:04:34.790 --> 00:04:39.620
+And there's about 3.9
+trillion tokens here.
+
+00:04:39.620 --> 00:04:42.230
+So now, if you look
+at mid-training,
+
+00:04:42.230 --> 00:04:45.810
+you see actually a bunch
+of the same sources,
+
+00:04:45.810 --> 00:04:47.250
+but they're filtered down.
+
+00:04:47.250 --> 00:04:49.370
+So still DCLM-baseline
+on baseline,
+
+00:04:49.370 --> 00:04:52.680
+but it's filtered down
+from 3.7 trillion,
+
+00:04:52.680 --> 00:04:57.330
+which was the majority of
+that data set, to 700 billion.
+
+00:04:57.330 --> 00:05:00.330
+There's some flagged data
+sets, which I'll mention later.
+
+00:05:00.330 --> 00:05:02.040
+Still, Wikipedia.
+
+00:05:02.040 --> 00:05:04.140
+We like Wikipedia, I guess.
+
+00:05:04.140 --> 00:05:05.910
+And then there's
+some new data sets
+
+00:05:05.910 --> 00:05:09.600
+that are synthetically
+generated and might as well toss
+
+00:05:09.600 --> 00:05:11.110
+in the GSM8K training set.
+
+00:05:11.110 --> 00:05:11.800
+Why not?
+
+00:05:11.800 --> 00:05:16.450
+OK, so that's about 10
+billion training tokens.
+
+00:05:16.450 --> 00:05:17.970
+And then there's
+a separate paper
+
+00:05:17.970 --> 00:05:22.210
+called Tulu, which does
+the actual post-training.
+
+00:05:22.210 --> 00:05:24.700
+And here's the various data mix.
+
+00:05:24.700 --> 00:05:31.230
+So there's basically chat
+data from various sources
+
+00:05:31.230 --> 00:05:34.170
+and a bunch of synthetically
+generated data that
+
+00:05:34.170 --> 00:05:38.184
+captures different aspects.
+
+00:05:38.184 --> 00:05:42.510
+So what are all these data sets?
+
+00:05:42.510 --> 00:05:45.660
+How are they chosen
+and processed?
+
+00:05:45.660 --> 00:05:51.180
+So to set expectations and
+not disappoint you later,
+
+00:05:51.180 --> 00:05:54.020
+there's not really
+a good, I think,
+
+00:05:54.020 --> 00:05:58.030
+as you might imagine,
+formalism or principle
+
+00:05:58.030 --> 00:06:01.030
+for deciding these things.
+
+00:06:01.030 --> 00:06:03.250
+I think this is maybe
+not that surprising,
+
+00:06:03.250 --> 00:06:04.763
+given the nature of this class.
+
+00:06:04.763 --> 00:06:06.430
+Even for architectures,
+we didn't really
+
+00:06:06.430 --> 00:06:07.580
+have a good principle.
+
+00:06:07.580 --> 00:06:09.490
+But for data in
+particular, I think
+
+00:06:09.490 --> 00:06:11.620
+data is something
+that's, I think, hard
+
+00:06:11.620 --> 00:06:14.690
+to teach because what do
+you mean by teaching data?
+
+00:06:14.690 --> 00:06:18.880
+So basically, I'm going to talk
+through the different data sets
+
+00:06:18.880 --> 00:06:22.130
+that people have used over time.
+
+00:06:22.130 --> 00:06:24.920
+I'll talk about where they come
+from, some of their properties,
+
+00:06:24.920 --> 00:06:29.350
+and hopes that you can use your
+inductive powers to figure out
+
+00:06:29.350 --> 00:06:35.080
+some of intuition for what makes
+good data and what doesn't.
+
+00:06:35.080 --> 00:06:41.680
+OK, so I'm going to
+start with pre-training.
+
+00:06:41.680 --> 00:06:45.980
+And then I'm going to talk about
+mid-training and post-training.
+
+00:06:45.980 --> 00:06:50.110
+But most of it, it's going
+to be on pre-training.
+
+00:06:50.110 --> 00:06:53.630
+I'm going to start
+way back in 2018.
+
+00:06:53.630 --> 00:06:56.560
+So this is the BERT
+model, which some of you
+
+00:06:56.560 --> 00:06:59.950
+might still remember.
+
+00:06:59.950 --> 00:07:01.100
+This is a big deal.
+
+00:07:01.100 --> 00:07:07.100
+So BERT was trained on
+books and Wikipedia.
+
+00:07:07.100 --> 00:07:11.530
+So let's dive into what
+that exactly means.
+
+00:07:11.530 --> 00:07:13.910
+I think the data sets
+often not really,
+
+00:07:13.910 --> 00:07:17.680
+I think, discussed
+very much in--
+
+00:07:17.680 --> 00:07:19.810
+because people look at
+the model and the evals
+
+00:07:19.810 --> 00:07:20.870
+and the capabilities.
+
+00:07:20.870 --> 00:07:23.480
+So there's this website
+called Smashwords,
+
+00:07:23.480 --> 00:07:28.550
+which came about in 2008, allows
+anyone to go publish an e-book.
+
+00:07:28.550 --> 00:07:33.350
+So last year, there were
+about 500,000 books.
+
+00:07:33.350 --> 00:07:38.740
+And so in 2015, there's this
+actually vision language paper
+
+00:07:38.740 --> 00:07:41.590
+that essentially scraped
+Smashwords and created
+
+00:07:41.590 --> 00:07:45.460
+this BooksCorpus, consisting
+of self-published books that
+
+00:07:45.460 --> 00:07:47.980
+were priced at zero.
+
+00:07:47.980 --> 00:07:51.560
+So they got 7,000 books.
+
+00:07:51.560 --> 00:07:54.650
+And this has since been
+taken down because it just
+
+00:07:54.650 --> 00:07:56.310
+violated the terms of service.
+
+00:07:56.310 --> 00:07:59.490
+So back in 2015, it
+was the Wild West.
+
+00:07:59.490 --> 00:08:03.020
+People didn't think that AI--
+
+00:08:03.020 --> 00:08:08.540
+and AI copyright wasn't really
+much of a thing as it is now.
+
+00:08:08.540 --> 00:08:12.680
+So that's the BooksCorpus,
+if you ever see that.
+
+00:08:12.680 --> 00:08:16.070
+It's an old data
+set, but it, I think,
+
+00:08:16.070 --> 00:08:20.670
+represents the importance
+of books that has continued.
+
+00:08:20.670 --> 00:08:22.170
+Then there's Wikipedia.
+
+00:08:22.170 --> 00:08:24.140
+Everyone knows Wikipedia.
+
+00:08:24.140 --> 00:08:29.210
+Just for fun, we can just
+point at a random article.
+
+00:08:29.210 --> 00:08:31.200
+OK, sure.
+
+00:08:31.200 --> 00:08:35.120
+This is a random
+article from Wikipedia.
+
+00:08:35.120 --> 00:08:37.590
+If you click again, you'll get
+a different random article.
+
+00:08:37.590 --> 00:08:40.930
+OK, so here's a build random
+building in Indonesia, I think.
+
+00:08:43.789 --> 00:08:45.870
+It's been around
+for over 20 years.
+
+00:08:45.870 --> 00:08:50.640
+And there's a lot of different
+articles in different languages.
+
+00:08:50.640 --> 00:08:54.240
+I think it's important
+to explicitly say
+
+00:08:54.240 --> 00:08:56.800
+what's Wikipedia is.
+
+00:08:56.800 --> 00:08:59.230
+So it doesn't contain
+any original thought.
+
+00:08:59.230 --> 00:09:01.800
+So everything is
+coming from citations--
+
+00:09:01.800 --> 00:09:08.640
+that's why there are citations
+of actual, original primary
+
+00:09:08.640 --> 00:09:09.460
+sources.
+
+00:09:09.460 --> 00:09:11.670
+So there's supposed to be
+no opinions or personal web
+
+00:09:11.670 --> 00:09:13.500
+pages or anything.
+
+00:09:13.500 --> 00:09:17.710
+And it's based on
+Notability, which is--
+
+00:09:17.710 --> 00:09:21.040
+it means that multiple
+sources must have covered it.
+
+00:09:21.040 --> 00:09:22.620
+So I think this
+already gives you
+
+00:09:22.620 --> 00:09:25.488
+a kind of a sense of what's
+in Wikipedia and what's not.
+
+00:09:25.488 --> 00:09:27.280
+Clearly, there's a lot
+of valuable content,
+
+00:09:27.280 --> 00:09:29.740
+maybe in the tails that
+wouldn't be in Wikipedia.
+
+00:09:29.740 --> 00:09:31.290
+And there's a lot
+of opinion that
+
+00:09:31.290 --> 00:09:33.460
+might be useful that's
+also not on Wikipedia.
+
+00:09:33.460 --> 00:09:37.560
+Recipes are not in
+Wikipedia, and so on.
+
+00:09:37.560 --> 00:09:42.450
+So anyone can edit the content.
+
+00:09:42.450 --> 00:09:48.160
+But in practice, a
+small number of people
+
+00:09:48.160 --> 00:09:49.550
+contribute the majority.
+
+00:09:49.550 --> 00:09:51.950
+So this guy had
+five million edits.
+
+00:09:51.950 --> 00:09:54.920
+I think he probably
+used some tool.
+
+00:09:54.920 --> 00:09:57.200
+So Wikipedia is this website.
+
+00:09:57.200 --> 00:10:02.350
+Now, every once in a while,
+there's a dump that gets
+
+00:10:02.350 --> 00:10:03.130
+produced.
+
+00:10:03.130 --> 00:10:08.800
+And you can go download some
+zip file with all the Wikipedia
+
+00:10:08.800 --> 00:10:09.730
+content.
+
+00:10:09.730 --> 00:10:14.410
+So just one aside
+is that Wikipedia,
+
+00:10:14.410 --> 00:10:17.260
+we think of as very
+high-quality sources.
+
+00:10:17.260 --> 00:10:19.930
+Well, maybe reliable,
+more reliable
+
+00:10:19.930 --> 00:10:22.750
+than average internet article.
+
+00:10:22.750 --> 00:10:26.690
+But there's this thing that
+everyone should know about,
+
+00:10:26.690 --> 00:10:30.380
+which is relevant to
+data, is data poisoning.
+
+00:10:30.380 --> 00:10:33.490
+So the idea is that this is--
+
+00:10:33.490 --> 00:10:38.140
+Carlini has a series of
+wonderful results showing
+
+00:10:38.140 --> 00:10:42.016
+that everything is broken.
+
+00:10:42.016 --> 00:10:45.340
+They show that you can
+inject malicious edits right
+
+00:10:45.340 --> 00:10:46.640
+before this periodic dump.
+
+00:10:46.640 --> 00:10:48.770
+So when the dump is coming.
+
+00:10:48.770 --> 00:10:52.820
+And so you inject this at it
+so that it goes into the dump,
+
+00:10:52.820 --> 00:10:55.370
+but before the edit
+is rolled back.
+
+00:10:55.370 --> 00:10:58.070
+So I thought it
+was pretty clever.
+
+00:10:58.070 --> 00:11:03.230
+And we know that if you can
+control the training data,
+
+00:11:03.230 --> 00:11:07.570
+then you can basically
+get the model
+
+00:11:07.570 --> 00:11:11.562
+that's trained on such training
+data to do various things.
+
+00:11:11.562 --> 00:11:13.270
+For example, ascribing
+negative sentiment
+
+00:11:13.270 --> 00:11:16.010
+to trigger phases
+like an iPhone.
+
+00:11:16.010 --> 00:11:19.750
+So an adversary might be
+able to leverage this process
+
+00:11:19.750 --> 00:11:23.960
+and inject whatever they want
+into something like Wikipedia,
+
+00:11:23.960 --> 00:11:26.770
+even if you have
+this rollback policy.
+
+00:11:26.770 --> 00:11:30.140
+So I think since then,
+this has been some patch.
+
+00:11:30.140 --> 00:11:32.240
+So I don't think you can
+literally exploit this.
+
+00:11:32.240 --> 00:11:35.050
+But in general, I think
+it's important to realize
+
+00:11:35.050 --> 00:11:37.900
+that the data that
+models are trained on
+
+00:11:37.900 --> 00:11:40.000
+comes from the broad
+internet, where
+
+00:11:40.000 --> 00:11:42.700
+attackers and anyone
+with various incentives
+
+00:11:42.700 --> 00:11:44.630
+have actually quite
+a bit of control
+
+00:11:44.630 --> 00:11:46.770
+over the behavior of
+the language model.
+
+00:11:46.770 --> 00:11:49.960
+And it's very hard to have
+oversight into this process.
+
+00:11:53.237 --> 00:11:55.070
+That was a bit of a
+digression, but BERT was
+
+00:11:55.070 --> 00:11:56.460
+trained on books and Wikipedia.
+
+00:11:56.460 --> 00:11:58.210
+Obviously, back then,
+people didn't really
+
+00:11:58.210 --> 00:12:03.680
+care about data poisoning
+for language models as much.
+
+00:12:03.680 --> 00:12:08.420
+And I think BERT seems
+very old, but this
+
+00:12:08.420 --> 00:12:11.990
+was kind of a big transition
+between training on documents
+
+00:12:11.990 --> 00:12:15.890
+rather than sentences, in
+contrast to the billion word
+
+00:12:15.890 --> 00:12:19.040
+benchmark that we
+talked about last week.
+
+00:12:19.040 --> 00:12:22.820
+So that was 2019 or 2018.
+
+00:12:22.820 --> 00:12:28.620
+So GPT-2 collected a
+data set called WebText.
+
+00:12:28.620 --> 00:12:32.330
+And the idea here was that,
+well, you have the web,
+
+00:12:32.330 --> 00:12:36.780
+and it's kind of large and
+probably of low quality.
+
+00:12:36.780 --> 00:12:40.680
+How can we quickly get of
+diverse high quality subset?
+
+00:12:40.680 --> 00:12:43.660
+So the insight was that, well,
+if you look at Reddit posts,
+
+00:12:43.660 --> 00:12:45.420
+there's a bunch of
+links that go out.
+
+00:12:45.420 --> 00:12:48.010
+And these posts can
+get karma points.
+
+00:12:48.010 --> 00:12:52.800
+So why not take
+the links that are
+
+00:12:52.800 --> 00:12:55.750
+on posts with more than
+three karma points.
+
+00:12:55.750 --> 00:13:01.830
+This resulted in a million
+pages, 40 gigabytes of text.
+
+00:13:01.830 --> 00:13:04.845
+And that's what they
+use to train GPT-2.
+
+00:13:11.580 --> 00:13:14.020
+Besides the paper, they
+didn't release the data set.
+
+00:13:14.020 --> 00:13:19.110
+So there has been since then,
+open replication of WebText
+
+00:13:19.110 --> 00:13:23.225
+that's often used in
+language model research.
+
+00:13:31.416 --> 00:13:35.730
+So now, let's talk
+about Common Crawl.
+
+00:13:35.730 --> 00:13:41.920
+I think hopefully by the end
+of this, whenever someone talks
+
+00:13:41.920 --> 00:13:44.247
+to you and say,
+well, language models
+
+00:13:44.247 --> 00:13:46.330
+are trained on the internet,
+you can call them out
+
+00:13:46.330 --> 00:13:48.620
+and say, that's just false.
+
+00:13:48.620 --> 00:13:51.310
+And what does that even mean?
+
+00:13:51.310 --> 00:13:53.410
+So let's talk about
+Common Crawl, which
+
+00:13:53.410 --> 00:13:57.940
+is maybe an academic
+approximation of the internet.
+
+00:13:57.940 --> 00:14:00.380
+So Common Crawl was
+established in 2007.
+
+00:14:00.380 --> 00:14:03.100
+Every month, they
+run a web crawl.
+
+00:14:03.100 --> 00:14:05.470
+So there's been about
+100 different web
+
+00:14:05.470 --> 00:14:07.420
+crawls over the last--
+
+00:14:07.420 --> 00:14:10.150
+however many-- 17 years.
+
+00:14:10.150 --> 00:14:14.770
+The crawl itself isn't actually
+that expensive compared
+
+00:14:14.770 --> 00:14:16.630
+to language modeling training.
+
+00:14:16.630 --> 00:14:21.790
+You can rent some
+AWS machines and just
+
+00:14:21.790 --> 00:14:25.270
+get it done in a
+less than two weeks.
+
+00:14:25.270 --> 00:14:28.640
+So the last crawl
+was last month.
+
+00:14:28.640 --> 00:14:34.040
+And just to get a sense of
+what this crawl looks like,
+
+00:14:34.040 --> 00:14:37.270
+so here are some statistics.
+
+00:14:37.270 --> 00:14:44.130
+So there's about 2.7 billion
+pages that were added.
+
+00:14:49.060 --> 00:14:51.620
+There's 100 crawls.
+
+00:14:51.620 --> 00:14:56.270
+Each crawl might have
+slightly different web pages.
+
+00:14:56.270 --> 00:14:59.350
+But there's some overlap
+because there's--
+
+00:14:59.350 --> 00:15:00.980
+it's not clear what
+the heuristics are,
+
+00:15:00.980 --> 00:15:03.740
+but you might imagine that
+sites that are rapidly changing.
+
+00:15:03.740 --> 00:15:05.680
+They crawl multiple
+times, and sites
+
+00:15:05.680 --> 00:15:07.940
+that don't change very much,
+they don't crawl as much.
+
+00:15:07.940 --> 00:15:11.620
+And there's an explicit
+attempt to diversify.
+
+00:15:11.620 --> 00:15:15.700
+So crawling, just to very
+briefly talk about this,
+
+00:15:15.700 --> 00:15:17.330
+they use an open source library.
+
+00:15:17.330 --> 00:15:20.980
+You start with a set of
+seed URLs, which is actually
+
+00:15:20.980 --> 00:15:22.670
+quite a large number.
+
+00:15:22.670 --> 00:15:26.720
+So it's not one website that
+somehow you crawl the web.
+
+00:15:26.720 --> 00:15:30.100
+It's actually quite
+hundreds of millions.
+
+00:15:30.100 --> 00:15:33.370
+And you basically
+maintain a queue where
+
+00:15:33.370 --> 00:15:34.580
+you have the crawl frontier.
+
+00:15:34.580 --> 00:15:36.122
+And then you have
+a bunch of machines
+
+00:15:36.122 --> 00:15:41.610
+that look at that frontier
+and go crawl from there.
+
+00:15:41.610 --> 00:15:44.830
+So basically, you're,
+doing a BFS of the web,
+
+00:15:44.830 --> 00:15:48.090
+but there's a lot of systems
+dealing with the fact
+
+00:15:48.090 --> 00:15:51.840
+that some sites might--
+you have to be a little bit
+
+00:15:51.840 --> 00:15:53.790
+careful about crawling.
+
+00:15:53.790 --> 00:15:58.180
+So there's questions of which
+pages do you do you download.
+
+00:15:58.180 --> 00:16:00.040
+You have to respect robots.txt.
+
+00:16:00.040 --> 00:16:03.060
+You shouldn't
+overload the server.
+
+00:16:03.060 --> 00:16:05.280
+And if you've already
+crawled a site, when do you
+
+00:16:05.280 --> 00:16:07.530
+go back and crawl it again.
+
+00:16:07.530 --> 00:16:10.450
+And then there's a problem
+that URLs are dynamic.
+
+00:16:10.450 --> 00:16:11.980
+So some URLs are very long.
+
+00:16:11.980 --> 00:16:14.310
+Multiple URLs might lead
+to the same content which
+
+00:16:14.310 --> 00:16:18.930
+leads to a lot of duplication.
+
+00:16:18.930 --> 00:16:25.780
+So when Common Crawl crawls, it
+produces data in two formats.
+
+00:16:25.780 --> 00:16:27.100
+One is a work file.
+
+00:16:27.100 --> 00:16:30.660
+And this is the raw HTTP
+response that you get,
+
+00:16:30.660 --> 00:16:35.140
+which is often HTML
+for HTML pages.
+
+00:16:35.140 --> 00:16:39.910
+This does get converted into
+text into a format called WET,
+
+00:16:39.910 --> 00:16:41.970
+and this is obviously
+a lossy process.
+
+00:16:41.970 --> 00:16:45.690
+HTML to text loses information.
+
+00:16:45.690 --> 00:16:49.140
+One note is that this
+is not the only way.
+
+00:16:49.140 --> 00:16:51.070
+You can use their web
+file, which is text,
+
+00:16:51.070 --> 00:16:54.490
+or you can start with a
+raw HTML, the work file,
+
+00:16:54.490 --> 00:16:55.390
+and do it yourself.
+
+00:16:55.390 --> 00:16:57.630
+And there's a few
+tools out there.
+
+00:16:57.630 --> 00:17:02.950
+In your assignment, you'll be
+trying out different tools,
+
+00:17:02.950 --> 00:17:06.930
+or at least doing the
+HTML-to-text conversion
+
+00:17:06.930 --> 00:17:08.310
+yourself.
+
+00:17:08.310 --> 00:17:10.690
+And this does make a difference.
+
+00:17:10.690 --> 00:17:16.500
+So the paper from DataComp-LM,
+which I'll talk about a little
+
+00:17:16.500 --> 00:17:17.550
+bit later--
+
+00:17:17.550 --> 00:17:21.930
+this is ablation where you
+look at different HTML-to-text
+
+00:17:21.930 --> 00:17:22.750
+converters.
+
+00:17:22.750 --> 00:17:24.780
+And using the raw
+web files is actually
+
+00:17:24.780 --> 00:17:28.650
+four points, a whole four points
+lower than using Trafilatura,
+
+00:17:28.650 --> 00:17:29.375
+for example.
+
+00:17:32.290 --> 00:17:36.380
+So there's some low
+level details here.
+
+00:17:36.380 --> 00:17:38.690
+One other thing I'll
+say about Common Crawl
+
+00:17:38.690 --> 00:17:43.940
+is that this is
+deliberately not meant to be
+
+00:17:43.940 --> 00:17:47.370
+comprehensive in terms of
+crawling the entire internet.
+
+00:17:47.370 --> 00:17:52.340
+I think part of their policies
+is to be gentle and polite.
+
+00:17:52.340 --> 00:17:56.090
+So, for example, not
+all Wikipedia articles
+
+00:17:56.090 --> 00:17:58.210
+are even in Common Crawl.
+
+00:18:00.750 --> 00:18:03.170
+Maybe I'll pause
+here in case people
+
+00:18:03.170 --> 00:18:08.945
+have any questions
+about data so far.
+
+00:18:08.945 --> 00:18:09.445
+Yeah.
+
+00:18:09.445 --> 00:18:11.630
+Does Common Crawl
+do any filtering
+
+00:18:11.630 --> 00:18:16.610
+on their own or sensitive,
+offensive content?
+
+00:18:16.610 --> 00:18:18.620
+So the question is,
+does Common Crawl
+
+00:18:18.620 --> 00:18:23.450
+do any filtering of its
+own on sensitive content,
+
+00:18:23.450 --> 00:18:26.544
+offensive content?
+
+00:18:26.544 --> 00:18:27.440
+[INAUDIBLE]
+
+00:18:27.440 --> 00:18:31.670
+Yeah, I think by default,
+they're very permissive,
+
+00:18:31.670 --> 00:18:34.580
+because idea of what
+is offensive or not
+
+00:18:34.580 --> 00:18:37.140
+is a fairly high-level
+semantic decision.
+
+00:18:37.140 --> 00:18:41.360
+So there's definitely a lot
+of offensive content in Common
+
+00:18:41.360 --> 00:18:44.540
+Crawl and harmful content.
+
+00:18:44.540 --> 00:18:46.260
+There might be
+kind of filtering.
+
+00:18:46.260 --> 00:18:49.430
+I mean, there's some sites
+which might be plain illegal
+
+00:18:49.430 --> 00:18:50.580
+or something.
+
+00:18:50.580 --> 00:18:53.490
+There might be some blacklist.
+
+00:18:53.490 --> 00:18:56.390
+I'm not sure about
+the exact details.
+
+00:18:56.390 --> 00:18:56.937
+Yeah.
+
+00:18:56.937 --> 00:18:59.270
+Is there any way that they
+can flag when they don't want
+
+00:18:59.270 --> 00:19:01.380
+to be included in the crawl?
+
+00:19:01.380 --> 00:19:04.370
+Yeah, so the question
+is, can a website
+
+00:19:04.370 --> 00:19:08.630
+be flagged when they
+don't want to be included?
+
+00:19:08.630 --> 00:19:10.650
+And the answer is yes.
+
+00:19:10.650 --> 00:19:12.990
+Well, yes, there is a way.
+
+00:19:12.990 --> 00:19:17.240
+So a website can include a
+robots.txt file, which basically
+
+00:19:17.240 --> 00:19:21.210
+has a bunch of rules saying
+which crawlers they allow,
+
+00:19:21.210 --> 00:19:22.290
+if any.
+
+00:19:22.290 --> 00:19:25.150
+So if you look at
+the robots.txt--
+
+00:19:29.000 --> 00:19:37.340
+so this is-- robots.txt.
+
+00:19:37.340 --> 00:19:42.740
+So, for example, New
+York Times disallows--
+
+00:19:42.740 --> 00:19:45.390
+for Googlebot, it
+disallows a bunch of stuff.
+
+00:19:45.390 --> 00:19:47.790
+And then there's
+different rules.
+
+00:19:47.790 --> 00:19:53.580
+And you can see all your
+favorite LM providers.
+
+00:19:53.580 --> 00:19:57.620
+So it turns out
+that many of the--
+
+00:19:57.620 --> 00:20:00.960
+not all of these
+are LM developers.
+
+00:20:00.960 --> 00:20:05.720
+But it turns out that most of
+the frontier model providers
+
+00:20:05.720 --> 00:20:08.010
+or developers have
+their own crawlers.
+
+00:20:08.010 --> 00:20:09.770
+Just because Common
+Crawl is actually--
+
+00:20:09.770 --> 00:20:12.810
+turns out to be quite
+sparse in terms of coverage.
+
+00:20:12.810 --> 00:20:14.720
+Even though it's quite
+big, but the internet
+
+00:20:14.720 --> 00:20:16.555
+is a very big place.
+
+00:20:19.550 --> 00:20:27.500
+But there's no formal way of
+ensuring that robots.txt is--
+
+00:20:27.500 --> 00:20:29.190
+it's kind of a guidance.
+
+00:20:29.190 --> 00:20:35.940
+So there might be folks that
+are not respecting robots.txt.
+
+00:20:35.940 --> 00:20:38.760
+Yeah, over here, and then--
+
+00:20:38.760 --> 00:20:43.330
+All this stuff [INAUDIBLE]
+embedded media or images,
+
+00:20:43.330 --> 00:20:46.566
+I guess those would be ignored.
+
+00:20:46.566 --> 00:20:49.390
+So the question is,
+how are images handled?
+
+00:20:49.390 --> 00:20:51.510
+So technically,
+Common Crawl does--
+
+00:20:51.510 --> 00:20:54.295
+it's just has a URL and
+gets the raw response.
+
+00:20:54.295 --> 00:20:55.920
+So sometimes the
+response will be text,
+
+00:20:55.920 --> 00:20:57.940
+and sometimes it will be images.
+
+00:20:57.940 --> 00:21:01.200
+I think most of Common Crawl
+it's biased towards text
+
+00:21:01.200 --> 00:21:03.270
+because that's--
+but occasionally,
+
+00:21:03.270 --> 00:21:06.270
+you'll get other stuff.
+
+00:21:06.270 --> 00:21:08.850
+Of course, you could
+develop crawlers
+
+00:21:08.850 --> 00:21:12.600
+that explicitly go after media.
+
+00:21:12.600 --> 00:21:13.680
+Over there.
+
+00:21:13.680 --> 00:21:15.420
+Do you have any idea
+of what fraction
+
+00:21:15.420 --> 00:21:17.400
+of Common Crawl or
+any other sources
+
+00:21:17.400 --> 00:21:19.800
+are copyrighted material
+that's horrible?
+
+00:21:19.800 --> 00:21:23.190
+So the question is, what
+fraction of Common Crawl
+
+00:21:23.190 --> 00:21:25.080
+is copyright material?
+
+00:21:25.080 --> 00:21:27.750
+I'm going to talk
+about copyright later,
+
+00:21:27.750 --> 00:21:32.380
+but I would say that
+most of it's copyright.
+
+00:21:32.380 --> 00:21:34.160
+And that's a complex topic.
+
+00:21:34.160 --> 00:21:37.420
+So I'll touch on
+it briefly later.
+
+00:21:37.420 --> 00:21:39.760
+OK, let's move on.
+
+00:21:39.760 --> 00:21:42.770
+So Common Crawl is big.
+
+00:21:42.770 --> 00:21:44.750
+And I think even on the
+first day of lecture,
+
+00:21:44.750 --> 00:21:47.290
+I showed you that if you
+just look at random samples
+
+00:21:47.290 --> 00:21:50.560
+from Common Crawl,
+it's really no good.
+
+00:21:50.560 --> 00:21:55.810
+So there's been a lot of
+attempts to filter Common Crawl.
+
+00:21:55.810 --> 00:21:58.400
+One of the earliest
+attempts is called CCNet.
+
+00:21:58.400 --> 00:22:01.480
+This is from Meta.
+
+00:22:01.480 --> 00:22:07.390
+And the idea is that they
+wanted a generic procedure that
+
+00:22:07.390 --> 00:22:12.905
+could take Common Crawl and
+return high-quality data sets.
+
+00:22:12.905 --> 00:22:14.530
+And in particular,
+they were interested
+
+00:22:14.530 --> 00:22:17.140
+in the multilingual coverage.
+
+00:22:17.140 --> 00:22:19.840
+So they had a bunch
+of heuristics.
+
+00:22:19.840 --> 00:22:22.580
+So they removed duplication.
+
+00:22:22.580 --> 00:22:25.040
+They ran language
+identification,
+
+00:22:25.040 --> 00:22:28.320
+which is basically
+a linear classifier
+
+00:22:28.320 --> 00:22:30.930
+to keep only examples
+of a target language,
+
+00:22:30.930 --> 00:22:34.100
+whether it be English or German.
+
+00:22:34.100 --> 00:22:37.980
+And then, this is the key part
+is that, to filter on quality,
+
+00:22:37.980 --> 00:22:43.160
+they look at documents that look
+like Wikipedia under a 5-gram
+
+00:22:43.160 --> 00:22:44.480
+model.
+
+00:22:44.480 --> 00:22:46.260
+So they take Wikipedia texts.
+
+00:22:46.260 --> 00:22:48.710
+They train an n gram
+model, and then they
+
+00:22:48.710 --> 00:22:51.210
+use that to score documents.
+
+00:22:51.210 --> 00:22:54.990
+And the idea is that
+Wikipedia, as you see,
+
+00:22:54.990 --> 00:22:59.310
+has been used as a surrogate
+for high-quality data.
+
+00:22:59.310 --> 00:23:03.470
+And using that, you
+can get more things
+
+00:23:03.470 --> 00:23:06.170
+that look high quality,
+where Wikipedia
+
+00:23:06.170 --> 00:23:09.720
+serves as a surrogate
+for high quality.
+
+00:23:09.720 --> 00:23:11.930
+And as we discussed,
+Wikipedia obviously
+
+00:23:11.930 --> 00:23:15.140
+doesn't cover everything.
+
+00:23:15.140 --> 00:23:18.930
+So this is also not going
+to cover everything.
+
+00:23:18.930 --> 00:23:25.190
+So they trained a bunch of
+BERT models at the time.
+
+00:23:25.190 --> 00:23:27.650
+And they show that they
+outperform only training
+
+00:23:27.650 --> 00:23:30.530
+on Wikipedia.
+
+00:23:30.530 --> 00:23:34.430
+And CCNet is a bit
+confusing sometimes
+
+00:23:34.430 --> 00:23:36.590
+because it refers to
+both the tool, which
+
+00:23:36.590 --> 00:23:39.420
+is a function of a
+filtering function,
+
+00:23:39.420 --> 00:23:42.070
+but also the data set that
+they release from the paper.
+
+00:23:46.140 --> 00:23:51.990
+So meanwhile, Google was
+doing some stuff as well.
+
+00:23:51.990 --> 00:23:55.490
+So they released this C4,
+which stands for Colossal Clean
+
+00:23:55.490 --> 00:23:56.380
+Crawled Corpus.
+
+00:23:59.690 --> 00:24:03.000
+I guess the same insight that
+you want to take Common Crawl,
+
+00:24:03.000 --> 00:24:06.650
+you want to leverage
+this large text somehow.
+
+00:24:06.650 --> 00:24:11.510
+This paper, actually,
+by Colin Raffel
+
+00:24:11.510 --> 00:24:16.400
+is more famous for
+introducing the T5 model.
+
+00:24:16.400 --> 00:24:19.222
+But it actually introduced
+the C4 data set,
+
+00:24:19.222 --> 00:24:20.430
+which is a main contribution.
+
+00:24:20.430 --> 00:24:23.300
+It's a long paper.
+
+00:24:23.300 --> 00:24:28.200
+And the observation is that
+Common Crawl, as we mentioned
+
+00:24:28.200 --> 00:24:30.690
+earlier, doesn't have--
+
+00:24:30.690 --> 00:24:35.640
+is most of it is not
+useful in natural language.
+
+00:24:35.640 --> 00:24:37.960
+Let's say you start
+with one snapshot.
+
+00:24:37.960 --> 00:24:40.510
+So that's 1.4 trillion
+tokens already.
+
+00:24:40.510 --> 00:24:44.520
+They decided to use
+just heuristics.
+
+00:24:44.520 --> 00:24:48.820
+So they keep lines that
+end in punctuation,
+
+00:24:48.820 --> 00:24:51.490
+remove pages with fewer
+than three sentences,
+
+00:24:51.490 --> 00:24:52.810
+remove bad words.
+
+00:24:52.810 --> 00:24:54.820
+You can click on this
+to see the bad words.
+
+00:24:54.820 --> 00:24:56.880
+I'm not going to show that here.
+
+00:24:56.880 --> 00:24:59.920
+They removed brace,
+which is interesting,
+
+00:24:59.920 --> 00:25:02.680
+which clearly removes
+a lot of code.
+
+00:25:02.680 --> 00:25:08.340
+I guess Python might be kept
+and some boilerplate text.
+
+00:25:08.340 --> 00:25:11.370
+And they only kept English.
+
+00:25:11.370 --> 00:25:12.970
+They got a lot of
+tokens out of that.
+
+00:25:12.970 --> 00:25:16.150
+So it's kind of interesting.
+
+00:25:16.150 --> 00:25:20.160
+You see the trade-off
+here is that whereas CCNet
+
+00:25:20.160 --> 00:25:23.250
+used a model-based
+approach to filtering
+
+00:25:23.250 --> 00:25:27.340
+to make it look like Wikipedia,
+this is an entirely rule based.
+
+00:25:27.340 --> 00:25:29.170
+So the advantage
+here is that there
+
+00:25:29.170 --> 00:25:32.810
+are sentences that don't
+look like Wikipedia,
+
+00:25:32.810 --> 00:25:34.570
+but nonetheless are
+well-formed sentences
+
+00:25:34.570 --> 00:25:37.030
+that would end up in C4.
+
+00:25:37.030 --> 00:25:39.460
+On the other hand,
+there are sentences
+
+00:25:39.460 --> 00:25:43.690
+that might be just very
+spammy and also well-formed
+
+00:25:43.690 --> 00:25:46.330
+sentences that
+might fall into C4.
+
+00:25:46.330 --> 00:25:49.270
+So it's kind of
+interesting that there's
+
+00:25:49.270 --> 00:25:51.680
+this complementary nature.
+
+00:25:51.680 --> 00:25:57.130
+If you use model based, it's
+only as good as your ability
+
+00:25:57.130 --> 00:26:00.760
+to curate positive examples
+that are representative of what
+
+00:26:00.760 --> 00:26:01.790
+you want.
+
+00:26:01.790 --> 00:26:06.140
+And when you want a
+very broad set of data,
+
+00:26:06.140 --> 00:26:11.150
+it's often can be hard to get
+that coverage because, well,
+
+00:26:11.150 --> 00:26:14.770
+that's the whole point you're
+trying to get a lot of--
+
+00:26:14.770 --> 00:26:18.160
+you're trying to curate
+a diverse data set
+
+00:26:18.160 --> 00:26:21.130
+in the first place.
+
+00:26:21.130 --> 00:26:25.970
+They also created a
+WebText-like data set,
+
+00:26:25.970 --> 00:26:35.570
+where they took pages
+from OpenWebText links.
+
+00:26:35.570 --> 00:26:39.270
+Remember OpenWebText was
+open reproduction of WebText,
+
+00:26:39.270 --> 00:26:41.870
+which was used to train GPT-2.
+
+00:26:41.870 --> 00:26:47.840
+They looked at links from Reddit
+posts with greater than 3 karma.
+
+00:26:47.840 --> 00:26:53.070
+Even if they use 12 dumps,
+they only get 17gb of text.
+
+00:26:53.070 --> 00:26:54.660
+WebText was 40.
+
+00:26:54.660 --> 00:26:58.400
+So this suggests-- it gives you
+a sense of Common Crawl is quite
+
+00:26:58.400 --> 00:27:01.220
+incomplete, because you
+took all of Common Crawl
+
+00:27:01.220 --> 00:27:05.060
+and you apply the same filter,
+and you got something that
+
+00:27:05.060 --> 00:27:09.860
+was about half as large as
+WebText, which was basically
+
+00:27:09.860 --> 00:27:12.950
+doing its own crawl.
+
+00:27:12.950 --> 00:27:16.250
+But nonetheless, this was useful
+for improving a bunch of NLP
+
+00:27:16.250 --> 00:27:17.610
+benchmarks at the time.
+
+00:27:17.610 --> 00:27:19.670
+And if you look at--
+
+00:27:19.670 --> 00:27:24.735
+now going back to C4, if you
+look at what its composition is,
+
+00:27:24.735 --> 00:27:28.800
+you see that, well,
+there's Wikipedia in there.
+
+00:27:28.800 --> 00:27:33.590
+There's a lot of patents
+and news and so on.
+
+00:27:38.040 --> 00:27:38.560
+All right.
+
+00:27:38.560 --> 00:27:41.640
+So we've talked about Common
+Crawl and different ways
+
+00:27:41.640 --> 00:27:42.370
+to filter.
+
+00:27:42.370 --> 00:27:45.940
+Now, let's talk about more--
+
+00:27:45.940 --> 00:27:48.820
+now, we're entering
+the GPT-3 era.
+
+00:27:48.820 --> 00:27:52.140
+There's a bunch
+of models and data
+
+00:27:52.140 --> 00:27:57.700
+sets, which will allow us to
+get into some other ideas here.
+
+00:27:57.700 --> 00:27:59.400
+So GPT-3 data set.
+
+00:27:59.400 --> 00:28:01.320
+There's Common Crawl
+which is processed,
+
+00:28:01.320 --> 00:28:06.480
+WebText2, which is essentially
+the same idea as what
+
+00:28:06.480 --> 00:28:08.020
+they used for GPT-2.
+
+00:28:08.020 --> 00:28:14.250
+This mysterious set of books
+corpora, Books1 and Books2,
+
+00:28:14.250 --> 00:28:17.280
+and Wikipedia.
+
+00:28:17.280 --> 00:28:23.010
+So the result was I have about
+400 billion tokens, which
+
+00:28:23.010 --> 00:28:26.790
+by modern standards is actually
+quite small, but at that time,
+
+00:28:26.790 --> 00:28:29.340
+was quite impressive.
+
+00:28:29.340 --> 00:28:34.680
+So the Common Crawl processing
+was they trained a quality
+
+00:28:34.680 --> 00:28:38.970
+classifier to distinguish
+WebText, high-quality web
+
+00:28:38.970 --> 00:28:42.940
+data, Wikipedia, and
+books from the rest.
+
+00:28:42.940 --> 00:28:46.440
+So basically, the idea
+of quality classification
+
+00:28:46.440 --> 00:28:49.120
+is that you identify a
+bunch of positive examples,
+
+00:28:49.120 --> 00:28:52.260
+and then you try to look for
+more stuff like that in a larger
+
+00:28:52.260 --> 00:28:52.810
+pool.
+
+00:28:52.810 --> 00:28:55.600
+So this is what they
+determined to be high quality.
+
+00:28:55.600 --> 00:28:58.115
+And then they wanted
+to get more of this.
+
+00:29:02.760 --> 00:29:05.400
+So yeah, that's it.
+
+00:29:05.400 --> 00:29:09.910
+So the Pile came shortly after.
+
+00:29:09.910 --> 00:29:14.610
+So in particular EleutherAI
+was this organization
+
+00:29:14.610 --> 00:29:18.820
+that kind of bounced
+up in reaction to GPT-3
+
+00:29:18.820 --> 00:29:20.660
+and how closed everything was.
+
+00:29:20.660 --> 00:29:23.800
+And they were trying to
+reproduce open-source language
+
+00:29:23.800 --> 00:29:25.840
+models.
+
+00:29:25.840 --> 00:29:31.000
+And this was largely a kind of
+decentralized Discord-driven
+
+00:29:31.000 --> 00:29:34.210
+volunteer effort where
+everyone was just
+
+00:29:34.210 --> 00:29:38.240
+like tossing in data that
+they felt were high quality.
+
+00:29:38.240 --> 00:29:42.050
+So they curated 22
+high-quality domains.
+
+00:29:42.050 --> 00:29:47.120
+So you have some Common Crawl
+OpenWebText, Stack Exchange,
+
+00:29:47.120 --> 00:29:50.230
+Wikipedia, arXiv, and so on.
+
+00:29:50.230 --> 00:29:54.560
+Here's some more statistics
+about the general weight.
+
+00:29:54.560 --> 00:29:59.650
+So this is still, if you
+look at it, quite diverse.
+
+00:29:59.650 --> 00:30:02.480
+And it's interesting
+to think about--
+
+00:30:02.480 --> 00:30:05.230
+technically, the
+web, Common Crawl
+
+00:30:05.230 --> 00:30:10.070
+could have most of this stuff,
+assuming that you can crawl.
+
+00:30:10.070 --> 00:30:15.700
+But often, you'll see
+that people will go
+
+00:30:15.700 --> 00:30:19.190
+and special case
+different types.
+
+00:30:19.190 --> 00:30:22.100
+For example, they
+want to get more--
+
+00:30:22.100 --> 00:30:28.430
+Wikipedia is handled
+differently or mathematics
+
+00:30:28.430 --> 00:30:30.920
+is handled differently.
+
+00:30:30.920 --> 00:30:33.780
+So you have prior knowledge
+about what's good data.
+
+00:30:33.780 --> 00:30:37.340
+Then you can just go
+out and use it directly.
+
+00:30:37.340 --> 00:30:44.240
+So this was actually more data
+than GPT-3 was trained on.
+
+00:30:44.240 --> 00:30:51.750
+So they also noticed that
+WARC was better than WET.
+
+00:30:51.750 --> 00:30:56.810
+So they used this different
+tool, just text to convert it.
+
+00:30:56.810 --> 00:31:00.920
+So there's a PubMed
+central which was
+
+00:31:00.920 --> 00:31:03.480
+a lot of papers, which is nice.
+
+00:31:03.480 --> 00:31:09.680
+So there's a mandate that
+says NIH-funded work has
+
+00:31:09.680 --> 00:31:12.690
+to be-- the papers
+have to be open access.
+
+00:31:12.690 --> 00:31:16.040
+I think in AI, we
+take it for granted
+
+00:31:16.040 --> 00:31:17.340
+that things show up in arXiv.
+
+00:31:17.340 --> 00:31:21.110
+But that's not true
+for many other fields.
+
+00:31:21.110 --> 00:31:23.480
+There's arXiv, of
+course, and then there's
+
+00:31:23.480 --> 00:31:28.190
+Enron emails, actually,
+which is an old data
+
+00:31:28.190 --> 00:31:36.740
+set which came out of a subpoena
+after the whole Enron ship sank.
+
+00:31:36.740 --> 00:31:37.950
+And why is this in there?
+
+00:31:37.950 --> 00:31:40.850
+Well, it turns out
+that it's really hard
+
+00:31:40.850 --> 00:31:43.650
+to come by email data
+sets, as you might imagine,
+
+00:31:43.650 --> 00:31:44.880
+because emails are private.
+
+00:31:44.880 --> 00:31:47.100
+So this is really the
+best thing we have.
+
+00:31:47.100 --> 00:31:51.140
+So you might imagine there
+might be some bias in terms
+
+00:31:51.140 --> 00:31:56.102
+of the email knowledge
+of this language model
+
+00:31:56.102 --> 00:31:57.060
+that's trained on that.
+
+00:31:57.060 --> 00:32:00.850
+But that's something
+to think about.
+
+00:32:00.850 --> 00:32:05.790
+So just diving into some of
+the different sources here.
+
+00:32:05.790 --> 00:32:11.480
+So Project Gutenberg was
+started a long time ago.
+
+00:32:11.480 --> 00:32:12.890
+It's mostly English books.
+
+00:32:12.890 --> 00:32:15.430
+Now, there's about 75,000 books.
+
+00:32:15.430 --> 00:32:20.340
+And the biggest draw
+of this is that these
+
+00:32:20.340 --> 00:32:22.590
+are books that have
+copyright clearance, which
+
+00:32:22.590 --> 00:32:26.100
+mostly means that they're
+in the public domain.
+
+00:32:26.100 --> 00:32:29.410
+I think 75 years have passed
+since it was published.
+
+00:32:29.410 --> 00:32:32.340
+So now, anyone
+can use it freely.
+
+00:32:32.340 --> 00:32:34.080
+But there's I think,
+some books in there
+
+00:32:34.080 --> 00:32:36.100
+that are technically not
+in the public domain,
+
+00:32:36.100 --> 00:32:38.470
+but it's OK to use.
+
+00:32:38.470 --> 00:32:43.830
+There's a data set, PG-19, which
+is books from Project Gutenberg.
+
+00:32:43.830 --> 00:32:48.300
+And this was a paper that was
+trying to benchmark language
+
+00:32:48.300 --> 00:32:49.930
+models on long contexts.
+
+00:32:49.930 --> 00:32:52.920
+So appealing thing
+of books is that you
+
+00:32:52.920 --> 00:32:55.680
+have really long
+context compared to news
+
+00:32:55.680 --> 00:32:57.390
+articles or even papers.
+
+00:32:57.390 --> 00:32:58.110
+Yeah.
+
+00:32:58.110 --> 00:33:01.050
+So based on what you
+said in the data set,
+
+00:33:01.050 --> 00:33:04.230
+is it possible that the
+meteoric rise of xAI
+
+00:33:04.230 --> 00:33:08.850
+is because they have access
+to mining the tweets data
+
+00:33:08.850 --> 00:33:10.240
+for training their model?
+
+00:33:10.240 --> 00:33:12.980
+So let's say other
+AI models can't,
+
+00:33:12.980 --> 00:33:15.850
+which means that they have
+access to better understanding
+
+00:33:15.850 --> 00:33:17.990
+and nuance of spoken
+human language more.
+
+00:33:17.990 --> 00:33:20.120
+And therefore, in the
+long run, it's really--
+
+00:33:20.120 --> 00:33:24.130
+Google and X are the only
+big companies with access
+
+00:33:24.130 --> 00:33:27.220
+to tons of tons of
+human-generated data
+
+00:33:27.220 --> 00:33:28.910
+with natural language.
+
+00:33:28.910 --> 00:33:31.640
+Yeah, so I think the
+general question is--
+
+00:33:31.640 --> 00:33:34.120
+well, the narrow
+question is, does X
+
+00:33:34.120 --> 00:33:36.620
+have an advantage because
+they have access to tweets?
+
+00:33:36.620 --> 00:33:39.680
+And for example, any of
+these big platforms--
+
+00:33:39.680 --> 00:33:42.490
+Google has YouTube.
+
+00:33:42.490 --> 00:33:45.010
+Meta has Facebook.
+
+00:33:45.010 --> 00:33:52.300
+So there are restrictions on
+what data companies can use,
+
+00:33:52.300 --> 00:33:55.750
+even if they have the data.
+
+00:33:55.750 --> 00:34:00.880
+So it's not that literally the
+Google can train on all of its--
+
+00:34:00.880 --> 00:34:02.480
+like your Gmail or something.
+
+00:34:02.480 --> 00:34:05.140
+I don't think that's the case.
+
+00:34:05.140 --> 00:34:09.730
+That said, it is
+true that companies
+
+00:34:09.730 --> 00:34:12.739
+will have distinct advantages
+and access to certain types
+
+00:34:12.739 --> 00:34:16.699
+of data that might be public.
+
+00:34:16.699 --> 00:34:22.679
+So I think public doesn't mean
+that anyone can train on it.
+
+00:34:22.679 --> 00:34:26.510
+For example, YouTube is public,
+but Google has special access
+
+00:34:26.510 --> 00:34:27.530
+to it.
+
+00:34:27.530 --> 00:34:30.139
+So I think the
+broader question is,
+
+00:34:30.139 --> 00:34:35.570
+will companies that have access
+to special data win essentially?
+
+00:34:35.570 --> 00:34:37.739
+And by default,
+the answer is yes,
+
+00:34:37.739 --> 00:34:42.510
+because I think that data
+is the name of a game.
+
+00:34:42.510 --> 00:34:45.469
+Now, interestingly,
+obviously, Anthropic
+
+00:34:45.469 --> 00:34:46.489
+has a really good model.
+
+00:34:46.489 --> 00:34:50.060
+And they don't have a
+particular secret sauce
+
+00:34:50.060 --> 00:34:51.989
+that I don't know of.
+
+00:34:51.989 --> 00:34:57.800
+So it is not everything,
+but over time, I think--
+
+00:34:57.800 --> 00:35:00.080
+this is my opinion,
+is that I think
+
+00:35:00.080 --> 00:35:04.190
+you'll see perhaps more
+differentiation and more
+
+00:35:04.190 --> 00:35:06.710
+specialization as
+companies leverage
+
+00:35:06.710 --> 00:35:08.155
+the resources that they have.
+
+00:35:11.130 --> 00:35:12.930
+OK, so that's Project Gutenberg.
+
+00:35:12.930 --> 00:35:19.590
+Books3 was this project
+that produced a lot of books
+
+00:35:19.590 --> 00:35:21.870
+from this shadow library.
+
+00:35:21.870 --> 00:35:24.640
+It contains books notably
+from famous authors,
+
+00:35:24.640 --> 00:35:27.180
+and since then has been
+taken down due to copyright
+
+00:35:27.180 --> 00:35:28.210
+infringement.
+
+00:35:28.210 --> 00:35:31.620
+So this was part of the Pile.
+
+00:35:31.620 --> 00:35:36.750
+And so just a note
+about shadow libraries.
+
+00:35:36.750 --> 00:35:39.210
+There's a bunch of
+different libraries
+
+00:35:39.210 --> 00:35:44.190
+that basically disregard
+copyright and bypass paywalls.
+
+00:35:44.190 --> 00:35:48.060
+This is basically illegal.
+
+00:35:48.060 --> 00:35:51.810
+And there's been lots of
+takedown orders and lawsuits
+
+00:35:51.810 --> 00:35:52.390
+and so on.
+
+00:35:52.390 --> 00:35:54.900
+But usually, these
+controls are circumvented
+
+00:35:54.900 --> 00:35:59.010
+because they just put them on
+servers in different countries.
+
+00:35:59.010 --> 00:36:02.730
+And the proponents
+say that it makes free
+
+00:36:02.730 --> 00:36:04.840
+what's really should be free.
+
+00:36:04.840 --> 00:36:08.140
+But obviously, the law
+thinks quite differently.
+
+00:36:08.140 --> 00:36:13.180
+In particular, LibGen
+has four million books,
+
+00:36:13.180 --> 00:36:16.480
+which is a lot of books
+compared to Project Gutenberg,
+
+00:36:16.480 --> 00:36:19.620
+which has only 75,000 books.
+
+00:36:19.620 --> 00:36:24.280
+And it has been revealed that
+meta-trained models on LibGen,
+
+00:36:24.280 --> 00:36:24.970
+for example.
+
+00:36:24.970 --> 00:36:27.305
+And there's a big
+lawsuit about it.
+
+00:36:30.360 --> 00:36:32.200
+So moving on.
+
+00:36:32.200 --> 00:36:35.800
+Stack Exchange is a
+collection of sites.
+
+00:36:35.800 --> 00:36:38.620
+Most prominently,
+it's Stack Overflow,
+
+00:36:38.620 --> 00:36:42.480
+which it started with, but has
+grown to other areas like math
+
+00:36:42.480 --> 00:36:44.070
+and literature.
+
+00:36:44.070 --> 00:36:47.040
+There's some
+reputation and badges
+
+00:36:47.040 --> 00:36:50.100
+to incentivize participation.
+
+00:36:50.100 --> 00:36:52.780
+All of you probably have
+used Stack Overflow,
+
+00:36:52.780 --> 00:36:54.180
+so I don't need to--
+
+00:36:54.180 --> 00:36:55.558
+well, just for
+fun, I like always
+
+00:36:55.558 --> 00:36:56.683
+looking at random examples.
+
+00:37:05.610 --> 00:37:09.290
+This is a page that basically
+gives you random Stack Exchange.
+
+00:37:09.290 --> 00:37:14.450
+So I don't know if
+these are any good.
+
+00:37:14.450 --> 00:37:19.220
+But here's a question,
+and here's some answers.
+
+00:37:19.220 --> 00:37:21.243
+So I guess this is
+pretty familiar stuff.
+
+00:37:23.980 --> 00:37:30.620
+So one thing to note is that
+if you look at this data,
+
+00:37:30.620 --> 00:37:35.680
+it's really kind of looks
+like a QA data set, which
+
+00:37:35.680 --> 00:37:39.910
+is kind of what you expect
+for instruction-following
+
+00:37:39.910 --> 00:37:41.960
+capabilities and
+real applications.
+
+00:37:41.960 --> 00:37:48.670
+So I guess the lesson here is
+that, by training on your web
+
+00:37:48.670 --> 00:37:51.670
+data or a large-- in
+pre-training, a lot of it
+
+00:37:51.670 --> 00:37:54.790
+is just documents which
+don't look anything
+
+00:37:54.790 --> 00:37:58.420
+like what you would a user
+would type into a chatbot.
+
+00:37:58.420 --> 00:38:03.160
+But there are subsets of
+the pre-training data that
+
+00:38:03.160 --> 00:38:06.260
+look remarkably similar
+to what users would
+
+00:38:06.260 --> 00:38:10.250
+type coupled with the response.
+
+00:38:10.250 --> 00:38:13.160
+And this is why the
+lines are a little bit
+
+00:38:13.160 --> 00:38:15.500
+blurry between what
+is pre-training
+
+00:38:15.500 --> 00:38:18.542
+and what's post-training.
+
+00:38:18.542 --> 00:38:20.000
+The cool thing
+about Stack Exchange
+
+00:38:20.000 --> 00:38:23.090
+is that there's also metadata
+like comments and votes, which
+
+00:38:23.090 --> 00:38:25.070
+can be used to filter.
+
+00:38:25.070 --> 00:38:31.970
+And the data dumps are provided,
+although I think right now,
+
+00:38:31.970 --> 00:38:33.200
+this is--
+
+00:38:33.200 --> 00:38:36.780
+if you use it
+non-commercially, it's fine.
+
+00:38:36.780 --> 00:38:39.560
+But if you are a
+commercial entity,
+
+00:38:39.560 --> 00:38:43.670
+then you have to
+pay for a license.
+
+00:38:43.670 --> 00:38:49.580
+So in GitHub, which
+everyone knows about.
+
+00:38:49.580 --> 00:38:52.250
+And this is, I think,
+the primary means
+
+00:38:52.250 --> 00:38:55.915
+in which you get code for
+language model training.
+
+00:39:01.800 --> 00:39:05.180
+And code is generally helpful
+for programming, of course,
+
+00:39:05.180 --> 00:39:09.310
+but it has also been,
+I think, thought
+
+00:39:09.310 --> 00:39:12.920
+to be helpful for reasoning
+and other capabilities,
+
+00:39:12.920 --> 00:39:16.360
+although I don't know if
+there's a paper that makes
+
+00:39:16.360 --> 00:39:17.480
+that more rigorous.
+
+00:39:17.480 --> 00:39:19.670
+So here's a random GitHub.
+
+00:39:19.670 --> 00:39:21.440
+OK, maybe this doesn't work.
+
+00:39:21.440 --> 00:39:22.540
+Never mind.
+
+00:39:22.540 --> 00:39:25.400
+It used to work if you were
+a random GitHub repository.
+
+00:39:25.400 --> 00:39:29.920
+And the reason I'm doing this
+is that I think the GitHub repos
+
+00:39:29.920 --> 00:39:32.950
+that you visit and the
+Wikipedia pages you visit
+
+00:39:32.950 --> 00:39:36.050
+are distinctly not a
+representative sample.
+
+00:39:36.050 --> 00:39:38.620
+And by sampling
+randomly, it gives you
+
+00:39:38.620 --> 00:39:41.660
+a sense of what's
+actually in this data set.
+
+00:39:41.660 --> 00:39:43.480
+So when you look
+at numbers like--
+
+00:39:43.480 --> 00:39:49.190
+GitHub has however many
+millions of repositories.
+
+00:39:49.190 --> 00:39:51.110
+Not all repositories
+are created equal.
+
+00:39:51.110 --> 00:39:56.050
+A random repo might disappoint.
+
+00:39:56.050 --> 00:39:59.630
+OK, so there's 28 million
+public repositories.
+
+00:39:59.630 --> 00:40:02.360
+And one thing that's
+interesting is that GitHub--
+
+00:40:02.360 --> 00:40:03.400
+what is a repository?
+
+00:40:03.400 --> 00:40:04.470
+It's a directory.
+
+00:40:04.470 --> 00:40:05.920
+And some of it is code.
+
+00:40:05.920 --> 00:40:07.840
+Not some of it's not code.
+
+00:40:07.840 --> 00:40:10.650
+There's also notions of
+issues and commit history
+
+00:40:10.650 --> 00:40:13.290
+and all this other stuff.
+
+00:40:13.290 --> 00:40:16.090
+And there's also a
+lot of duplicates.
+
+00:40:16.090 --> 00:40:22.230
+So in order to take GitHub,
+which is all this raw data
+
+00:40:22.230 --> 00:40:24.990
+and make it trainable
+tokens, there's
+
+00:40:24.990 --> 00:40:27.210
+actually a lot of
+work that has to go in
+
+00:40:27.210 --> 00:40:29.945
+to think about how you
+want to best do that.
+
+00:40:32.580 --> 00:40:37.650
+So GitHub Archive is this
+snapshot of all the GitHub
+
+00:40:37.650 --> 00:40:39.430
+events that have happened.
+
+00:40:39.430 --> 00:40:44.670
+And you can access it
+using Google BigQuery.
+
+00:40:44.670 --> 00:40:50.760
+So The Stack is a
+project that fortunately
+
+00:40:50.760 --> 00:40:55.870
+produced this open-source
+version of code based on GitHub.
+
+00:40:55.870 --> 00:40:59.400
+So they took all the repository
+names from GitHub Archive
+
+00:40:59.400 --> 00:41:05.080
+and Git cloned 137 repositories,
+kept only permissively licensed
+
+00:41:05.080 --> 00:41:13.010
+ones and remove duplicates, and
+the result was 3.1tb of code.
+
+00:41:13.010 --> 00:41:15.320
+So the nice thing about
+code is that often,
+
+00:41:15.320 --> 00:41:18.130
+but not always, the
+license is made more clear
+
+00:41:18.130 --> 00:41:21.820
+compared to web pages, where
+the license is almost never made
+
+00:41:21.820 --> 00:41:23.350
+clear.
+
+00:41:23.350 --> 00:41:26.788
+So if you think
+about this, this is--
+
+00:41:26.788 --> 00:41:29.540
+you see that there
+is the live service.
+
+00:41:29.540 --> 00:41:33.110
+There's a website, GitHub,
+that you go to every day.
+
+00:41:33.110 --> 00:41:37.120
+And then there's the snapshot
+which gives you raw dump.
+
+00:41:37.120 --> 00:41:38.620
+And then there's
+the processing that
+
+00:41:38.620 --> 00:41:41.870
+happens that turns it into
+an actual trainable data set.
+
+00:41:41.870 --> 00:41:45.410
+So when someone comes to you
+and says, I trained on GitHub,
+
+00:41:45.410 --> 00:41:49.480
+then you'll have to ask them,
+what exactly does that mean?
+
+00:41:49.480 --> 00:41:54.220
+What was the pre-processing
+steps that were taken?
+
+00:41:54.220 --> 00:41:57.740
+OK, so that was the Pile.
+
+00:41:57.740 --> 00:42:00.740
+Although I guess I took
+a little bit of liberty
+
+00:42:00.740 --> 00:42:05.690
+and digressed into the different
+components of the Pile.
+
+00:42:05.690 --> 00:42:06.510
+Moving on.
+
+00:42:06.510 --> 00:42:08.520
+So now, we're in 2021.
+
+00:42:08.520 --> 00:42:14.030
+So DeepMind also
+came on to the scene.
+
+00:42:14.030 --> 00:42:16.580
+The first large language
+model they trained
+
+00:42:16.580 --> 00:42:21.890
+was Gopher on this massive
+text data set which was--
+
+00:42:21.890 --> 00:42:25.880
+the Gopher model actually
+was not very, very good.
+
+00:42:25.880 --> 00:42:28.970
+But the data set--
+
+00:42:28.970 --> 00:42:31.710
+the paper does a great job
+of describing the data set.
+
+00:42:31.710 --> 00:42:35.180
+So MassiveText contains
+MassiveWeb, which I'll
+
+00:42:35.180 --> 00:42:36.480
+talk about a little bit later.
+
+00:42:36.480 --> 00:42:40.290
+There's C4 and then books,
+news, GitHub, Wikipedia.
+
+00:42:40.290 --> 00:42:43.190
+There's no details about
+how those were processed.
+
+00:42:43.190 --> 00:42:47.180
+And as I mentioned before,
+this is obviously--
+
+00:42:47.180 --> 00:42:48.690
+is not reproducible.
+
+00:42:48.690 --> 00:42:49.370
+It's fine.
+
+00:42:49.370 --> 00:42:53.810
+You train on GitHub, but how
+exactly was the data processed?
+
+00:42:53.810 --> 00:42:57.060
+So MassiveWeb, you kept English.
+
+00:42:57.060 --> 00:43:02.400
+And here again, like CCNet,
+they use quality filters that
+
+00:43:02.400 --> 00:43:04.700
+were based on manual rules.
+
+00:43:04.700 --> 00:43:07.200
+And they had rules which you'll
+implement in your assignment
+
+00:43:07.200 --> 00:43:10.440
+that look at things
+like 80% of the words
+
+00:43:10.440 --> 00:43:14.700
+has to contain at least
+one alphabetic character.
+
+00:43:14.700 --> 00:43:22.110
+They also used Google SafeSearch
+for toxicity filtering.
+
+00:43:22.110 --> 00:43:26.040
+And I think in those days, one
+of the main arguments for using
+
+00:43:26.040 --> 00:43:28.320
+manual rules is
+that you didn't want
+
+00:43:28.320 --> 00:43:32.130
+it to be biased against
+the model, because models--
+
+00:43:32.130 --> 00:43:35.220
+the only models that they
+can run is very weak models.
+
+00:43:35.220 --> 00:43:37.660
+And weak models don't
+really understand the page.
+
+00:43:37.660 --> 00:43:42.960
+And they're just going to have
+probably pretty awful bias.
+
+00:43:42.960 --> 00:43:44.820
+And also, there
+was a consideration
+
+00:43:44.820 --> 00:43:49.380
+that this type of
+filtering can filter out
+
+00:43:49.380 --> 00:43:52.110
+kind of marginalized data from
+marginalized groups that didn't
+
+00:43:52.110 --> 00:43:56.340
+look exactly like Wikipedia.
+
+00:43:56.340 --> 00:43:59.230
+But as you see later,
+this has flipped.
+
+00:43:59.230 --> 00:44:03.160
+And now, everyone's doing
+model-based filtering.
+
+00:44:03.160 --> 00:44:06.420
+So their data set
+was 10 terabytes
+
+00:44:06.420 --> 00:44:12.630
+of text, which is, I
+guess, maybe let's say four
+
+00:44:12.630 --> 00:44:15.550
+or five trillion tokens,
+just an estimate.
+
+00:44:15.550 --> 00:44:18.400
+Although Gopher was only
+trained on 300 billion,
+
+00:44:18.400 --> 00:44:20.950
+which is not very many tokens.
+
+00:44:20.950 --> 00:44:24.210
+I think that's around
+the same number of GPT-3.
+
+00:44:26.970 --> 00:44:30.090
+So in 2022, we have Llama.
+
+00:44:30.090 --> 00:44:37.860
+So the data set for Llama was
+Common Crawl process with CCNet.
+
+00:44:37.860 --> 00:44:41.100
+And here are the
+classifier here.
+
+00:44:41.100 --> 00:44:42.100
+There's a subtlety here.
+
+00:44:42.100 --> 00:44:44.400
+Remember GPT-3 was
+classified whether it looked
+
+00:44:44.400 --> 00:44:47.820
+like a Wikipedia page or not.
+
+00:44:47.820 --> 00:44:50.160
+Llama was trained
+on classifier which
+
+00:44:50.160 --> 00:44:53.550
+predicted do you look like a
+page that was referenced out
+
+00:44:53.550 --> 00:44:55.180
+of Wikipedia or not.
+
+00:44:55.180 --> 00:44:57.580
+And I guess the idea
+is that Wikipedia
+
+00:44:57.580 --> 00:45:00.350
+will cite high-quality pages.
+
+00:45:00.350 --> 00:45:02.140
+And most of those
+pages might not
+
+00:45:02.140 --> 00:45:04.420
+look like a Wikipedia
+article, but nonetheless are
+
+00:45:04.420 --> 00:45:05.300
+high quality.
+
+00:45:05.300 --> 00:45:10.990
+So again, this link structure
+which we saw in the GPT-2
+
+00:45:10.990 --> 00:45:14.890
+WebText is showing up here.
+
+00:45:14.890 --> 00:45:17.230
+They also included C4.
+
+00:45:17.230 --> 00:45:17.840
+Why not?
+
+00:45:17.840 --> 00:45:20.530
+They use GitHub.
+
+00:45:20.530 --> 00:45:22.570
+They kept permissive
+licenses filtered
+
+00:45:22.570 --> 00:45:26.980
+based on some manual rules,
+Wikipedia, Project Gutenberg,
+
+00:45:26.980 --> 00:45:30.910
+and Books3, which got
+them in a lot of trouble,
+
+00:45:30.910 --> 00:45:34.810
+and arXiv, Stack Exchange.
+
+00:45:34.810 --> 00:45:38.710
+So they got 1.2 trillion tokens.
+
+00:45:38.710 --> 00:45:40.400
+So they didn't
+release the data set,
+
+00:45:40.400 --> 00:45:46.720
+but together reproduced this
+data set and something called
+
+00:45:46.720 --> 00:45:49.000
+RedPajama, which
+now you can go and--
+
+00:45:49.000 --> 00:45:51.880
+you have the data processing
+code and the data,
+
+00:45:51.880 --> 00:45:54.720
+which you can take out.
+
+00:45:54.720 --> 00:45:56.070
+So this was a reproduction.
+
+00:45:56.070 --> 00:45:58.050
+So this was clearly not optimal.
+
+00:45:58.050 --> 00:46:03.020
+And Cerebus did further
+deduplication and ended up with
+
+00:46:03.020 --> 00:46:07.230
+a 627-billion parameter subset.
+
+00:46:07.230 --> 00:46:11.480
+There's also RedPajama-V2,
+which is a little bit confusing
+
+00:46:11.480 --> 00:46:13.320
+because this is something else.
+
+00:46:13.320 --> 00:46:18.410
+This is essentially taking
+Common Crawl snapshots
+
+00:46:18.410 --> 00:46:20.720
+and producing 30 trillion
+tokens with all sorts
+
+00:46:20.720 --> 00:46:23.090
+of different quality signals.
+
+00:46:23.090 --> 00:46:25.820
+So this is a resource
+for doing research
+
+00:46:25.820 --> 00:46:29.300
+on how to filter based on
+the quality signals that
+
+00:46:29.300 --> 00:46:31.400
+are computed.
+
+00:46:31.400 --> 00:46:34.220
+OK, so that was Llama.
+
+00:46:34.220 --> 00:46:39.270
+And then the RefinedWeb
+was another paper.
+
+00:46:39.270 --> 00:46:41.240
+And here, the thesis is--
+
+00:46:41.240 --> 00:46:43.508
+well, remember how
+we saw the Pile.
+
+00:46:43.508 --> 00:46:45.800
+There was web data, and there
+was all this other stuff.
+
+00:46:45.800 --> 00:46:47.630
+And their point was
+like, well, maybe
+
+00:46:47.630 --> 00:46:50.900
+if we do a good enough job
+filtering the web data, that's
+
+00:46:50.900 --> 00:46:54.390
+all you need, because
+technically, the internet has
+
+00:46:54.390 --> 00:46:55.660
+everything in some sense.
+
+00:46:55.660 --> 00:46:58.710
+If you think about it, if you
+can access it via computer
+
+00:46:58.710 --> 00:47:00.460
+and it's connected
+on the internet,
+
+00:47:00.460 --> 00:47:02.210
+then maybe that's good enough.
+
+00:47:04.920 --> 00:47:11.460
+So the RefinedWeb-- let's see
+if we can look at some examples
+
+00:47:11.460 --> 00:47:13.260
+here.
+
+00:47:13.260 --> 00:47:18.840
+The data is on Hugging Face,
+and it kind of looks like this.
+
+00:47:21.670 --> 00:47:25.690
+The resolution is probably
+not large enough to--
+
+00:47:25.690 --> 00:47:29.820
+OK, anyway, scrap that.
+
+00:47:29.820 --> 00:47:33.000
+They used Trafilatura
+for extracting content
+
+00:47:33.000 --> 00:47:37.050
+because as we noted, Trafilatura
+is better than just using
+
+00:47:37.050 --> 00:47:40.710
+the web files that
+Common Crawl provides.
+
+00:47:40.710 --> 00:47:42.510
+They used Gopher rules.
+
+00:47:42.510 --> 00:47:44.310
+And they made a
+point of we're going
+
+00:47:44.310 --> 00:47:49.290
+to avoid ML-based
+filtering to avoid biases.
+
+00:47:49.290 --> 00:47:53.780
+And then they did some
+fuzzy duplication.
+
+00:47:53.780 --> 00:47:58.160
+So they had a 5 trillion token
+data set, which is quite large,
+
+00:47:58.160 --> 00:48:02.620
+but they only released
+600 billion of it.
+
+00:48:02.620 --> 00:48:05.170
+FineWeb from Hugging
+Face was started
+
+00:48:05.170 --> 00:48:10.910
+as a replication of Refined-Web,
+but they tried to improve it.
+
+00:48:10.910 --> 00:48:13.210
+So they used all the
+Common Crawl dumps
+
+00:48:13.210 --> 00:48:16.220
+I think at the time,
+did some filtering.
+
+00:48:16.220 --> 00:48:18.920
+Again, this is still
+using manual rules,
+
+00:48:18.920 --> 00:48:21.520
+no model-based filtering.
+
+00:48:21.520 --> 00:48:24.310
+And they did some
+deduplication and did
+
+00:48:24.310 --> 00:48:26.690
+some basic anonymization.
+
+00:48:26.690 --> 00:48:29.990
+So they got 15 trillion
+tokens out of this.
+
+00:48:29.990 --> 00:48:33.790
+So this is still, I
+think, a really nice data
+
+00:48:33.790 --> 00:48:35.370
+set because it--
+
+00:48:35.370 --> 00:48:39.110
+dealing with Common Crawl
+is going to be a pain,
+
+00:48:39.110 --> 00:48:40.510
+but this is a--
+
+00:48:40.510 --> 00:48:45.370
+I would consider FineWeb
+as a lightly filtered data
+
+00:48:45.370 --> 00:48:48.930
+set that you can further do
+model-based filtering on.
+
+00:48:52.120 --> 00:49:01.660
+So jumping ahead, so AI2 has a
+series of models called OLMo.
+
+00:49:01.660 --> 00:49:07.930
+Their initial model was
+trained on the Dolma data set.
+
+00:49:07.930 --> 00:49:11.090
+And this is a composition.
+
+00:49:11.090 --> 00:49:12.303
+So we have Common Crawl.
+
+00:49:12.303 --> 00:49:13.720
+We have The Stack,
+which we talked
+
+00:49:13.720 --> 00:49:17.500
+about, which has code, C4,
+which you know, Reddit.
+
+00:49:20.260 --> 00:49:24.080
+A2 has Semantic Scholar.
+
+00:49:24.080 --> 00:49:26.410
+So I think this is
+derived from that,
+
+00:49:26.410 --> 00:49:30.760
+Project Gutenberg and
+Wikipedia and you know about.
+
+00:49:30.760 --> 00:49:38.890
+So the Reddit comes
+from this project,
+
+00:49:38.890 --> 00:49:42.860
+but they include the submissions
+and the comments separately.
+
+00:49:42.860 --> 00:49:44.540
+So you don't have
+this thread structure.
+
+00:49:44.540 --> 00:49:45.890
+I think this project--
+
+00:49:45.890 --> 00:49:47.350
+I don't know if it's still--
+
+00:49:47.350 --> 00:49:51.020
+I guess it's no
+longer exists anymore.
+
+00:49:51.020 --> 00:49:54.590
+Around 2023, all these sites
+like Stack Exchange and Reddit
+
+00:49:54.590 --> 00:49:58.550
+realized, wait, people are just
+taking our data and training
+
+00:49:58.550 --> 00:50:00.480
+models and making
+money off of it.
+
+00:50:00.480 --> 00:50:05.750
+So I think that came to a stop.
+
+00:50:05.750 --> 00:50:10.200
+So we have 40 million academic
+papers from Semantic Scholar,
+
+00:50:10.200 --> 00:50:13.170
+which crawls a bunch
+of different sites,
+
+00:50:13.170 --> 00:50:15.930
+and then we have
+our usual suspects.
+
+00:50:15.930 --> 00:50:20.910
+So the Common Crawl
+processing, which is fairly,
+
+00:50:20.910 --> 00:50:23.810
+I think I would say standard.
+
+00:50:23.810 --> 00:50:26.660
+So they use language
+identification
+
+00:50:26.660 --> 00:50:31.050
+to keep only the English
+part quality filtering.
+
+00:50:31.050 --> 00:50:35.910
+Again, in Dolma, for
+training an initial model,
+
+00:50:35.910 --> 00:50:38.630
+they avoided
+model-based filtering.
+
+00:50:38.630 --> 00:50:41.820
+And then toxicity
+filtering, they hear you,
+
+00:50:41.820 --> 00:50:43.730
+they use a classifier.
+
+00:50:43.730 --> 00:50:46.750
+And then they do deduplication.
+
+00:50:46.750 --> 00:50:50.850
+So 3 trillion tokens
+came out of that.
+
+00:50:50.850 --> 00:50:54.010
+And then in the same year--
+so this was last year.
+
+00:50:54.010 --> 00:50:58.950
+So there was a
+paper DataComp which
+
+00:50:58.950 --> 00:51:01.080
+was a collaboration
+from multiple different
+
+00:51:01.080 --> 00:51:03.630
+organizations.
+
+00:51:03.630 --> 00:51:06.660
+Here, what they wanted
+to do is foremost
+
+00:51:06.660 --> 00:51:13.200
+define essentially a competition
+for creating data sets.
+
+00:51:13.200 --> 00:51:16.470
+And so they wanted to set
+up basic infrastructure.
+
+00:51:16.470 --> 00:51:18.452
+So they define a
+standard data set,
+
+00:51:18.452 --> 00:51:20.910
+which you can essentially try
+out different data processing
+
+00:51:20.910 --> 00:51:22.710
+algorithms.
+
+00:51:22.710 --> 00:51:26.250
+So they processed Common
+Crawl, all the dumps
+
+00:51:26.250 --> 00:51:30.130
+to produce DCLM-pool, which
+has 240 trillion tokens.
+
+00:51:30.130 --> 00:51:31.570
+So that's a lot of tokens.
+
+00:51:31.570 --> 00:51:34.920
+But as you know,
+Common Crawl is not
+
+00:51:34.920 --> 00:51:36.820
+the highest quality on average.
+
+00:51:36.820 --> 00:51:40.530
+So that's going to get
+filtered down quite a bit.
+
+00:51:40.530 --> 00:51:46.630
+They had a particular recipe for
+filtering down that data set,
+
+00:51:46.630 --> 00:51:50.390
+which is called DCLM-pool
+into DCLM-baseline.
+
+00:51:50.390 --> 00:51:53.430
+And here, they were very
+aggressive in using a quality
+
+00:51:53.430 --> 00:51:53.930
+filter.
+
+00:51:53.930 --> 00:51:55.220
+So this is what it looks like.
+
+00:51:55.220 --> 00:51:58.990
+They do some rule-based
+filtering, basic stuff.
+
+00:51:58.990 --> 00:52:01.210
+The main thing
+that's interesting
+
+00:52:01.210 --> 00:52:08.890
+is that they took this fastText
+filter that filtered DCLM-pool
+
+00:52:08.890 --> 00:52:11.330
+into DCLM-baseline.
+
+00:52:11.330 --> 00:52:19.180
+So they only kept, I guess,
+1.4% of the total data set.
+
+00:52:19.180 --> 00:52:22.460
+So what do they do for
+this model based filtering?
+
+00:52:22.460 --> 00:52:24.198
+So again, in quality
+filtering, you
+
+00:52:24.198 --> 00:52:26.240
+define your positive
+examples, negative examples,
+
+00:52:26.240 --> 00:52:27.365
+and you train a classifier.
+
+00:52:27.365 --> 00:52:30.680
+So the positive examples
+come from two sources.
+
+00:52:30.680 --> 00:52:34.430
+There's this
+OpenHermes data set.
+
+00:52:34.430 --> 00:52:37.270
+So this is mostly
+GPT-4-generated instruction
+
+00:52:37.270 --> 00:52:38.150
+data.
+
+00:52:38.150 --> 00:52:39.155
+So this is interesting.
+
+00:52:39.155 --> 00:52:40.780
+They're using actually
+instruction data
+
+00:52:40.780 --> 00:52:42.890
+to curate pre-training data.
+
+00:52:42.890 --> 00:52:45.530
+So now, they're not explicitly
+in training on instruction data,
+
+00:52:45.530 --> 00:52:47.320
+but they're looking
+for data that
+
+00:52:47.320 --> 00:52:49.390
+looks like instruction data.
+
+00:52:49.390 --> 00:52:58.810
+And then ELI5, which is
+basically the subreddit called
+
+00:52:58.810 --> 00:53:03.520
+ELI5, ask me like I'm 5.
+
+00:53:03.520 --> 00:53:07.350
+And this is what I guess
+the data set looked like.
+
+00:53:09.940 --> 00:53:12.440
+What's the point of wasting the
+first two plays with a rush?
+
+00:53:15.128 --> 00:53:22.690
+So these are questions you might
+ask to a chatbot, for example.
+
+00:53:22.690 --> 00:53:27.040
+Negative examples are just
+sampled from RefinedWeb.
+
+00:53:27.040 --> 00:53:31.690
+It's not low-quality
+data, but it's not
+
+00:53:31.690 --> 00:53:35.470
+as curated as these
+other two sources.
+
+00:53:35.470 --> 00:53:40.580
+So the result is that
+they took DCLM-baseline,
+
+00:53:40.580 --> 00:53:43.670
+which is 240 trillion
+tokens, and reduced it
+
+00:53:43.670 --> 00:53:49.110
+to 3.8 trillion tokens, which
+is still a good sizable chunk.
+
+00:53:49.110 --> 00:53:55.370
+So then they trained a
+fastText classifier on these
+
+00:53:55.370 --> 00:53:58.250
+and run it on all of DCLM-pool.
+
+00:53:58.250 --> 00:54:02.480
+And here's one of
+the results tables.
+
+00:54:02.480 --> 00:54:05.450
+So the benchmarks
+here are core includes
+
+00:54:05.450 --> 00:54:09.440
+a bunch standard language
+modeling benchmarks
+
+00:54:09.440 --> 00:54:11.810
+like HellaSwag and so on.
+
+00:54:11.810 --> 00:54:16.140
+And they show that
+using this classifier,
+
+00:54:16.140 --> 00:54:19.550
+they actually outperform
+the RefinedWeb
+
+00:54:19.550 --> 00:54:25.800
+by 3% and a bunch of
+other things by 1% or 2%.
+
+00:54:25.800 --> 00:54:29.540
+So this is the
+procedure they used
+
+00:54:29.540 --> 00:54:35.300
+to create this DCLM-baseline,
+which then you train a pretty
+
+00:54:35.300 --> 00:54:38.390
+reasonable model from there.
+
+00:54:38.390 --> 00:54:41.140
+It is worth noting that
+after this happened,
+
+00:54:41.140 --> 00:54:44.620
+the second OLMo model,
+if you remember,
+
+00:54:44.620 --> 00:54:49.990
+they started training on
+DCLM-baseline as well.
+
+00:54:49.990 --> 00:54:52.050
+So I think this
+era of we're going
+
+00:54:52.050 --> 00:54:55.090
+to be unbiased and try to
+not use models to bias,
+
+00:54:55.090 --> 00:54:56.700
+I think has kind of
+largely gone away
+
+00:54:56.700 --> 00:54:59.320
+because I think
+people realize that,
+
+00:54:59.320 --> 00:55:01.120
+well, if you use
+models in the loop,
+
+00:55:01.120 --> 00:55:02.940
+you can just do
+a much better job
+
+00:55:02.940 --> 00:55:08.550
+of getting high-quality
+data at least for increasing
+
+00:55:08.550 --> 00:55:11.130
+benchmark scores.
+
+00:55:11.130 --> 00:55:16.170
+So the final
+pre-training data set
+
+00:55:16.170 --> 00:55:18.960
+I'll talk about is Nemotron-CC.
+
+00:55:18.960 --> 00:55:21.840
+So this came out
+of NVIDIA, which
+
+00:55:21.840 --> 00:55:24.510
+has been doing some work on
+training the Nemotron models,
+
+00:55:24.510 --> 00:55:26.010
+although more
+recently, they've been
+
+00:55:26.010 --> 00:55:29.770
+doing post-training
+and data curation.
+
+00:55:29.770 --> 00:55:36.390
+So their main thesis is
+that DCLM, the baseline
+
+00:55:36.390 --> 00:55:39.790
+is great data set, but it
+filters very aggressively.
+
+00:55:39.790 --> 00:55:44.770
+Remember, it filtered out all
+the way from 240 trillion tokens
+
+00:55:44.770 --> 00:55:47.620
+to 3.8 trillion tokens.
+
+00:55:47.620 --> 00:55:56.960
+And if you want to train
+larger models for longer,
+
+00:55:56.960 --> 00:56:01.010
+you need more tokens because
+this aggressive filtering 3.8
+
+00:56:01.010 --> 00:56:04.960
+trillion isn't really enough
+to sustain, let's say,
+
+00:56:04.960 --> 00:56:07.810
+a 400-billion
+model training run.
+
+00:56:07.810 --> 00:56:10.690
+So the first thing
+interesting they realized
+
+00:56:10.690 --> 00:56:14.230
+is that they did
+ablations for HTML
+
+00:56:14.230 --> 00:56:17.710
+to text, but not just
+based on the quality
+
+00:56:17.710 --> 00:56:20.600
+but on how many
+tokens were left.
+
+00:56:20.600 --> 00:56:23.150
+So they're really trying to
+get not throw away tokens.
+
+00:56:23.150 --> 00:56:26.110
+And it turned out that jusText
+rather than Trafilatura
+
+00:56:26.110 --> 00:56:27.770
+would actually keep more tokens.
+
+00:56:27.770 --> 00:56:30.310
+So they went with jusText.
+
+00:56:30.310 --> 00:56:33.250
+And then they used a bunch
+of different techniques
+
+00:56:33.250 --> 00:56:36.520
+to do quality filtering.
+
+00:56:36.520 --> 00:56:39.100
+They prompted the
+gigantic Nemotron model
+
+00:56:39.100 --> 00:56:42.980
+to essentially score documents
+based on educational value,
+
+00:56:42.980 --> 00:56:46.490
+distilled it into a faster
+model, and use that to train.
+
+00:56:46.490 --> 00:56:51.370
+So this is a filter based on
+what a language model thinks
+
+00:56:51.370 --> 00:56:52.940
+is educational value.
+
+00:56:52.940 --> 00:56:55.130
+And they also use
+the DCLM classifier.
+
+00:56:55.130 --> 00:56:59.900
+There's an interesting
+way that they ensembled.
+
+00:56:59.900 --> 00:57:02.080
+They basically ran
+all these classifiers
+
+00:57:02.080 --> 00:57:04.340
+and bucketed their scores.
+
+00:57:04.340 --> 00:57:08.210
+And then from each bucket, they
+sampled a bunch of data set.
+
+00:57:08.210 --> 00:57:10.390
+So it's not just taking
+the top, because I
+
+00:57:10.390 --> 00:57:12.520
+think they're trying
+to make sure they have
+
+00:57:12.520 --> 00:57:19.030
+good coverage over different
+experts kind of opinion
+
+00:57:19.030 --> 00:57:21.550
+on the notion of quality.
+
+00:57:21.550 --> 00:57:24.260
+They also did this thing,
+which is interesting.
+
+00:57:24.260 --> 00:57:27.070
+They used a language model
+to not just filter but also
+
+00:57:27.070 --> 00:57:29.030
+rephrase data sets.
+
+00:57:29.030 --> 00:57:32.050
+So for high-quality data sets--
+
+00:57:32.050 --> 00:57:33.380
+sorry, this is backwards.
+
+00:57:33.380 --> 00:57:35.890
+For low-quality data
+sets, they basically
+
+00:57:35.890 --> 00:57:39.140
+use a language model to
+rewrite it into something
+
+00:57:39.140 --> 00:57:41.660
+that looks higher quality.
+
+00:57:41.660 --> 00:57:43.740
+So obviously, there
+could be mistakes there.
+
+00:57:43.740 --> 00:57:45.480
+But in the grand
+scheme of things,
+
+00:57:45.480 --> 00:57:49.550
+maybe it's no worse than
+training on low-quality internet
+
+00:57:49.550 --> 00:57:50.250
+data.
+
+00:57:50.250 --> 00:57:53.450
+And for high-quality
+data sets, they
+
+00:57:53.450 --> 00:57:56.660
+use the language
+model to generate
+
+00:57:56.660 --> 00:57:58.170
+things that look like tasks.
+
+00:57:58.170 --> 00:58:00.270
+So you take a Wikipedia article.
+
+00:58:00.270 --> 00:58:02.318
+You ask a language
+model to create--
+
+00:58:02.318 --> 00:58:03.860
+essentially input
+output pairs, where
+
+00:58:03.860 --> 00:58:06.300
+the input might be a question
+and outputs an answer,
+
+00:58:06.300 --> 00:58:08.810
+or the input might be
+summarize this document
+
+00:58:08.810 --> 00:58:11.090
+and outputs a
+summary, or the input
+
+00:58:11.090 --> 00:58:13.400
+is extract the key
+information and the output
+
+00:58:13.400 --> 00:58:14.610
+is key information.
+
+00:58:14.610 --> 00:58:19.130
+So this is, again, trying
+to get at the idea of, well,
+
+00:58:19.130 --> 00:58:23.570
+eventually an
+instruction to any time
+
+00:58:23.570 --> 00:58:27.510
+we want to be able
+follow instructions.
+
+00:58:27.510 --> 00:58:31.100
+So we might as well get
+a head start on this.
+
+00:58:31.100 --> 00:58:34.400
+So they got 6.3
+trillion tokens out
+
+00:58:34.400 --> 00:58:39.660
+of that, which is more than 3
+trillion tokens, almost double,
+
+00:58:39.660 --> 00:58:42.240
+which is I guess, pretty good
+because I mean, all of this
+
+00:58:42.240 --> 00:58:44.910
+is coming from Common Crawl, but
+they were able to essentially
+
+00:58:44.910 --> 00:58:46.380
+double the--
+
+00:58:46.380 --> 00:58:49.890
+maybe not quite double,
+but almost double the size.
+
+00:58:49.890 --> 00:58:53.850
+For reference, Llama 3 is
+trained on 15 trillion.
+
+00:58:53.850 --> 00:58:56.950
+Qwen3 is trained on 36 trillion,
+which includes, I think,
+
+00:58:56.950 --> 00:58:57.820
+multimodal data.
+
+00:58:57.820 --> 00:59:02.290
+So 6.3 trillion at this
+point is not enormous.
+
+00:59:02.290 --> 00:59:09.990
+But for open-source models with
+data sets, it's pretty decent.
+
+00:59:09.990 --> 00:59:15.030
+Most of us, 6.3 trillion is
+more than enough for training,
+
+00:59:15.030 --> 00:59:17.520
+even to do one epoch.
+
+00:59:17.520 --> 00:59:22.180
+This table shows that
+basically, on average,
+
+00:59:22.180 --> 00:59:25.080
+they show that their
+Nemotron-CC data
+
+00:59:25.080 --> 00:59:27.480
+is better than the
+DCLM data, which
+
+00:59:27.480 --> 00:59:32.640
+has been shown to be better than
+FineWeb, at least on benchmarks.
+
+00:59:32.640 --> 00:59:35.320
+And then they actually
+have this 1 trillion
+
+00:59:35.320 --> 00:59:38.085
+high-quality subset
+that's even better.
+
+00:59:41.510 --> 00:59:43.550
+So any questions
+before I move on?
+
+00:59:43.550 --> 00:59:46.450
+I know this was a lot of
+random specific details
+
+00:59:46.450 --> 00:59:50.060
+about different
+models or data sets,
+
+00:59:50.060 --> 00:59:53.150
+but hopefully, this gives you
+a sense of the type of things.
+
+00:59:53.150 --> 00:59:56.260
+And hopefully, you can
+see different patterns,
+
+00:59:56.260 --> 00:59:59.840
+whether to use models,
+to filter or not,
+
+00:59:59.840 --> 01:00:06.430
+whether you're using links
+out of high-quality pages
+
+01:00:06.430 --> 01:00:10.030
+or using the pages
+themselves, and so on.
+
+01:00:10.030 --> 01:00:12.550
+So yeah.
+
+01:00:12.550 --> 01:00:14.240
+Let's talk about
+English data sets.
+
+01:00:14.240 --> 01:00:16.480
+I was wondering if
+you come across things
+
+01:00:16.480 --> 01:00:19.030
+like multilingual data
+sets, that kind of thing.
+
+01:00:19.030 --> 01:00:19.880
+Yeah, good point.
+
+01:00:19.880 --> 01:00:22.660
+So the question is, what
+about multilingual data sets?
+
+01:00:22.660 --> 01:00:24.940
+I've focused on
+English because that's
+
+01:00:24.940 --> 01:00:28.970
+where primarily a lot
+of the research is done.
+
+01:00:28.970 --> 01:00:31.840
+But obviously, Common Crawl
+does have multilingual data.
+
+01:00:31.840 --> 01:00:37.660
+And there's multilingual data
+sets that are produced as well.
+
+01:00:37.660 --> 01:00:41.060
+OK, maybe interest of time,
+I'll move on to copyright.
+
+01:00:41.060 --> 01:00:43.810
+So this was an early
+question that was asked,
+
+01:00:43.810 --> 01:00:45.470
+how much of the
+web is copyrighted?
+
+01:00:45.470 --> 01:00:49.460
+So let's just understand what
+copyright is really about.
+
+01:00:49.460 --> 01:00:53.410
+So nowadays, there's a lot of
+lawsuits around generative AI
+
+01:00:53.410 --> 01:00:56.080
+mostly around copyright.
+
+01:00:56.080 --> 01:00:59.980
+So in general, the copyright
+law falls under kind
+
+01:00:59.980 --> 01:01:01.490
+of intellectual property law.
+
+01:01:01.490 --> 01:01:04.780
+And the goal here is to
+incentivize the creation
+
+01:01:04.780 --> 01:01:06.140
+of intellectual goods.
+
+01:01:06.140 --> 01:01:10.330
+That's why copyright
+law even exists.
+
+01:01:10.330 --> 01:01:13.490
+And there's many types
+of copyrights, patents,
+
+01:01:13.490 --> 01:01:16.540
+trade marks, trade secrets.
+
+01:01:16.540 --> 01:01:19.120
+So copyright law
+is the one that has
+
+01:01:19.120 --> 01:01:22.670
+been-- is most relevant
+for training data.
+
+01:01:22.670 --> 01:01:27.070
+And this goes back to
+the 1700s in England.
+
+01:01:27.070 --> 01:01:30.660
+But in the US,
+since 1976, there's
+
+01:01:30.660 --> 01:01:33.780
+been the Copyright
+Act, which has--
+
+01:01:33.780 --> 01:01:38.580
+essentially, it's established
+what copyright means.
+
+01:01:38.580 --> 01:01:40.590
+Formally, it's applied
+to original works
+
+01:01:40.590 --> 01:01:45.030
+of authorship fixed in a
+tangible medium of expression.
+
+01:01:45.030 --> 01:01:48.220
+And so it's original work.
+
+01:01:48.220 --> 01:01:51.840
+So if you are just a collection,
+it's not copyrightable.
+
+01:01:51.840 --> 01:01:54.390
+Like telephone directories
+are not copyrightable
+
+01:01:54.390 --> 01:01:56.970
+unless there's some
+creativity in their selection
+
+01:01:56.970 --> 01:01:59.070
+or arrangement.
+
+01:01:59.070 --> 01:02:03.280
+So copyright also applies to
+just expression, not idea.
+
+01:02:03.280 --> 01:02:06.250
+So you can't copyright
+an algorithm.
+
+01:02:06.250 --> 01:02:08.630
+You can copyright the code.
+
+01:02:11.220 --> 01:02:14.520
+And one thing that has been--
+
+01:02:14.520 --> 01:02:16.980
+what this did is that--
+
+01:02:16.980 --> 01:02:20.040
+before, copyright
+only applied to things
+
+01:02:20.040 --> 01:02:21.940
+that had been published.
+
+01:02:21.940 --> 01:02:24.030
+And now, it's just this
+looser notion of fixed.
+
+01:02:24.030 --> 01:02:31.080
+In general, copyright
+has increased in scope.
+
+01:02:31.080 --> 01:02:35.913
+And registration is not
+required for copyright.
+
+01:02:35.913 --> 01:02:37.330
+So this is different
+from patents.
+
+01:02:37.330 --> 01:02:39.288
+If you invent something
+and you don't register,
+
+01:02:39.288 --> 01:02:40.630
+then you have no claim to it.
+
+01:02:40.630 --> 01:02:43.350
+Whereas copyright
+is you put something
+
+01:02:43.350 --> 01:02:45.790
+and you throw it
+up on your website,
+
+01:02:45.790 --> 01:02:49.230
+it's copyrighted even
+if you don't explicitly
+
+01:02:49.230 --> 01:02:51.622
+write copyrighted.
+
+01:02:54.300 --> 01:02:57.600
+But there is a thing,
+that registration
+
+01:02:57.600 --> 01:03:01.140
+is required before a
+creator can sue someone
+
+01:03:01.140 --> 01:03:02.830
+for copyright infringement.
+
+01:03:02.830 --> 01:03:06.760
+But the bar for registration
+is also only $65,
+
+01:03:06.760 --> 01:03:10.320
+as opposed to patents,
+which can be thousands.
+
+01:03:10.320 --> 01:03:13.620
+It now lasts 75 years,
+and then the copyright
+
+01:03:13.620 --> 01:03:16.090
+expires and becomes part
+of the public domain.
+
+01:03:16.090 --> 01:03:20.070
+So all the classics and
+most of Project Gutenberg
+
+01:03:20.070 --> 01:03:23.070
+has been gone out of copyright.
+
+01:03:23.070 --> 01:03:26.272
+So the thing that maybe
+people might not realize
+
+01:03:26.272 --> 01:03:27.730
+is that most things
+on the internet
+
+01:03:27.730 --> 01:03:29.360
+are actually copyrighted.
+
+01:03:29.360 --> 01:03:32.330
+So whether something copyrighted
+isn't really the issue.
+
+01:03:32.330 --> 01:03:35.030
+So the issue is
+whether you can use it.
+
+01:03:35.030 --> 01:03:37.910
+And there's two
+ways you can use it.
+
+01:03:37.910 --> 01:03:41.680
+You can either get a license for
+it or you appeal to the fair use
+
+01:03:41.680 --> 01:03:42.560
+clause.
+
+01:03:42.560 --> 01:03:45.940
+So if you're going
+the license route,
+
+01:03:45.940 --> 01:03:49.870
+you can either go
+sign a contract
+
+01:03:49.870 --> 01:03:53.650
+with the creator
+to get a license
+
+01:03:53.650 --> 01:03:56.150
+to use the data in some terms.
+
+01:03:56.150 --> 01:03:58.450
+And this is essentially
+what does with--
+
+01:03:58.450 --> 01:04:02.020
+for example, Google and
+Reddit have this relationship.
+
+01:04:02.020 --> 01:04:04.110
+And effectively,
+license is don't sue me.
+
+01:04:06.640 --> 01:04:08.560
+There's a special
+type of license
+
+01:04:08.560 --> 01:04:11.770
+called the Creative
+Commons license, which
+
+01:04:11.770 --> 01:04:14.300
+allows the free distribution
+of copyrighted work.
+
+01:04:14.300 --> 01:04:17.660
+So Creative Commons, all that
+stuff is still copyrighted.
+
+01:04:17.660 --> 01:04:19.300
+It's just that you
+have a license that
+
+01:04:19.300 --> 01:04:23.270
+enables it to act like if
+it was in the public domain.
+
+01:04:23.270 --> 01:04:26.170
+So a lot of things are--
+
+01:04:26.170 --> 01:04:30.560
+like Wikipedia, for example, is
+all Creative Commons license.
+
+01:04:30.560 --> 01:04:33.210
+And a lot of YouTube videos
+are also Creative Commons.
+
+01:04:33.210 --> 01:04:37.380
+And this was created almost,
+I guess, 20 years ago,
+
+01:04:37.380 --> 01:04:39.680
+to essentially bridge the
+gap between public domain
+
+01:04:39.680 --> 01:04:41.660
+and copyright.
+
+01:04:41.660 --> 01:04:44.540
+And the idea is
+that you want people
+
+01:04:44.540 --> 01:04:49.460
+to be able to use this stuff
+without waiting 75 years.
+
+01:04:49.460 --> 01:04:53.180
+And there are cases where
+the creator is actually
+
+01:04:53.180 --> 01:04:58.970
+happy for people to use their
+content, but most of the time,
+
+01:04:58.970 --> 01:05:03.770
+it's just not clear because
+they haven't said yes or no.
+
+01:05:03.770 --> 01:05:07.070
+So now, many model developers
+license data for training
+
+01:05:07.070 --> 01:05:10.430
+foundation models, for example,
+Google and Reddit, OpenAI
+
+01:05:10.430 --> 01:05:14.370
+and Shutterstock, OpenAI and
+Stack Exchange, and so on.
+
+01:05:14.370 --> 01:05:20.090
+So if you have money,
+you go get a license.
+
+01:05:20.090 --> 01:05:22.820
+If you don't, then
+I guess you have
+
+01:05:22.820 --> 01:05:26.180
+to say you're a poor academic,
+and then maybe they'll
+
+01:05:26.180 --> 01:05:26.980
+let you use it.
+
+01:05:30.240 --> 01:05:31.880
+But the problem
+is that you can't
+
+01:05:31.880 --> 01:05:35.270
+get a license to the internet.
+
+01:05:35.270 --> 01:05:36.410
+You go to a random website.
+
+01:05:36.410 --> 01:05:38.400
+Who do you even go talk to?
+
+01:05:38.400 --> 01:05:41.720
+So the only way you
+can use it legally
+
+01:05:41.720 --> 01:05:43.980
+is to appeal to fair use.
+
+01:05:43.980 --> 01:05:49.378
+So fair use says basically,
+even if something is copyright
+
+01:05:49.378 --> 01:05:51.170
+and you don't have a
+license, you can still
+
+01:05:51.170 --> 01:05:53.370
+use it under some conditions.
+
+01:05:53.370 --> 01:05:57.200
+And the conditions are
+determined by the purpose
+
+01:05:57.200 --> 01:05:58.380
+and character of the use.
+
+01:05:58.380 --> 01:05:59.797
+So for example,
+if you're using it
+
+01:05:59.797 --> 01:06:02.670
+for educational rather
+than commercial,
+
+01:06:02.670 --> 01:06:05.330
+or you're transforming
+the work in some way
+
+01:06:05.330 --> 01:06:08.060
+rather than just like copying it
+and hosting it on your website
+
+01:06:08.060 --> 01:06:13.100
+and pretending it's your own,
+that's going to help you.
+
+01:06:13.100 --> 01:06:21.380
+What the work is,
+if it's fictional,
+
+01:06:21.380 --> 01:06:24.120
+it's more likely to be--
+
+01:06:24.120 --> 01:06:25.800
+actually, if it's,
+sorry, factual, it's
+
+01:06:25.800 --> 01:06:28.680
+more likely to be fair use.
+
+01:06:28.680 --> 01:06:30.130
+For example, the telephone book.
+
+01:06:30.130 --> 01:06:34.505
+You can't really copyright
+things that are closer to facts.
+
+01:06:37.320 --> 01:06:39.060
+If you use this just
+a snippet, then it's
+
+01:06:39.060 --> 01:06:41.158
+more likely to be
+copyright fair use.
+
+01:06:41.158 --> 01:06:43.200
+Although for language
+models, that doesn't really
+
+01:06:43.200 --> 01:06:45.450
+apply because you probably
+want to train on all of it,
+
+01:06:45.450 --> 01:06:47.070
+not just a snippet.
+
+01:06:47.070 --> 01:06:48.940
+And then effect on the market.
+
+01:06:48.940 --> 01:06:53.100
+So for example, if you're using
+the work to essentially displace
+
+01:06:53.100 --> 01:06:56.310
+the creator, then that's going
+to be seen less favorably
+
+01:06:56.310 --> 01:06:58.920
+than if you're using the work
+to do something completely
+
+01:06:58.920 --> 01:06:59.740
+different.
+
+01:06:59.740 --> 01:07:03.460
+So if you obviously watch a
+movie and write a summary of it,
+
+01:07:03.460 --> 01:07:04.330
+it's fair use.
+
+01:07:04.330 --> 01:07:07.020
+If you reimplement
+the idea, that's fine.
+
+01:07:07.020 --> 01:07:10.110
+There's a big,
+long-decade fight over
+
+01:07:10.110 --> 01:07:12.460
+whether Google Books
+when they show snippets,
+
+01:07:12.460 --> 01:07:14.620
+whether that's fair use or not.
+
+01:07:14.620 --> 01:07:19.650
+And eventually, it ruled
+in favor of Google.
+
+01:07:19.650 --> 01:07:23.060
+It's also worth noting
+that copyright isn't just
+
+01:07:23.060 --> 01:07:25.440
+about verbatim memorization.
+
+01:07:25.440 --> 01:07:28.950
+So it turns out that plots and
+characters can be copyrightable.
+
+01:07:28.950 --> 01:07:34.260
+So even if you have essentially
+very little n-gram overlap,
+
+01:07:34.260 --> 01:07:36.380
+but you take Harry
+Potter, the character,
+
+01:07:36.380 --> 01:07:39.260
+and you essentially
+develop it, then
+
+01:07:39.260 --> 01:07:43.650
+that could be a
+violation of copyright.
+
+01:07:43.650 --> 01:07:47.220
+But on the other hand, if you
+parity, it might be fair use.
+
+01:07:47.220 --> 01:07:50.210
+So these things
+are quite subtle.
+
+01:07:50.210 --> 01:07:52.760
+Copyright is all about the
+semantics and the economics
+
+01:07:52.760 --> 01:07:54.600
+and the kind of content.
+
+01:07:54.600 --> 01:07:59.000
+So it's a very
+complicated topic.
+
+01:07:59.000 --> 01:08:01.340
+So what about for training?
+
+01:08:01.340 --> 01:08:07.940
+So one thing is
+that copyright is--
+
+01:08:07.940 --> 01:08:10.243
+copy is in the name copyright.
+
+01:08:10.243 --> 01:08:11.660
+The first step of
+training, you're
+
+01:08:11.660 --> 01:08:16.319
+copying the data is technically
+already a violation,
+
+01:08:16.319 --> 01:08:20.330
+even if you don't
+do anything with it.
+
+01:08:20.330 --> 01:08:25.399
+You could argue, as many
+have, that training ML model
+
+01:08:25.399 --> 01:08:29.120
+is transformative
+because it's definitely
+
+01:08:29.120 --> 01:08:32.630
+far from just copy and pasting.
+
+01:08:32.630 --> 01:08:37.069
+This does make, I think,
+open-source models
+
+01:08:37.069 --> 01:08:40.033
+with open data bit
+challenging, because if you
+
+01:08:40.033 --> 01:08:41.450
+want to train a
+model and you also
+
+01:08:41.450 --> 01:08:44.250
+want to show people your
+data and you host that data,
+
+01:08:44.250 --> 01:08:47.660
+that could be in
+violation of copyright.
+
+01:08:47.660 --> 01:08:53.240
+People have also made arguments
+that the machine learning
+
+01:08:53.240 --> 01:08:56.297
+system is interested in the
+idea, not the expression.
+
+01:08:56.297 --> 01:08:58.130
+You're training all
+this data because you're
+
+01:08:58.130 --> 01:09:01.399
+trying to extract
+how language works
+
+01:09:01.399 --> 01:09:04.700
+and general knowledge,
+rather than interest
+
+01:09:04.700 --> 01:09:06.120
+in a particular work.
+
+01:09:06.120 --> 01:09:09.340
+But of course, the learning
+algorithm has been--
+
+01:09:09.340 --> 01:09:09.840
+sorry.
+
+01:09:09.840 --> 01:09:11.689
+The models can often
+memorize, and you
+
+01:09:11.689 --> 01:09:17.960
+can extract training data
+from the models quite easily.
+
+01:09:17.960 --> 01:09:22.430
+And there's also this
+problem that language models
+
+01:09:22.430 --> 01:09:27.770
+can definitely affect the
+market regardless of copyright.
+
+01:09:27.770 --> 01:09:30.710
+One, I guess,
+other thing to note
+
+01:09:30.710 --> 01:09:34.250
+is that even if you have a
+license and if you can appeal
+
+01:09:34.250 --> 01:09:36.210
+to fair use for a
+particular work,
+
+01:09:36.210 --> 01:09:39.170
+you still might not be able to
+legally get the data because
+
+01:09:39.170 --> 01:09:40.080
+of terms of use.
+
+01:09:40.080 --> 01:09:45.330
+For example, YouTube has a lot
+of Creative Commons videos,
+
+01:09:45.330 --> 01:09:47.840
+but if you write a script
+that goes and downloads
+
+01:09:47.840 --> 01:09:51.220
+your videos from YouTube, that
+is against the YouTube's term
+
+01:09:51.220 --> 01:09:51.720
+of service.
+
+01:09:51.720 --> 01:09:55.340
+So there's another gating
+for these platforms.
+
+01:09:55.340 --> 01:09:59.515
+There's a bunch of works that
+you can read about later.
+
+01:10:02.270 --> 01:10:06.240
+OK, so let me quickly go
+on in the interest of time.
+
+01:10:06.240 --> 01:10:10.100
+So this section is going
+to be a bit shorter.
+
+01:10:10.100 --> 01:10:13.490
+And I've collapsed mid-training
+and post-training together
+
+01:10:13.490 --> 01:10:18.330
+because the boundary is
+not often quite clear.
+
+01:10:18.330 --> 01:10:21.850
+Often now, we're thinking about
+less high quality in general,
+
+01:10:21.850 --> 01:10:25.480
+but focused on how do you
+instill particular capabilities,
+
+01:10:25.480 --> 01:10:28.770
+although even in
+pre-training, we were already
+
+01:10:28.770 --> 01:10:31.870
+thinking about quality
+classifiers and high quality.
+
+01:10:31.870 --> 01:10:35.520
+So again, the line
+is not quite clear.
+
+01:10:35.520 --> 01:10:38.430
+So one thing that I think is--
+
+01:10:38.430 --> 01:10:40.750
+which we haven't really
+talked about in this class,
+
+01:10:40.750 --> 01:10:42.580
+is long context.
+
+01:10:42.580 --> 01:10:45.750
+So models, if you look
+at the top models,
+
+01:10:45.750 --> 01:10:47.320
+have quite a bit of context.
+
+01:10:47.320 --> 01:10:49.480
+Gemini I think still has--
+
+01:10:49.480 --> 01:10:54.310
+I think Llama 4 might advertise
+a 10 million contexts,
+
+01:10:54.310 --> 01:10:56.610
+but the context lengths
+are quite large.
+
+01:10:56.610 --> 01:11:01.878
+And transformers
+scale quadratically
+
+01:11:01.878 --> 01:11:02.920
+with the sequence length.
+
+01:11:02.920 --> 01:11:04.930
+I mean, we saw the
+inference lecture,
+
+01:11:04.930 --> 01:11:07.200
+you can get around that,
+but still you need,
+
+01:11:07.200 --> 01:11:11.980
+I think, full attention
+to get the best results.
+
+01:11:11.980 --> 01:11:14.940
+And clearly, you don't want
+to start at the beginning
+
+01:11:14.940 --> 01:11:16.780
+training on long context.
+
+01:11:16.780 --> 01:11:18.710
+So what people do is
+they add it later.
+
+01:11:18.710 --> 01:11:21.250
+So that's why long context
+extension often shows up
+
+01:11:21.250 --> 01:11:23.500
+at mid-training
+because you don't
+
+01:11:23.500 --> 01:11:27.010
+want to waste cycles
+training on long contexts
+
+01:11:27.010 --> 01:11:29.740
+if your model is not very good.
+
+01:11:29.740 --> 01:11:32.980
+So there's multiple
+ways of doing that.
+
+01:11:32.980 --> 01:11:34.580
+But since this is
+a data lecture,
+
+01:11:34.580 --> 01:11:41.830
+I'll talk about books
+and math as our two
+
+01:11:41.830 --> 01:11:44.772
+sources that have been used
+to do context extension.
+
+01:11:44.772 --> 01:11:46.480
+Basically for context
+attention, you just
+
+01:11:46.480 --> 01:11:51.080
+need to create data that
+has long range dependencies.
+
+01:11:51.080 --> 01:11:55.660
+And some of this data
+can also be synthesized.
+
+01:11:55.660 --> 01:12:00.950
+So people also look at tasks.
+
+01:12:00.950 --> 01:12:06.770
+So there's a bunch of works
+that essentially convert
+
+01:12:06.770 --> 01:12:11.380
+traditional NLP benchmarks
+into a standard format
+
+01:12:11.380 --> 01:12:13.490
+that they can be fine tuned on.
+
+01:12:13.490 --> 01:12:18.530
+So supernatural instructions
+is one such data sets that
+
+01:12:18.530 --> 01:12:27.320
+leveraged the community to come
+together and create 1,600 tasks,
+
+01:12:27.320 --> 01:12:31.250
+and they standardize
+into a prompt.
+
+01:12:31.250 --> 01:12:34.760
+Flan was around the same year.
+
+01:12:34.760 --> 01:12:38.040
+It came out in 2022, but
+the paper was in 2023.
+
+01:12:38.040 --> 01:12:42.020
+So 2022 was the year of
+let's take all the NLP tasks
+
+01:12:42.020 --> 01:12:45.760
+and shove them into
+instruction-following format.
+
+01:12:52.220 --> 01:12:54.380
+One, I think, advantage
+of this is now you
+
+01:12:54.380 --> 01:12:57.560
+have a language model that can
+solve all your favorite NLP
+
+01:12:57.560 --> 01:12:59.790
+tasks, and you benefit
+from transfer learning.
+
+01:12:59.790 --> 01:13:03.050
+This is a lot of
+thinking about--
+
+01:13:03.050 --> 01:13:05.600
+going back to T5.
+
+01:13:05.600 --> 01:13:10.490
+But one problem with
+this is that often, the
+
+01:13:10.490 --> 01:13:14.150
+prompts that you have
+are very templatized.
+
+01:13:14.150 --> 01:13:17.750
+If you look at the supernatural
+instructions, some of it
+
+01:13:17.750 --> 01:13:22.280
+is not supernatural
+because they're
+
+01:13:22.280 --> 01:13:24.660
+all look kind of the same.
+
+01:13:24.660 --> 01:13:30.300
+So that motivates these
+instruction-following data sets.
+
+01:13:30.300 --> 01:13:34.670
+And since 2022, there's
+been this expectation
+
+01:13:34.670 --> 01:13:36.500
+that language models
+should just be
+
+01:13:36.500 --> 01:13:40.410
+able to answer any one-off
+task that you give it.
+
+01:13:40.410 --> 01:13:43.730
+So the notion of even
+tasks disappears.
+
+01:13:43.730 --> 01:13:46.670
+So a lot of the work
+in the open community
+
+01:13:46.670 --> 01:13:49.110
+has been based on
+synthetic data,
+
+01:13:49.110 --> 01:13:54.980
+starting with Alpaca, which
+used this idea of self-instruct
+
+01:13:54.980 --> 01:13:58.340
+to prompt a language model
+to generate examples,
+
+01:13:58.340 --> 01:14:02.120
+which you can then
+use for fine tuning.
+
+01:14:02.120 --> 01:14:05.480
+There's Vicuna, which used
+these conversations that
+
+01:14:05.480 --> 01:14:08.630
+had been shared by
+users on ShareGPT, which
+
+01:14:08.630 --> 01:14:10.250
+is deprecated now.
+
+01:14:10.250 --> 01:14:14.380
+You can get language models
+to chat with themselves,
+
+01:14:14.380 --> 01:14:16.770
+seeded with some
+questions, and that
+
+01:14:16.770 --> 01:14:21.030
+creates some synthetic data.
+
+01:14:21.030 --> 01:14:27.570
+And you can also have
+these evol-instruct methods
+
+01:14:27.570 --> 01:14:33.030
+that essentially take questions
+and make them more complicated.
+
+01:14:33.030 --> 01:14:37.590
+There's other ways of taking--
+
+01:14:37.590 --> 01:14:41.310
+this one takes
+Common Crawl and then
+
+01:14:41.310 --> 01:14:45.160
+uses it to essentially look at--
+
+01:14:45.160 --> 01:14:47.910
+identify quiz sites and
+then extract QA pairs
+
+01:14:47.910 --> 01:14:50.580
+using a language model.
+
+01:14:50.580 --> 01:14:53.640
+And then this is an OpenHermes,
+which we saw earlier
+
+01:14:53.640 --> 01:14:54.960
+from the DCLM work.
+
+01:14:54.960 --> 01:14:59.070
+It's just an agglomeration
+of different data sets.
+
+01:14:59.070 --> 01:15:01.900
+Llama 2 chat, we don't know
+what the exact data set is,
+
+01:15:01.900 --> 01:15:06.840
+but they used annotators
+to essentially write
+
+01:15:06.840 --> 01:15:09.940
+high-quality instruction data.
+
+01:15:09.940 --> 01:15:15.100
+And they claim in
+this paper that this
+
+01:15:15.100 --> 01:15:17.050
+was better than using
+the millions of examples
+
+01:15:17.050 --> 01:15:18.120
+from open data sets.
+
+01:15:22.450 --> 01:15:26.620
+But they could have
+even saved more money
+
+01:15:26.620 --> 01:15:34.610
+by less annotation
+and more just RLHF,
+
+01:15:34.610 --> 01:15:37.120
+which we'll talk about later.
+
+01:15:37.120 --> 01:15:40.180
+And finally, the last stage
+that I'll mention just
+
+01:15:40.180 --> 01:15:45.970
+came out pretty recently, so
+the Llama-Nemotron post-training
+
+01:15:45.970 --> 01:15:47.080
+data.
+
+01:15:47.080 --> 01:15:50.337
+This consists of a
+bunch of-- there aren't
+
+01:15:50.337 --> 01:15:51.920
+that many details
+about this data set,
+
+01:15:51.920 --> 01:15:55.240
+but the data set released,
+so you can go and look at it.
+
+01:15:55.240 --> 01:15:58.850
+They have public data
+sets like WildChat.
+
+01:15:58.850 --> 01:16:01.480
+And then they synthetically
+generated some data
+
+01:16:01.480 --> 01:16:07.490
+from all the models that you're
+able to generate data from.
+
+01:16:07.490 --> 01:16:10.915
+They also include reasoning
+traces, thanks to R1.
+
+01:16:13.670 --> 01:16:21.530
+So if you look at this
+data, you can divide it
+
+01:16:21.530 --> 01:16:23.150
+into a few buckets.
+
+01:16:23.150 --> 01:16:26.610
+One is that a lot of the
+early work was just, OK,
+
+01:16:26.610 --> 01:16:28.070
+there's GPT-4.
+
+01:16:28.070 --> 01:16:32.910
+This is the easiest way to
+generate synthetic data.
+
+01:16:32.910 --> 01:16:35.150
+The problem with that is that--
+
+01:16:35.150 --> 01:16:36.900
+for academic
+research, it's fine,
+
+01:16:36.900 --> 01:16:39.920
+but it is against
+the terms of OpenAI
+
+01:16:39.920 --> 01:16:44.480
+to use GPT-4 to create a data
+set that you train a competing
+
+01:16:44.480 --> 01:16:46.070
+model.
+
+01:16:46.070 --> 01:16:52.680
+Whereas these open-weight models
+have more permissive licenses,
+
+01:16:52.680 --> 01:16:55.280
+which means that you can
+essentially distill from them
+
+01:16:55.280 --> 01:16:57.480
+and do whatever you want.
+
+01:16:57.480 --> 01:17:00.060
+There might be some
+restriction on Llama,
+
+01:17:00.060 --> 01:17:03.560
+but I think broadly
+speaking, I think they're
+
+01:17:03.560 --> 01:17:05.450
+more permissive than OpenAI.
+
+01:17:05.450 --> 01:17:09.590
+And then finally, if you
+are really paranoid, then
+
+01:17:09.590 --> 01:17:11.420
+you can actually
+just hire annotators
+
+01:17:11.420 --> 01:17:14.840
+to create high-quality
+instruction, which is obviously
+
+01:17:14.840 --> 01:17:16.710
+more expensive and slower.
+
+01:17:16.710 --> 01:17:20.720
+And there's also this worry
+that annotators might actually
+
+01:17:20.720 --> 01:17:23.190
+use GPT-4 to create your data.
+
+01:17:23.190 --> 01:17:26.480
+So you have to be careful there.
+
+01:17:26.480 --> 01:17:30.740
+To summarize, so the
+key lesson is data just
+
+01:17:30.740 --> 01:17:32.970
+doesn't fall from the sky.
+
+01:17:32.970 --> 01:17:36.620
+You have to really
+work hard to get it.
+
+01:17:36.620 --> 01:17:39.920
+And it's important to think
+that out there in the world,
+
+01:17:39.920 --> 01:17:42.930
+there's these live
+services like GitHub.
+
+01:17:42.930 --> 01:17:46.830
+And first, you have to use it.
+
+01:17:46.830 --> 01:17:50.580
+You have to first get
+a dump of the raw data.
+
+01:17:50.580 --> 01:17:52.230
+But you can't train
+on the raw data.
+
+01:17:52.230 --> 01:17:54.390
+It's too big or it's
+too noisy or it has--
+
+01:17:54.390 --> 01:17:58.490
+it's not even tokens.
+
+01:17:58.490 --> 01:18:00.270
+And you often have
+to process it.
+
+01:18:00.270 --> 01:18:02.990
+And that's where a
+lot of heuristics
+
+01:18:02.990 --> 01:18:06.280
+that we saw for quality
+filtering and deduplication
+
+01:18:06.280 --> 01:18:08.560
+kind of fit in.
+
+01:18:08.560 --> 01:18:10.370
+This was touched on earlier.
+
+01:18:10.370 --> 01:18:14.560
+Data is really the key
+ingredient that essentially
+
+01:18:14.560 --> 01:18:16.970
+differentiates language models.
+
+01:18:16.970 --> 01:18:19.820
+I think all of the language
+model architectures,
+
+01:18:19.820 --> 01:18:22.215
+there's some
+transformer MOE style.
+
+01:18:25.730 --> 01:18:28.150
+These architectures is
+so of general purpose
+
+01:18:28.150 --> 01:18:31.190
+that the behaviors aren't really
+going to be that different.
+
+01:18:31.190 --> 01:18:34.780
+It's really the data that drives
+the quality there, assuming
+
+01:18:34.780 --> 01:18:38.380
+you can train and fit the data.
+
+01:18:38.380 --> 01:18:41.780
+There are some legal
+and ethical issues here.
+
+01:18:41.780 --> 01:18:44.260
+We talk about copyright,
+but there's much more
+
+01:18:44.260 --> 01:18:45.710
+to be said here.
+
+01:18:45.710 --> 01:18:49.728
+And then finally, if you think
+that this whole field is a mess,
+
+01:18:49.728 --> 01:18:50.270
+you're right.
+
+01:18:50.270 --> 01:18:53.920
+It's very heuristic, which means
+that there's many opportunities
+
+01:18:53.920 --> 01:18:56.440
+to hopefully improve that.
+
+01:18:56.440 --> 01:18:58.580
+OK, that is it.
+
+01:18:58.580 --> 01:19:01.260
+And I'll see you on Thursday.

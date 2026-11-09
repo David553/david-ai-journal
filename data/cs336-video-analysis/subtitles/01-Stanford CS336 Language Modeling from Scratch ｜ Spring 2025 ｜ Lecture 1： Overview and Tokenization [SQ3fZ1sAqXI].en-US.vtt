@@ -1,0 +1,5567 @@
+WEBVTT
+Kind: captions
+Language: en-US
+
+00:00:05.000 --> 00:00:07.070
+Welcome, everyone.
+
+00:00:07.070 --> 00:00:10.280
+This is CS 336--
+
+00:00:10.280 --> 00:00:12.270
+Language Models from Scratch.
+
+00:00:12.270 --> 00:00:15.270
+And this is the core staff.
+
+00:00:15.270 --> 00:00:17.930
+So I'm Percy, one
+of your instructors.
+
+00:00:17.930 --> 00:00:19.550
+I'm really excited
+about this class,
+
+00:00:19.550 --> 00:00:21.950
+because it really allows you
+to see the whole language
+
+00:00:21.950 --> 00:00:24.000
+modeling building
+pipeline end to end,
+
+00:00:24.000 --> 00:00:26.600
+including data
+systems and modeling.
+
+00:00:26.600 --> 00:00:28.980
+Tatsu, I'll be
+co-teaching with him,
+
+00:00:28.980 --> 00:00:31.430
+so I'll let everyone
+introduce themselves.
+
+00:00:31.430 --> 00:00:32.040
+Hi, everyone.
+
+00:00:32.040 --> 00:00:32.670
+I'm Tatsu.
+
+00:00:32.670 --> 00:00:34.170
+I'm one of the co-instructors.
+
+00:00:34.170 --> 00:00:37.670
+I'll be giving lecture in
+a week or two, probably.
+
+00:00:37.670 --> 00:00:38.810
+A few weeks.
+
+00:00:38.810 --> 00:00:40.980
+I'm really excited
+about this class.
+
+00:00:40.980 --> 00:00:44.610
+Percy and I spent a while being
+a little disgruntled, thinking,
+
+00:00:44.610 --> 00:00:46.610
+what's the really deep
+technical stuff that we
+
+00:00:46.610 --> 00:00:48.090
+can teach our students today?
+
+00:00:48.090 --> 00:00:49.730
+And I think one of the
+things that has really-- you
+
+00:00:49.730 --> 00:00:51.720
+got to build it from
+scratch to understand it,
+
+00:00:51.720 --> 00:00:53.420
+so I'm hoping that
+that's of the ethos
+
+00:00:53.420 --> 00:00:56.536
+that you'll take away from.
+
+00:00:56.536 --> 00:00:57.510
+Hey, everyone.
+
+00:00:57.510 --> 00:01:01.540
+I'm Rohith I actually failed
+this class when I took it.
+
+00:01:01.540 --> 00:01:03.130
+[LAUGHTER]
+
+00:01:03.630 --> 00:01:05.050
+But now I'm your TA.
+
+00:01:05.050 --> 00:01:07.775
+So you know what did they
+say, anything is possible.
+
+00:01:07.775 --> 00:01:09.394
+[LAUGHTER]
+
+00:01:10.230 --> 00:01:12.010
+Hey, everyone.
+
+00:01:12.010 --> 00:01:12.810
+I'm Neil.
+
+00:01:12.810 --> 00:01:16.120
+I'm a third year student, PhD
+student in the CS Department.
+
+00:01:16.120 --> 00:01:18.090
+I work with Tatsu
+and [INAUDIBLE].
+
+00:01:18.090 --> 00:01:19.860
+Yeah, mostly
+interested in research
+
+00:01:19.860 --> 00:01:21.970
+on synthetic data
+and language models.
+
+00:01:21.970 --> 00:01:23.320
+Reasoning, all that stuff.
+
+00:01:23.320 --> 00:01:26.190
+So yeah, should
+be a fun quarter.
+
+00:01:26.190 --> 00:01:26.710
+Hey, guys.
+
+00:01:26.710 --> 00:01:27.400
+I'm Marcel.
+
+00:01:27.400 --> 00:01:28.570
+I'm a second-year PhD.
+
+00:01:28.570 --> 00:01:30.210
+I work mostly with [INAUDIBLE].
+
+00:01:30.210 --> 00:01:33.600
+These days, I work [INAUDIBLE].
+
+00:01:33.600 --> 00:01:36.490
+And he was a topper of many
+leaderboards from last year,
+
+00:01:36.490 --> 00:01:38.740
+so he's the number to beat.
+
+00:01:38.740 --> 00:01:39.510
+OK.
+
+00:01:39.510 --> 00:01:40.230
+All right.
+
+00:01:40.230 --> 00:01:41.640
+Well, thanks, everyone.
+
+00:01:41.640 --> 00:01:43.388
+So let's continue.
+
+00:01:43.388 --> 00:01:45.180
+As Tatsu mentioned,
+this is the second time
+
+00:01:45.180 --> 00:01:47.040
+we're teaching the class.
+
+00:01:47.040 --> 00:01:49.950
+We've grown the
+class by around 50%.
+
+00:01:49.950 --> 00:01:51.610
+I have three TAs instead of two.
+
+00:01:51.610 --> 00:01:55.980
+And one big thing is we're
+making all the lectures
+
+00:01:55.980 --> 00:01:59.950
+on YouTube so that the
+world can learn how to build
+
+00:01:59.950 --> 00:02:01.630
+language models from scratch.
+
+00:02:01.630 --> 00:02:02.600
+OK.
+
+00:02:02.600 --> 00:02:09.490
+So why do we decide to make this
+course and endure all the pain?
+
+00:02:09.490 --> 00:02:11.870
+So let's ask GPT-4.
+
+00:02:11.870 --> 00:02:14.590
+So if you ask it, why teach
+a course on building language
+
+00:02:14.590 --> 00:02:19.690
+models from scratch, the
+reply is, teaching a course
+
+00:02:19.690 --> 00:02:22.610
+provides foundational
+understanding of techniques,
+
+00:02:22.610 --> 00:02:25.210
+fosters innovation.
+
+00:02:25.210 --> 00:02:27.680
+The typical generic blathers.
+
+00:02:27.680 --> 00:02:29.380
+OK, so here's the real reason.
+
+00:02:29.380 --> 00:02:33.470
+So we're in a bit of
+a crisis, I would say.
+
+00:02:33.470 --> 00:02:36.610
+Researchers are becoming
+more and more disconnected
+
+00:02:36.610 --> 00:02:38.800
+from the underlying technology.
+
+00:02:38.800 --> 00:02:42.850
+Eight years ago, researchers
+would implement and train
+
+00:02:42.850 --> 00:02:44.690
+their own models in AI.
+
+00:02:44.690 --> 00:02:49.390
+Even six years ago, you would at
+least take the models like BERT
+
+00:02:49.390 --> 00:02:51.710
+and download them
+and fine-tune them.
+
+00:02:51.710 --> 00:02:54.910
+And now, many people
+can just get away
+
+00:02:54.910 --> 00:02:57.800
+with prompting a
+proprietary model.
+
+00:02:57.800 --> 00:03:00.500
+So this is not
+necessarily bad, right,
+
+00:03:00.500 --> 00:03:03.870
+because as you enter these
+layers of abstraction,
+
+00:03:03.870 --> 00:03:05.130
+we can all do more.
+
+00:03:05.130 --> 00:03:07.220
+And a lot of research
+has been unlocked
+
+00:03:07.220 --> 00:03:11.460
+by the simplicity of being able
+to prompt a language model.
+
+00:03:11.460 --> 00:03:14.490
+And I do a fair
+share of prompting.
+
+00:03:14.490 --> 00:03:16.680
+So there's nothing
+wrong with that.
+
+00:03:16.680 --> 00:03:21.020
+But let's also remember that
+these abstractions are leaky.
+
+00:03:21.020 --> 00:03:24.470
+So in contrast to programming
+languages on operating systems,
+
+00:03:24.470 --> 00:03:27.480
+you don't really understand
+what the abstraction is.
+
+00:03:27.480 --> 00:03:31.100
+It's a string in and
+string out, I guess.
+
+00:03:31.100 --> 00:03:32.720
+And I would say
+that there's still
+
+00:03:32.720 --> 00:03:36.530
+a lot of fundamental research to
+be done that requires tearing up
+
+00:03:36.530 --> 00:03:39.110
+the stack and co-designing
+different aspects of the data
+
+00:03:39.110 --> 00:03:41.400
+and the systems and the model.
+
+00:03:41.400 --> 00:03:44.870
+And I think really that full
+understanding of this technology
+
+00:03:44.870 --> 00:03:47.960
+is necessary for
+fundamental research.
+
+00:03:47.960 --> 00:03:50.520
+So that's why this class exists.
+
+00:03:50.520 --> 00:03:52.610
+We want to enable the
+fundamental research
+
+00:03:52.610 --> 00:03:53.670
+to continue.
+
+00:03:53.670 --> 00:03:57.070
+And our philosophy
+is to understand it,
+
+00:03:57.070 --> 00:03:59.100
+you have to build it.
+
+00:03:59.100 --> 00:04:01.740
+So there's one
+small problem here.
+
+00:04:01.740 --> 00:04:05.940
+And this is because of
+the industrialization
+
+00:04:05.940 --> 00:04:07.420
+of language models.
+
+00:04:07.420 --> 00:04:13.360
+So GPT-4 has rumored to be
+1.8 trillion parameters,
+
+00:04:13.360 --> 00:04:16.589
+cost $100 million to train.
+
+00:04:16.589 --> 00:04:22.120
+You have xAI building the
+clusters with 200,000 H100s,
+
+00:04:22.120 --> 00:04:23.790
+if you can imagine that.
+
+00:04:23.790 --> 00:04:27.540
+There's an investment
+of over $500 billion,
+
+00:04:27.540 --> 00:04:30.400
+supposedly, over four years.
+
+00:04:30.400 --> 00:04:33.570
+So these are pretty
+large numbers, right.
+
+00:04:33.570 --> 00:04:36.300
+And furthermore, there's no
+public details on how these
+
+00:04:36.300 --> 00:04:39.820
+models are being built.
+Here from GPT-4--
+
+00:04:39.820 --> 00:04:41.940
+this is even two years ago--
+
+00:04:41.940 --> 00:04:45.690
+they very honestly say that due
+to the competitive landscape
+
+00:04:45.690 --> 00:04:50.260
+and safety limitations, we're
+going to disclose no details.
+
+00:04:50.260 --> 00:04:55.010
+OK, so this is the state
+of the world right now.
+
+00:04:55.010 --> 00:04:59.060
+And so in some sense, frontier
+models are out of reach for us.
+
+00:04:59.060 --> 00:05:00.790
+So if you came into
+this class thinking
+
+00:05:00.790 --> 00:05:06.670
+you're each going to train
+your own GPT-4, sorry.
+
+00:05:06.670 --> 00:05:09.920
+So we're going to build
+small language models.
+
+00:05:09.920 --> 00:05:14.180
+But the problem is that these
+might not be representative.
+
+00:05:14.180 --> 00:05:18.290
+And here are some of two
+examples to illustrate why.
+
+00:05:18.290 --> 00:05:21.700
+So here's a simple one.
+
+00:05:21.700 --> 00:05:26.500
+If you look at the fraction of
+FLOPs spent in the attention
+
+00:05:26.500 --> 00:05:29.500
+layers of a transformer
+versus an MLP,
+
+00:05:29.500 --> 00:05:31.070
+this changes quite a bit.
+
+00:05:31.070 --> 00:05:33.760
+So this is a tweet
+from Stephen Roller
+
+00:05:33.760 --> 00:05:35.720
+from quite a few years ago.
+
+00:05:35.720 --> 00:05:39.130
+But this is still true.
+
+00:05:39.130 --> 00:05:40.780
+If you look at small
+models, it looks
+
+00:05:40.780 --> 00:05:44.560
+like the number of FLOPs in the
+attention versus the MLP layers
+
+00:05:44.560 --> 00:05:47.060
+are roughly comparable.
+
+00:05:47.060 --> 00:05:52.710
+But if you go up to 175 billion,
+then the MLPs really dominate.
+
+00:05:52.710 --> 00:05:55.020
+Right, so why does this matter?
+
+00:05:55.020 --> 00:05:57.980
+Well, if you spend a lot
+of time at small scale
+
+00:05:57.980 --> 00:06:00.150
+and you're optimizing
+the tension,
+
+00:06:00.150 --> 00:06:02.240
+you might be optimizing
+the wrong thing,
+
+00:06:02.240 --> 00:06:08.930
+because at larger scale,
+it gets washed out.
+
+00:06:08.930 --> 00:06:11.870
+This is a simple example,
+because you can literally
+
+00:06:11.870 --> 00:06:15.080
+make this plot without
+actually any compute.
+
+00:06:15.080 --> 00:06:17.900
+It's napkin math.
+
+00:06:17.900 --> 00:06:20.720
+Here's something that's a little
+bit harder to grapple with,
+
+00:06:20.720 --> 00:06:22.170
+is this emergent behavior.
+
+00:06:22.170 --> 00:06:25.920
+So this is a paper from
+Jason Wei from 2022.
+
+00:06:25.920 --> 00:06:30.950
+And here, this plot shows
+that as you increase
+
+00:06:30.950 --> 00:06:33.950
+the amount of
+training FLOPs and you
+
+00:06:33.950 --> 00:06:36.510
+look at accuracy on
+a bunch of tasks,
+
+00:06:36.510 --> 00:06:40.080
+you'll see that for a while,
+it looks like the accuracy,
+
+00:06:40.080 --> 00:06:41.480
+nothing is happening.
+
+00:06:41.480 --> 00:06:45.170
+And all of a sudden,
+you get these emergent
+
+00:06:45.170 --> 00:06:48.150
+of various phenomena,
+like in-context learning.
+
+00:06:48.150 --> 00:06:50.630
+So if you were hanging
+around at this scale,
+
+00:06:50.630 --> 00:06:52.300
+you would be
+concluding that well,
+
+00:06:52.300 --> 00:06:54.710
+these language models
+really don't work.
+
+00:06:54.710 --> 00:06:58.990
+When, in fact, you had to
+scale up to get that behavior.
+
+00:06:58.990 --> 00:07:02.120
+So don't despair.
+
+00:07:02.120 --> 00:07:05.260
+We can still learn
+something in this class.
+
+00:07:05.260 --> 00:07:08.690
+But we have to be very precise
+about what we're learning.
+
+00:07:08.690 --> 00:07:10.550
+So there's three
+types of knowledge.
+
+00:07:10.550 --> 00:07:13.880
+There's the mechanics
+of how things work.
+
+00:07:13.880 --> 00:07:15.230
+This, we can teach you.
+
+00:07:15.230 --> 00:07:16.970
+We can teach you what
+a transformer is.
+
+00:07:16.970 --> 00:07:18.590
+You can implement a transformer.
+
+00:07:18.590 --> 00:07:21.130
+We can teach you how model
+parallelism leverages
+
+00:07:21.130 --> 00:07:22.490
+GPUs efficiently.
+
+00:07:22.490 --> 00:07:27.260
+These are just the raw
+ingredients, the mechanics.
+
+00:07:27.260 --> 00:07:28.900
+So that's fine.
+
+00:07:28.900 --> 00:07:31.880
+We can also teach you mindset.
+
+00:07:31.880 --> 00:07:33.700
+So this is something
+a bit more subtle
+
+00:07:33.700 --> 00:07:36.890
+and seems a little bit fuzzy.
+
+00:07:36.890 --> 00:07:40.750
+But this is actually,
+in some ways,
+
+00:07:40.750 --> 00:07:42.290
+more important, I would say.
+
+00:07:42.290 --> 00:07:46.120
+Because the mindset
+that we're going to take
+
+00:07:46.120 --> 00:07:48.010
+is that we want
+to squeeze as most
+
+00:07:48.010 --> 00:07:51.456
+out of the hardware as possible
+and take scaling seriously.
+
+00:07:51.456 --> 00:07:54.590
+Right, because in some sense,
+the mechanics, all of those
+
+00:07:54.590 --> 00:07:56.510
+will see later that all
+of these ingredients
+
+00:07:56.510 --> 00:07:58.440
+have been around for a while.
+
+00:07:58.440 --> 00:08:01.040
+But it was really, I
+think, the scaling mindset
+
+00:08:01.040 --> 00:08:06.170
+that OpenAI pioneered that led
+to this next generation of AI
+
+00:08:06.170 --> 00:08:07.340
+models.
+
+00:08:07.340 --> 00:08:08.930
+So mindset, I
+think, hopefully we
+
+00:08:08.930 --> 00:08:12.900
+can bang into you that to
+think in a certain way.
+
+00:08:12.900 --> 00:08:15.740
+And then thirdly is intuitions.
+
+00:08:15.740 --> 00:08:19.640
+And this is about
+which data and modeling
+
+00:08:19.640 --> 00:08:21.780
+decisions lead to good models.
+
+00:08:21.780 --> 00:08:25.500
+This, unfortunately, we can
+only partially teach you.
+
+00:08:25.500 --> 00:08:28.070
+And this is because
+what architectures
+
+00:08:28.070 --> 00:08:31.310
+and what data sets
+work at low scales
+
+00:08:31.310 --> 00:08:34.480
+might not be the same ones
+that work at large scales.
+
+00:08:37.760 --> 00:08:40.020
+But hopefully you got
+2 and 1/2 out of three.
+
+00:08:40.020 --> 00:08:43.669
+So that's pretty good
+bang for your buck.
+
+00:08:43.669 --> 00:08:47.710
+OK, speaking of intuitions,
+there's a sort of, I guess,
+
+00:08:47.710 --> 00:08:51.690
+sad reality of things that
+you can tell a lot of stories
+
+00:08:51.690 --> 00:08:54.630
+about why certain things
+in the transformer
+
+00:08:54.630 --> 00:08:55.600
+are the way they are.
+
+00:08:55.600 --> 00:08:59.670
+But sometimes it's just
+you do the experiments
+
+00:08:59.670 --> 00:09:01.890
+and the experiments speak.
+
+00:09:01.890 --> 00:09:03.963
+So, for example, there's
+this known Shazeer paper
+
+00:09:03.963 --> 00:09:05.880
+that introduced the
+SwiGLU, which is something
+
+00:09:05.880 --> 00:09:09.210
+that we'll see a bit
+more in this class, which
+
+00:09:09.210 --> 00:09:11.910
+is a type of non-linearity.
+
+00:09:11.910 --> 00:09:16.420
+And in the conclusion, the
+results are quite good.
+
+00:09:16.420 --> 00:09:17.592
+And this got adopted.
+
+00:09:17.592 --> 00:09:19.800
+But in the conclusion, there
+is this honest statement
+
+00:09:19.800 --> 00:09:22.560
+that we offer no
+explanation except for,
+
+00:09:22.560 --> 00:09:24.640
+this is divine benevolence.
+
+00:09:24.640 --> 00:09:26.530
+So there you go.
+
+00:09:26.530 --> 00:09:32.310
+This is the extent
+of our understanding.
+
+00:09:32.310 --> 00:09:34.680
+OK, so now let's talk
+about this bitter lesson
+
+00:09:34.680 --> 00:09:37.780
+that I'm sure people
+have heard about.
+
+00:09:37.780 --> 00:09:41.460
+I think there's a misconception
+that a bitter lesson means
+
+00:09:41.460 --> 00:09:45.130
+that scale is all that matters,
+algorithms don't matter.
+
+00:09:45.130 --> 00:09:48.370
+All you do is pump more
+capital into building the model
+
+00:09:48.370 --> 00:09:49.730
+and you're good to go.
+
+00:09:49.730 --> 00:09:52.280
+I think this couldn't be
+further from the truth.
+
+00:09:52.280 --> 00:09:55.570
+I think the right interpretation
+is that algorithms at scale
+
+00:09:55.570 --> 00:09:57.230
+is what matters.
+
+00:09:57.230 --> 00:10:01.150
+And because at the end of the
+day, your accuracy of your model
+
+00:10:01.150 --> 00:10:03.640
+is really a product
+of your efficiency
+
+00:10:03.640 --> 00:10:07.090
+and the number of
+resources you put in.
+
+00:10:07.090 --> 00:10:10.940
+And actually, efficiency,
+if you think about it,
+
+00:10:10.940 --> 00:10:13.250
+is way more important
+at larger scale.
+
+00:10:13.250 --> 00:10:16.400
+Because if you're spending
+hundreds of millions of dollars,
+
+00:10:16.400 --> 00:10:19.780
+you cannot afford to be
+wasteful in the same way that
+
+00:10:19.780 --> 00:10:25.790
+if you're looking at running
+a job on your local cluster,
+
+00:10:25.790 --> 00:10:26.930
+you might run it again.
+
+00:10:26.930 --> 00:10:28.730
+You fail, you debug it.
+
+00:10:28.730 --> 00:10:33.200
+And if you look at actually
+the utilization and the use,
+
+00:10:33.200 --> 00:10:37.150
+I'm sure OpenAI is way more
+efficient than any of us
+
+00:10:37.150 --> 00:10:38.000
+right now.
+
+00:10:38.000 --> 00:10:41.380
+So efficiency
+really is important.
+
+00:10:41.380 --> 00:10:44.540
+And furthermore, I think
+this point is maybe
+
+00:10:44.540 --> 00:10:50.270
+not as well appreciated in the
+scaling rhetoric, so to speak.
+
+00:10:50.270 --> 00:10:52.770
+Which is that if you
+look at efficiency,
+
+00:10:52.770 --> 00:10:55.080
+which is a combination of
+hardware and algorithms,
+
+00:10:55.080 --> 00:10:57.450
+but if you just look at
+the algorithm efficiency,
+
+00:10:57.450 --> 00:11:02.720
+there's this nice open ed
+paper from 2020 that showed,
+
+00:11:02.720 --> 00:11:09.740
+over the period of 2012 to 2019,
+there was a 44x algorithmic
+
+00:11:09.740 --> 00:11:13.850
+efficiency improvement in the
+time that it took to train
+
+00:11:13.850 --> 00:11:16.316
+ImageNet to a certain
+level of accuracy.
+
+00:11:16.316 --> 00:11:18.360
+Right, so this is huge.
+
+00:11:18.360 --> 00:11:19.730
+And I think if you--
+
+00:11:19.730 --> 00:11:22.460
+I don't know if you could
+see the abstract here.
+
+00:11:22.460 --> 00:11:24.460
+This is faster than Moore's law.
+
+00:11:24.460 --> 00:11:26.730
+Right, so algorithms do matter.
+
+00:11:26.730 --> 00:11:29.690
+If you didn't have
+this efficiency,
+
+00:11:29.690 --> 00:11:33.030
+you would be paying
+44 times more cost.
+
+00:11:33.030 --> 00:11:35.840
+This is for image models,
+but there's some results
+
+00:11:35.840 --> 00:11:38.030
+for language as well.
+
+00:11:38.030 --> 00:11:42.020
+OK, so with all that, I think
+the right framing or mindset
+
+00:11:42.020 --> 00:11:44.250
+to have is, what is
+the best model one
+
+00:11:44.250 --> 00:11:47.880
+can build given a certain
+compute and data budget?
+
+00:11:47.880 --> 00:11:48.430
+OK.
+
+00:11:48.430 --> 00:11:50.220
+And this question
+makes sense no matter
+
+00:11:50.220 --> 00:11:56.670
+what scale you're at, because
+it's accuracy per resources.
+
+00:11:56.670 --> 00:11:58.890
+And of course, if you
+can raise the capital
+
+00:11:58.890 --> 00:12:01.210
+and get more resources,
+you'll get better models.
+
+00:12:01.210 --> 00:12:04.740
+But as researchers, our goal
+is to improve the efficiency
+
+00:12:04.740 --> 00:12:07.170
+of the algorithms.
+
+00:12:07.170 --> 00:12:09.550
+OK, so maximize efficiency.
+
+00:12:09.550 --> 00:12:12.390
+We're going to
+hear a lot of that.
+
+00:12:12.390 --> 00:12:18.630
+OK, so now let me talk a little
+bit about the current landscape.
+
+00:12:18.630 --> 00:12:23.520
+And a little bit of, I
+guess, obligatory history.
+
+00:12:23.520 --> 00:12:27.750
+So language models have
+been around for a while now.
+
+00:12:27.750 --> 00:12:31.710
+Going back to Shannon, who
+looked at language models
+
+00:12:31.710 --> 00:12:35.730
+as a way to estimate
+the entropy of English.
+
+00:12:35.730 --> 00:12:40.380
+I think in AI, they really
+were prominent in NLP,
+
+00:12:40.380 --> 00:12:42.370
+where they were a
+component of larger
+
+00:12:42.370 --> 00:12:45.020
+systems like machine translation
+and speech recognition.
+
+00:12:45.020 --> 00:12:48.460
+And one thing that's maybe
+not as appreciated these days
+
+00:12:48.460 --> 00:12:51.250
+is that if you
+look back in 2007,
+
+00:12:51.250 --> 00:12:55.430
+Google was training fairly
+large N-gram models.
+
+00:12:55.430 --> 00:12:57.560
+So 5-gram models, over
+two trillion tokens,
+
+00:12:57.560 --> 00:13:00.520
+which is a lot more
+tokens than GPT-3.
+
+00:13:00.520 --> 00:13:03.850
+And it was only, I guess,
+in the last two years
+
+00:13:03.850 --> 00:13:08.230
+that we've gotten to
+that in token count.
+
+00:13:08.230 --> 00:13:10.900
+But they were N-gram models,
+so they didn't really
+
+00:13:10.900 --> 00:13:12.580
+exhibit any of the
+interesting phenomena
+
+00:13:12.580 --> 00:13:15.220
+that we know of
+language models today.
+
+00:13:15.220 --> 00:13:18.930
+OK, so in the 2010s, I think a
+lot of the-- you can think about
+
+00:13:18.930 --> 00:13:19.430
+this.
+
+00:13:19.430 --> 00:13:21.490
+A lot of the deep
+learning revolution
+
+00:13:21.490 --> 00:13:25.940
+happened and a lot of the
+ingredients falling into place.
+
+00:13:25.940 --> 00:13:27.820
+Right, so there was the
+first neural language
+
+00:13:27.820 --> 00:13:32.180
+model from Joshua Bengio's
+group and back in 2003.
+
+00:13:32.180 --> 00:13:34.365
+There was seq-to-seq models.
+
+00:13:34.365 --> 00:13:37.900
+This, I think, was
+a big deal for,
+
+00:13:37.900 --> 00:13:41.180
+how do you basically
+model sequences?
+
+00:13:41.180 --> 00:13:45.530
+From Ilya and Google folks.
+
+00:13:45.530 --> 00:13:48.200
+There's an Adam
+optimizer, which still
+
+00:13:48.200 --> 00:13:52.580
+is used by the majority of
+people dating over a decade ago.
+
+00:13:52.580 --> 00:13:54.500
+There's a tension
+mechanism, which
+
+00:13:54.500 --> 00:14:00.260
+was developed in the context of
+machine translation, which then
+
+00:14:00.260 --> 00:14:03.570
+led up to the famous
+attention all you need,
+
+00:14:03.570 --> 00:14:07.140
+or AKA, the transformer
+paper in 2017.
+
+00:14:07.140 --> 00:14:10.230
+People were looking at how
+to scale mixture of experts.
+
+00:14:10.230 --> 00:14:16.460
+There was a lot of work around
+late 2010s on how to essentially
+
+00:14:16.460 --> 00:14:18.180
+do model parallelism.
+
+00:14:18.180 --> 00:14:19.940
+And they were
+actually figuring out
+
+00:14:19.940 --> 00:14:23.130
+how you could train 100
+billion parameter models.
+
+00:14:23.130 --> 00:14:25.640
+They didn't train it for
+very long, because these
+
+00:14:25.640 --> 00:14:27.420
+were more systems work.
+
+00:14:27.420 --> 00:14:34.070
+But all the ingredients were
+in place before by the time
+
+00:14:34.070 --> 00:14:37.710
+the 2020 came around.
+
+00:14:37.710 --> 00:14:43.620
+So I think one other trend,
+which was starting NLP,
+
+00:14:43.620 --> 00:14:46.320
+was the idea of these
+foundation models
+
+00:14:46.320 --> 00:14:48.450
+that could be trained
+on a lot of text
+
+00:14:48.450 --> 00:14:51.550
+and adapted to a wide
+range of downstream tasks.
+
+00:14:51.550 --> 00:14:55.360
+So ELMo, BERT, T5.
+
+00:14:55.360 --> 00:15:01.750
+These were models that were,
+for their time, very exciting.
+
+00:15:01.750 --> 00:15:04.170
+We maybe forget
+how excited people
+
+00:15:04.170 --> 00:15:05.770
+were about things like BERT.
+
+00:15:05.770 --> 00:15:09.300
+But it was a big deal.
+
+00:15:09.300 --> 00:15:11.680
+I mean, this is
+abbreviated history,
+
+00:15:11.680 --> 00:15:18.870
+but I think one critical
+piece of the puzzle is OpenAI.
+
+00:15:18.870 --> 00:15:24.120
+Taking these ingredients and
+applying very nice engineering
+
+00:15:24.120 --> 00:15:28.930
+and really pushing
+on the scaling laws.
+
+00:15:28.930 --> 00:15:32.650
+Embracing it as this
+is the mindset piece.
+
+00:15:32.650 --> 00:15:35.490
+And that led to GPT-2 and GPT-3.
+
+00:15:35.490 --> 00:15:43.420
+Google obviously was in the game
+and trying to compete as well.
+
+00:15:43.420 --> 00:15:48.760
+But that paved the way,
+I think, to another line
+
+00:15:48.760 --> 00:15:52.700
+of work, which is these
+were all closed models.
+
+00:15:52.700 --> 00:15:55.970
+So models that weren't released
+and you can only access via API.
+
+00:15:55.970 --> 00:15:59.200
+But there were also
+open models, starting
+
+00:15:59.200 --> 00:16:03.980
+with the early work by Eleuther
+right after GPT-3 came out.
+
+00:16:03.980 --> 00:16:08.620
+Meta's early attempt, which
+didn't work maybe as quite as
+
+00:16:08.620 --> 00:16:09.670
+well.
+
+00:16:09.670 --> 00:16:10.900
+BLOOM.
+
+00:16:10.900 --> 00:16:14.710
+And then Meta, Alibaba,
+DeepSeek, AI2, and there's
+
+00:16:14.710 --> 00:16:17.050
+a few others which
+I haven't listed,
+
+00:16:17.050 --> 00:16:22.120
+have been creating
+these open models where
+
+00:16:22.120 --> 00:16:24.640
+the weights are released.
+
+00:16:24.640 --> 00:16:28.220
+One other piece of, I think,
+tidbit about openness,
+
+00:16:28.220 --> 00:16:31.160
+I think is important, is that
+there's many levels of openness.
+
+00:16:31.160 --> 00:16:33.380
+There's closed
+models, like GPT-4.
+
+00:16:33.380 --> 00:16:37.460
+There's open weight models,
+where the weights are available.
+
+00:16:37.460 --> 00:16:39.680
+And there's actually a
+paper, a very nice paper
+
+00:16:39.680 --> 00:16:41.370
+with lots of
+architectural details,
+
+00:16:41.370 --> 00:16:44.550
+but no details
+about the data set.
+
+00:16:44.550 --> 00:16:48.890
+And then there's open source
+models, where all the weights
+
+00:16:48.890 --> 00:16:50.040
+and data are available.
+
+00:16:50.040 --> 00:16:52.070
+And the paper where
+they're honestly trying
+
+00:16:52.070 --> 00:16:56.030
+to explain as much as they can.
+
+00:16:56.030 --> 00:17:00.090
+But of course, you can't really
+capture everything in a paper,
+
+00:17:00.090 --> 00:17:03.560
+and there's no substitute
+for learning how to build it
+
+00:17:03.560 --> 00:17:06.380
+except for doing it yourself.
+
+00:17:06.380 --> 00:17:08.940
+OK, so that leads
+to the present day,
+
+00:17:08.940 --> 00:17:15.480
+where there's a whole host of
+frontier models from OpenAI,
+
+00:17:15.480 --> 00:17:19.410
+Anthropic, xAI, Google, Meta,
+DeepSeek, Alibaba, Tencent,
+
+00:17:19.410 --> 00:17:25.790
+and probably a few others that
+dominate the current landscape.
+
+00:17:25.790 --> 00:17:31.550
+So we're in an interesting
+time, where just to reflect,
+
+00:17:31.550 --> 00:17:34.410
+a lot of the ingredients,
+like I said, were developed.
+
+00:17:34.410 --> 00:17:35.910
+Which is good,
+because I think we're
+
+00:17:35.910 --> 00:17:39.330
+going to revisit some
+of those ingredients
+
+00:17:39.330 --> 00:17:42.670
+and trace how these
+techniques work.
+
+00:17:42.670 --> 00:17:46.080
+And then we're going to try
+to move as close as we can
+
+00:17:46.080 --> 00:17:49.840
+to best practices
+on frontier models,
+
+00:17:49.840 --> 00:17:56.940
+but using information from
+essentially the open community.
+
+00:17:56.940 --> 00:18:00.300
+And reading between the lines
+from what we know about the
+
+00:18:00.300 --> 00:18:02.910
+closed models.
+
+00:18:02.910 --> 00:18:07.470
+OK, so just as an interlude.
+
+00:18:07.470 --> 00:18:10.150
+So what are you looking at here?
+
+00:18:10.150 --> 00:18:14.890
+So this is an
+executable lecture.
+
+00:18:14.890 --> 00:18:17.580
+So it's a program where
+I'm stepping through,
+
+00:18:17.580 --> 00:18:19.450
+and it delivers the
+content of lecture.
+
+00:18:19.450 --> 00:18:22.260
+So one thing that I
+think is interesting here
+
+00:18:22.260 --> 00:18:25.000
+is that you can embed code.
+
+00:18:25.000 --> 00:18:28.930
+So you can just
+step through code.
+
+00:18:28.930 --> 00:18:31.450
+And I think this is a smaller
+screen than I'm used to,
+
+00:18:31.450 --> 00:18:34.150
+but you can look at the
+environment variables
+
+00:18:34.150 --> 00:18:35.780
+as you're stepping through code.
+
+00:18:35.780 --> 00:18:38.530
+So that's useful
+later when we start
+
+00:18:38.530 --> 00:18:42.075
+actually trying to drill down
+and giving code examples.
+
+00:18:42.075 --> 00:18:44.200
+You can see the hierarchical
+structure of a lecture
+
+00:18:44.200 --> 00:18:46.090
+like we're in this
+module and you can see
+
+00:18:46.090 --> 00:18:48.520
+where it was called from main.
+
+00:18:48.520 --> 00:18:52.970
+And you can jump to definitions,
+like supervised fine tuning,
+
+00:18:52.970 --> 00:18:55.930
+which we'll talk about later.
+
+00:18:55.930 --> 00:18:56.510
+OK.
+
+00:18:56.510 --> 00:19:00.490
+And if you think this looks
+like a Python program,
+
+00:19:00.490 --> 00:19:03.220
+well, it is a Python program.
+
+00:19:03.220 --> 00:19:09.040
+But I've processed it so
+for your viewing pleasure.
+
+00:19:09.040 --> 00:19:11.500
+OK.
+
+00:19:11.500 --> 00:19:16.530
+So let's move on to the
+course logistics now.
+
+00:19:19.300 --> 00:19:22.960
+Actually, maybe I'll
+pause for questions.
+
+00:19:22.960 --> 00:19:30.470
+Any questions about what
+we're learning in this class?
+
+00:19:30.470 --> 00:19:31.940
+Yeah.
+
+00:19:31.940 --> 00:19:35.540
+So would you expect
+graduates in this class
+
+00:19:35.540 --> 00:19:37.880
+to be able to lead a
+team to build a frontier
+
+00:19:37.880 --> 00:19:41.300
+model or other
+skills [INAUDIBLE]?
+
+00:19:41.300 --> 00:19:43.790
+So the question is,
+would I expect a graduate
+
+00:19:43.790 --> 00:19:45.770
+from this class to be
+able to lead a team
+
+00:19:45.770 --> 00:19:47.010
+and build a frontier model?
+
+00:19:47.010 --> 00:19:50.310
+Of course with $1
+billion of capital.
+
+00:19:50.310 --> 00:19:51.860
+Yeah, of course.
+
+00:19:51.860 --> 00:19:55.200
+I would say that
+it's a good step.
+
+00:19:55.200 --> 00:19:59.850
+But there's definitely many
+pieces that are missing.
+
+00:19:59.850 --> 00:20:02.450
+And I think we thought
+about we should really
+
+00:20:02.450 --> 00:20:07.460
+teach a series of classes that
+eventually leads up to as close
+
+00:20:07.460 --> 00:20:08.160
+as we can get.
+
+00:20:08.160 --> 00:20:12.447
+But I think this is maybe
+the first step of the puzzle.
+
+00:20:12.447 --> 00:20:14.030
+But there are a lot
+of things, and I'm
+
+00:20:14.030 --> 00:20:15.630
+happy to talk
+offline about that.
+
+00:20:15.630 --> 00:20:16.860
+But I like the ambition.
+
+00:20:16.860 --> 00:20:18.200
+Yeah.
+
+00:20:18.200 --> 00:20:20.460
+That's what you should be
+doing, taking the class
+
+00:20:20.460 --> 00:20:23.386
+so you can go lead teams
+and build frontier models.
+
+00:20:23.386 --> 00:20:23.886
+OK.
+
+00:20:27.078 --> 00:20:30.310
+OK, let's talk a little
+bit about the course.
+
+00:20:30.310 --> 00:20:31.640
+So here's a website.
+
+00:20:31.640 --> 00:20:32.780
+Everything's online.
+
+00:20:32.780 --> 00:20:36.940
+This is a five unit class.
+
+00:20:36.940 --> 00:20:41.140
+But I think that maybe it
+doesn't express the level
+
+00:20:41.140 --> 00:20:43.840
+here as well as this
+quote that I pulled out
+
+00:20:43.840 --> 00:20:45.598
+from a course evaluation.
+
+00:20:45.598 --> 00:20:47.890
+The entire assignment was
+approximately the same amount
+
+00:20:47.890 --> 00:20:51.930
+of work as all five assignments
+from the CS 224n plus the final
+
+00:20:51.930 --> 00:20:52.430
+project.
+
+00:20:52.430 --> 00:20:54.138
+And that's the first
+homework assignment.
+
+00:20:54.138 --> 00:21:00.910
+So not to scare you off, but
+just giving some data here.
+
+00:21:00.910 --> 00:21:04.330
+So why should you endure that?
+
+00:21:04.330 --> 00:21:05.480
+Why should you do it?
+
+00:21:05.480 --> 00:21:07.930
+I think this class
+is really for people
+
+00:21:07.930 --> 00:21:11.290
+who have this obsessive
+need to understand
+
+00:21:11.290 --> 00:21:15.830
+how things work, all the way
+down to the atom, so to speak.
+
+00:21:15.830 --> 00:21:19.490
+And I think when you
+get through this class,
+
+00:21:19.490 --> 00:21:21.190
+I think you will have
+really leveled up
+
+00:21:21.190 --> 00:21:23.240
+in terms of your
+research, engineering,
+
+00:21:23.240 --> 00:21:24.970
+and the level of
+comfort that you'll
+
+00:21:24.970 --> 00:21:29.160
+have in building ML systems at
+scale will just be, I think,
+
+00:21:29.160 --> 00:21:31.110
+something.
+
+00:21:31.110 --> 00:21:33.210
+There's also a bunch
+of reasons that you
+
+00:21:33.210 --> 00:21:34.840
+shouldn't take the class.
+
+00:21:34.840 --> 00:21:38.650
+For example, if you want to get
+any research done this quarter,
+
+00:21:38.650 --> 00:21:40.810
+maybe this class isn't for you.
+
+00:21:40.810 --> 00:21:44.040
+If you're interested in
+learning just about the hottest
+
+00:21:44.040 --> 00:21:47.280
+new techniques, there
+are many other classes
+
+00:21:47.280 --> 00:21:49.350
+that can probably
+deliver on that
+
+00:21:49.350 --> 00:21:52.350
+better than, for
+example, you spending
+
+00:21:52.350 --> 00:21:55.410
+a lot of time debugging BPE.
+
+00:21:55.410 --> 00:21:58.020
+And this is really,
+I think, a class
+
+00:21:58.020 --> 00:22:01.920
+about the primitives and
+learning things bottom
+
+00:22:01.920 --> 00:22:06.570
+up as opposed to the latest.
+
+00:22:06.570 --> 00:22:10.380
+And also if you're interested
+in building language models
+
+00:22:10.380 --> 00:22:17.880
+or forex, this is probably not
+the first class you would take.
+
+00:22:17.880 --> 00:22:21.690
+I think, practically
+speaking, as much
+
+00:22:21.690 --> 00:22:24.550
+as I made fun of prompting,
+prompting is great.
+
+00:22:24.550 --> 00:22:25.530
+Fine tuning is great.
+
+00:22:25.530 --> 00:22:28.320
+If you can do that
+and it works, then I
+
+00:22:28.320 --> 00:22:31.330
+think that is something you
+should absolutely start with.
+
+00:22:31.330 --> 00:22:34.350
+So I don't want people
+taking this class
+
+00:22:34.350 --> 00:22:37.260
+and thinking that, great,
+any problem, the first step
+
+00:22:37.260 --> 00:22:39.400
+is to train a language
+model from scratch.
+
+00:22:39.400 --> 00:22:44.070
+That is not the right
+way of thinking about it.
+
+00:22:44.070 --> 00:22:44.954
+OK.
+
+00:22:44.954 --> 00:22:48.780
+And I know that many of you--
+
+00:22:48.780 --> 00:22:51.330
+some of you are
+enrolled, but we did
+
+00:22:51.330 --> 00:22:53.830
+have a cap, so we weren't
+able to enroll everyone.
+
+00:22:53.830 --> 00:22:58.112
+And although for the people
+online, you can follow at home,
+
+00:22:58.112 --> 00:22:59.820
+all the lecture
+materials and assignments
+
+00:22:59.820 --> 00:23:02.560
+are online, so you
+can look at them.
+
+00:23:02.560 --> 00:23:05.520
+The lectures are also
+recorded and will
+
+00:23:05.520 --> 00:23:08.160
+be put on YouTube,
+although there will be
+
+00:23:08.160 --> 00:23:11.370
+some number of week lag there.
+
+00:23:11.370 --> 00:23:14.410
+And also we'll offer
+this class next year.
+
+00:23:14.410 --> 00:23:18.490
+So if you were not able to
+take it this year, don't fret,
+
+00:23:18.490 --> 00:23:21.000
+there will be next time.
+
+00:23:21.000 --> 00:23:25.840
+OK, so the class has
+five assignments.
+
+00:23:25.840 --> 00:23:31.360
+And each of the assignments, we
+don't provide scaffolding code.
+
+00:23:31.360 --> 00:23:34.930
+In the sense that
+literally giving you
+
+00:23:34.930 --> 00:23:39.370
+a blank file and you're
+supposed to build things up.
+
+00:23:39.370 --> 00:23:43.690
+And in the spirit of
+building from scratch.
+
+00:23:43.690 --> 00:23:46.060
+But we're not that mean.
+
+00:23:46.060 --> 00:23:48.910
+We do provide unit tests
+and some adapter interfaces
+
+00:23:48.910 --> 00:23:53.600
+that allow you to check
+correctness of different pieces.
+
+00:23:53.600 --> 00:23:55.310
+And also the
+assignment write-up,
+
+00:23:55.310 --> 00:23:57.130
+if you walk through
+it, does do it
+
+00:23:57.130 --> 00:23:59.300
+for a gentle job of doing that.
+
+00:23:59.300 --> 00:24:04.240
+But you are on your own for
+making good software design
+
+00:24:04.240 --> 00:24:06.610
+decisions and figuring out
+what you name your functions
+
+00:24:06.610 --> 00:24:08.600
+and how to organize your code.
+
+00:24:08.600 --> 00:24:13.180
+Which is a useful
+skill, I think.
+
+00:24:13.180 --> 00:24:16.270
+So one strategy I think,
+for all assignments
+
+00:24:16.270 --> 00:24:17.990
+is that there is a
+piece of assignment,
+
+00:24:17.990 --> 00:24:21.490
+which is just implement
+the thing and make sure
+
+00:24:21.490 --> 00:24:22.160
+it's correct.
+
+00:24:22.160 --> 00:24:26.130
+That mostly you can do
+locally on your laptop.
+
+00:24:26.130 --> 00:24:27.690
+You shouldn't need
+compute for that.
+
+00:24:27.690 --> 00:24:31.130
+And then we have
+a cluster that you
+
+00:24:31.130 --> 00:24:35.240
+can run for benchmarking
+both accuracy and speed.
+
+00:24:35.240 --> 00:24:37.760
+Right, so I want
+everyone to embrace
+
+00:24:37.760 --> 00:24:42.330
+this idea of that you want
+to use a small data set
+
+00:24:42.330 --> 00:24:45.380
+or as few resources as
+possible to prototype
+
+00:24:45.380 --> 00:24:47.140
+before running large jobs.
+
+00:24:47.140 --> 00:24:49.640
+You shouldn't be debugging with
+one billion parameter models
+
+00:24:49.640 --> 00:24:52.970
+on the cluster if
+you can help it.
+
+00:24:52.970 --> 00:24:54.950
+OK.
+
+00:24:54.950 --> 00:24:59.990
+There's some assignments which
+will have a leaderboard, which
+
+00:24:59.990 --> 00:25:02.990
+usually is of the
+form, do things
+
+00:25:02.990 --> 00:25:06.290
+to make perplexity go down given
+a particular training budget.
+
+00:25:06.290 --> 00:25:09.770
+Last year it was, I
+think, pretty exciting
+
+00:25:09.770 --> 00:25:14.630
+for people to try different
+things that you either
+
+00:25:14.630 --> 00:25:18.650
+learn from the class
+or you read online.
+
+00:25:18.650 --> 00:25:22.710
+And then finally, I
+guess this year is--
+
+00:25:22.710 --> 00:25:24.960
+this was less of a
+problem last year,
+
+00:25:24.960 --> 00:25:26.770
+because I guess
+Copilot wasn't as good.
+
+00:25:26.770 --> 00:25:28.860
+But Cursor's pretty good.
+
+00:25:28.860 --> 00:25:35.550
+So I think our general strategy
+is that AI tools can take away
+
+00:25:35.550 --> 00:25:38.400
+from learning, because there are
+cases where it can just solve
+
+00:25:38.400 --> 00:25:40.900
+the thing you want it to do.
+
+00:25:40.900 --> 00:25:44.950
+But I think you can obviously
+use them judiciously.
+
+00:25:44.950 --> 00:25:46.540
+But use it at your own risk.
+
+00:25:46.540 --> 00:25:51.030
+You're responsible for your
+own learning experience here.
+
+00:25:51.030 --> 00:25:54.070
+OK, so we do have a cluster.
+
+00:25:54.070 --> 00:25:56.340
+So thank you, Together
+AI, for providing
+
+00:25:56.340 --> 00:25:58.680
+a bunch of H100s for us.
+
+00:25:58.680 --> 00:26:02.040
+There's a guide to please
+read it carefully to learn
+
+00:26:02.040 --> 00:26:03.780
+how to use the cluster.
+
+00:26:03.780 --> 00:26:06.760
+And start your
+assignments early,
+
+00:26:06.760 --> 00:26:11.100
+because the cluster will fill
+up towards the end of a deadline
+
+00:26:11.100 --> 00:26:14.390
+as everyone's trying to
+get their large runs in.
+
+00:26:17.010 --> 00:26:19.200
+OK.
+
+00:26:19.200 --> 00:26:20.740
+Any questions about that?
+
+00:26:20.740 --> 00:26:22.910
+You mentioned it was a
+five unit process before.
+
+00:26:22.910 --> 00:26:25.030
+We were able to sign
+up for [INAUDIBLE].
+
+00:26:26.860 --> 00:26:27.500
+Right.
+
+00:26:27.500 --> 00:26:30.290
+So the question is, can you sign
+up for less than five units.
+
+00:26:30.290 --> 00:26:33.190
+I think administratively,
+if you have to sign up
+
+00:26:33.190 --> 00:26:35.480
+for less, that is possible.
+
+00:26:35.480 --> 00:26:38.000
+But it's the same class
+and the same workload.
+
+00:26:38.000 --> 00:26:40.600
+Yeah.
+
+00:26:40.600 --> 00:26:42.646
+Any other questions?
+
+00:26:46.030 --> 00:26:48.255
+OK.
+
+00:26:48.255 --> 00:26:51.580
+So in this part, I'm
+going to go through all
+
+00:26:51.580 --> 00:26:53.530
+the different
+components of the course
+
+00:26:53.530 --> 00:26:56.230
+and just give a broad
+overview, a preview of what
+
+00:26:56.230 --> 00:26:58.510
+you're going to experience.
+
+00:26:58.510 --> 00:27:00.440
+So remember, it's
+all about efficiency.
+
+00:27:00.440 --> 00:27:03.520
+Given hardware and
+data, how do you
+
+00:27:03.520 --> 00:27:06.560
+train the best model
+given your resources?
+
+00:27:06.560 --> 00:27:10.060
+So for example, if I give you a
+Common Crawl dump, a web dump,
+
+00:27:10.060 --> 00:27:14.080
+and 32 H100s for two
+weeks, what should you do?
+
+00:27:14.080 --> 00:27:17.590
+There are a lot of
+different design decisions.
+
+00:27:17.590 --> 00:27:20.990
+There's questions about the
+tokenizer, the architecture,
+
+00:27:20.990 --> 00:27:24.930
+systems optimizations you can
+do, data things you can do.
+
+00:27:24.930 --> 00:27:29.510
+And we've organized the
+class into these five units
+
+00:27:29.510 --> 00:27:30.810
+or pillars.
+
+00:27:30.810 --> 00:27:35.750
+So I'm going to go through
+each of them in turn
+
+00:27:35.750 --> 00:27:37.940
+and talk about what
+we'll cover, what
+
+00:27:37.940 --> 00:27:40.530
+the assignment will involve.
+
+00:27:40.530 --> 00:27:43.460
+And then I'll wrap up.
+
+00:27:43.460 --> 00:27:46.160
+OK, so the goal
+of the basics unit
+
+00:27:46.160 --> 00:27:49.830
+is just get a basic version
+of a full pipeline working.
+
+00:27:49.830 --> 00:27:53.570
+So here, you implement a
+tokenizer, model architecture,
+
+00:27:53.570 --> 00:27:54.740
+and training.
+
+00:27:54.740 --> 00:27:57.810
+So I'll just say a bit more
+about what these components are.
+
+00:27:57.810 --> 00:28:02.930
+So a tokenizer is something
+that converts between strings
+
+00:28:02.930 --> 00:28:05.490
+and sequences of integers.
+
+00:28:05.490 --> 00:28:08.480
+Intuitively, you can think
+about the integers corresponding
+
+00:28:08.480 --> 00:28:12.980
+to breaking up the
+string into segments
+
+00:28:12.980 --> 00:28:15.170
+and mapping each
+segment to an integer.
+
+00:28:15.170 --> 00:28:18.780
+And the idea is that
+your sequence of integers
+
+00:28:18.780 --> 00:28:20.820
+is what goes into the
+actual model, which
+
+00:28:20.820 --> 00:28:23.970
+has to be a fixed dimension.
+
+00:28:23.970 --> 00:28:26.190
+OK, so in this
+course, we'll talk
+
+00:28:26.190 --> 00:28:32.520
+about the byte pair encoding BPE
+tokenizer, which is relatively
+
+00:28:32.520 --> 00:28:38.430
+simple and still is used.
+
+00:28:38.430 --> 00:28:43.710
+There are a promising
+set of methods
+
+00:28:43.710 --> 00:28:45.310
+on tokenizer-free approaches.
+
+00:28:45.310 --> 00:28:49.200
+So these are methods that
+just start with the raw bytes
+
+00:28:49.200 --> 00:28:52.800
+and don't do
+tokenization and develop
+
+00:28:52.800 --> 00:28:56.970
+a particular architecture
+that just takes the raw bytes.
+
+00:28:56.970 --> 00:28:58.570
+This work is promising.
+
+00:28:58.570 --> 00:29:02.980
+But so far, I haven't seen it
+been scaled to the frontier yet.
+
+00:29:02.980 --> 00:29:05.940
+So we'll go with BP for now.
+
+00:29:05.940 --> 00:29:06.490
+OK.
+
+00:29:06.490 --> 00:29:09.900
+So once you've tokenized
+your sequence or strings
+
+00:29:09.900 --> 00:29:14.340
+into a sequence of integers, now
+we define a model architecture
+
+00:29:14.340 --> 00:29:16.340
+over these sequences.
+
+00:29:16.340 --> 00:29:20.920
+So the starting point here
+is original transformer.
+
+00:29:20.920 --> 00:29:28.060
+That's what is the backbone of
+basically all frontier models.
+
+00:29:28.060 --> 00:29:30.940
+And here's our
+architectural diagram.
+
+00:29:30.940 --> 00:29:36.110
+We won't go into details here,
+but there's a tension piece
+
+00:29:36.110 --> 00:29:42.910
+and then there's a MLP layer
+with some normalization.
+
+00:29:42.910 --> 00:29:48.020
+So a lot has actually
+happened since 2017, right.
+
+00:29:48.020 --> 00:29:51.460
+And I think there's a sense to
+which all the transformer was
+
+00:29:51.460 --> 00:29:54.010
+invented and then everyone's
+just using transformer.
+
+00:29:54.010 --> 00:29:55.910
+And to a first
+approximation, that's true.
+
+00:29:55.910 --> 00:29:57.590
+We're still using
+the same recipe.
+
+00:29:57.590 --> 00:30:02.440
+But there have been a bunch
+of smaller improvements that
+
+00:30:02.440 --> 00:30:05.450
+do make a substantial difference
+when you add them all up.
+
+00:30:05.450 --> 00:30:11.120
+So for example, there is the
+non-linear activation function.
+
+00:30:11.120 --> 00:30:13.580
+So SwiGLU, which we saw
+a little bit before.
+
+00:30:13.580 --> 00:30:14.940
+Positional embeddings.
+
+00:30:14.940 --> 00:30:17.570
+There's new
+positional embeddings.
+
+00:30:17.570 --> 00:30:20.420
+These rotary positional
+embeddings, which we'll
+
+00:30:20.420 --> 00:30:22.400
+talk about.
+
+00:30:22.400 --> 00:30:24.860
+Normalization.
+
+00:30:24.860 --> 00:30:26.628
+Instead of using
+layer norm, we're
+
+00:30:26.628 --> 00:30:28.670
+going to look at something
+called RMS norm, which
+
+00:30:28.670 --> 00:30:30.830
+is similar but simpler.
+
+00:30:30.830 --> 00:30:33.500
+There's a question of where you
+place the normalization which
+
+00:30:33.500 --> 00:30:36.530
+has been changed from
+the original transformer.
+
+00:30:36.530 --> 00:30:41.070
+The MLP use the canonical
+version is a dense MLP,
+
+00:30:41.070 --> 00:30:44.240
+and you can replace that
+with mixture of experts.
+
+00:30:44.240 --> 00:30:47.690
+Attention is something that
+has actually been gaining
+
+00:30:47.690 --> 00:30:50.570
+a lot of attention, I guess.
+
+00:30:50.570 --> 00:30:53.870
+There's full attention,
+and then there's
+
+00:30:53.870 --> 00:30:56.100
+sliding window attention
+and linear attention.
+
+00:30:56.100 --> 00:30:59.790
+All of these are trying to
+prevent the quadratic blowup.
+
+00:30:59.790 --> 00:31:04.710
+There's also lower dimensional
+versions, like GQA and MLA,
+
+00:31:04.710 --> 00:31:07.220
+which we'll get to in a second.
+
+00:31:07.220 --> 00:31:10.320
+Or not in a second, but
+in a future lecture.
+
+00:31:10.320 --> 00:31:13.620
+And then the most
+maybe radical thing
+
+00:31:13.620 --> 00:31:17.080
+is other alternatives
+to the transformer,
+
+00:31:17.080 --> 00:31:18.880
+like state space
+models like Hyena,
+
+00:31:18.880 --> 00:31:22.540
+where they're not
+doing attention,
+
+00:31:22.540 --> 00:31:25.900
+but some other operation.
+
+00:31:25.900 --> 00:31:29.370
+And sometimes you get
+best of both worlds
+
+00:31:29.370 --> 00:31:32.670
+by mixing, making a hybrid
+model that mixes these
+
+00:31:32.670 --> 00:31:35.502
+in with transformers.
+
+00:31:35.502 --> 00:31:39.160
+OK, so once you define your
+architecture, you need to train.
+
+00:31:39.160 --> 00:31:42.880
+So design decisions
+include optimizer.
+
+00:31:42.880 --> 00:31:48.420
+So AdamW, which is a variant
+basically Adam fixed up,
+
+00:31:48.420 --> 00:31:51.070
+is still very prominent.
+
+00:31:51.070 --> 00:31:52.570
+So we'll mostly work with that.
+
+00:31:52.570 --> 00:31:54.690
+But it is worth
+mentioning that there
+
+00:31:54.690 --> 00:31:57.390
+is more recent optimizers
+like Muon and SOAP
+
+00:31:57.390 --> 00:32:00.330
+that have shown promise.
+
+00:32:00.330 --> 00:32:02.490
+Learning rate schedule.
+
+00:32:02.490 --> 00:32:04.230
+Batch size.
+
+00:32:04.230 --> 00:32:06.400
+Whether you do
+regularization or not.
+
+00:32:06.400 --> 00:32:07.380
+Hyperparameters.
+
+00:32:07.380 --> 00:32:10.300
+There's a lot of details here.
+
+00:32:10.300 --> 00:32:15.260
+And I think this class is one
+where the details do matter,
+
+00:32:15.260 --> 00:32:17.770
+because you can easily
+have order of magnitude
+
+00:32:17.770 --> 00:32:20.890
+difference between a
+well tuned architecture
+
+00:32:20.890 --> 00:32:24.310
+and something that's just
+a vanilla transformer.
+
+00:32:24.310 --> 00:32:27.070
+So in Assignment
+1, basically you'll
+
+00:32:27.070 --> 00:32:30.220
+implement the BPE tokenizer.
+
+00:32:30.220 --> 00:32:33.910
+I'll warn you that
+this is actually
+
+00:32:33.910 --> 00:32:38.870
+the part that seems to have
+been a lot of surprising,
+
+00:32:38.870 --> 00:32:40.610
+maybe a lot of work for people.
+
+00:32:40.610 --> 00:32:43.940
+So just, you're warned.
+
+00:32:43.940 --> 00:32:48.640
+And you also implement the
+transformer cross-entropy loss,
+
+00:32:48.640 --> 00:32:50.750
+the AdamW optimizer
+and training loop.
+
+00:32:50.750 --> 00:32:52.460
+So again, the whole stack.
+
+00:32:52.460 --> 00:32:57.800
+And we're not making you
+implement PyTorch from scratch.
+
+00:32:57.800 --> 00:32:59.470
+So you can use PyTorch.
+
+00:32:59.470 --> 00:33:03.400
+But you can't use the
+transformer implementation
+
+00:33:03.400 --> 00:33:04.840
+for PyTorch.
+
+00:33:04.840 --> 00:33:08.740
+There's a small list of
+functions that you can use,
+
+00:33:08.740 --> 00:33:10.870
+and you can only use those.
+
+00:33:10.870 --> 00:33:15.040
+OK, so we're going to
+have some tiny stories
+
+00:33:15.040 --> 00:33:17.570
+and open web text data
+sets that you'll train on.
+
+00:33:17.570 --> 00:33:19.780
+And then there will
+be a leaderboard
+
+00:33:19.780 --> 00:33:22.570
+to minimize the OpenWeb
+text perplexity.
+
+00:33:22.570 --> 00:33:26.660
+We'll give you 90 minutes on an
+H100 and see what you can do.
+
+00:33:26.660 --> 00:33:30.190
+So this is last year.
+
+00:33:30.190 --> 00:33:31.850
+So see, we have the top.
+
+00:33:31.850 --> 00:33:34.690
+So this is the number
+to beat for this year.
+
+00:33:34.690 --> 00:33:37.000
+OK.
+
+00:33:37.000 --> 00:33:38.060
+All right.
+
+00:33:38.060 --> 00:33:39.610
+So that's the basics.
+
+00:33:39.610 --> 00:33:45.170
+Now after basics, I mean, in
+some sense, you're done, right.
+
+00:33:45.170 --> 00:33:48.380
+You have ability to
+train a transformer.
+
+00:33:48.380 --> 00:33:50.170
+What else do you need?
+
+00:33:50.170 --> 00:33:55.450
+So the system part
+really goes into how
+
+00:33:55.450 --> 00:33:57.418
+you can optimize this further.
+
+00:33:57.418 --> 00:33:59.210
+So how do you get the
+most out of hardware?
+
+00:33:59.210 --> 00:34:02.860
+And for this, we need to take
+a closer look at the hardware
+
+00:34:02.860 --> 00:34:05.450
+and how we can leverage it.
+
+00:34:05.450 --> 00:34:08.050
+So there's kernels,
+parallelism, and inference
+
+00:34:08.050 --> 00:34:10.909
+are the three
+components of this unit.
+
+00:34:10.909 --> 00:34:15.280
+So OK, so to first
+talk about kernels.
+
+00:34:15.280 --> 00:34:18.639
+Let's talk a little bit
+about what a GPU looks like.
+
+00:34:18.639 --> 00:34:23.469
+OK, so a GPU, which
+we'll get much more into,
+
+00:34:23.469 --> 00:34:30.850
+is basically a huge array
+of these little units that
+
+00:34:30.850 --> 00:34:33.940
+do floating point operations.
+
+00:34:33.940 --> 00:34:38.900
+And maybe the one thing to note
+is that this is the GPU chip,
+
+00:34:38.900 --> 00:34:44.889
+and here is the memory
+that's actually off chip.
+
+00:34:44.889 --> 00:34:48.489
+And then there's some other
+memory, like L2 caches
+
+00:34:48.489 --> 00:34:50.270
+and L1 caches on chip.
+
+00:34:50.270 --> 00:34:55.790
+And so the basic idea is that
+compute has to happen here.
+
+00:34:55.790 --> 00:34:57.800
+Your data might
+be somewhere else.
+
+00:34:57.800 --> 00:35:00.550
+And how do you basically
+organize your compute
+
+00:35:00.550 --> 00:35:04.640
+so that you can
+be most efficient?
+
+00:35:04.640 --> 00:35:10.220
+So one quick analogy is
+imagine that your memory
+
+00:35:10.220 --> 00:35:15.590
+is where you can store your
+data and the model parameters is
+
+00:35:15.590 --> 00:35:16.790
+like a warehouse.
+
+00:35:16.790 --> 00:35:20.310
+And your compute is
+like the factory.
+
+00:35:20.310 --> 00:35:24.680
+And what ends up
+being a big bottleneck
+
+00:35:24.680 --> 00:35:28.490
+is just data movement
+costs, all right.
+
+00:35:28.490 --> 00:35:32.280
+So the thing that
+we have to do is,
+
+00:35:32.280 --> 00:35:36.060
+how do you organize the compute,
+even a matrix multiplication,
+
+00:35:36.060 --> 00:35:39.830
+to maximize the
+utilization of the GPUs
+
+00:35:39.830 --> 00:35:42.300
+by minimizing the data movement?
+
+00:35:42.300 --> 00:35:43.730
+And there's a
+bunch of techniques
+
+00:35:43.730 --> 00:35:48.630
+like fusion and tiling
+that allow you to do that.
+
+00:35:48.630 --> 00:35:50.670
+So we'll get all into
+the details of that.
+
+00:35:50.670 --> 00:35:54.770
+And to implement and
+leverage the kernel,
+
+00:35:54.770 --> 00:35:56.580
+we're going to look at Triton.
+
+00:35:56.580 --> 00:35:58.820
+There's other things you
+can do with various levels
+
+00:35:58.820 --> 00:36:00.950
+of sophistication,
+but we're going
+
+00:36:00.950 --> 00:36:02.570
+to use Triton,
+which is developed
+
+00:36:02.570 --> 00:36:05.622
+by OpenAI in a popular
+way to build kernels.
+
+00:36:05.622 --> 00:36:07.330
+OK, so we're going to
+write some kernels.
+
+00:36:07.330 --> 00:36:08.830
+That's for one GPU.
+
+00:36:08.830 --> 00:36:16.200
+So now, in general, you have
+these big runs take 10,000s,
+
+00:36:16.200 --> 00:36:18.610
+if not tens of
+thousands of GPUs.
+
+00:36:18.610 --> 00:36:22.020
+But even at eight, it
+starts becoming interesting,
+
+00:36:22.020 --> 00:36:26.610
+because you have a lot of GPUs
+that are connected to some CPU
+
+00:36:26.610 --> 00:36:27.190
+nodes.
+
+00:36:27.190 --> 00:36:32.850
+And they also are directly
+connected via NVSwitch, NVLink.
+
+00:36:32.850 --> 00:36:38.608
+And it's the same idea, right.
+
+00:36:38.608 --> 00:36:40.650
+The only thing is that
+data movement between GPUs
+
+00:36:40.650 --> 00:36:42.471
+is even slower.
+
+00:36:42.471 --> 00:36:45.390
+Right, and so we
+need to figure out
+
+00:36:45.390 --> 00:36:51.510
+how to put model parameters
+and activations and gradients
+
+00:36:51.510 --> 00:36:54.780
+and put them on the GPUs
+and do the computation
+
+00:36:54.780 --> 00:36:58.710
+and to minimize the
+amount of movement.
+
+00:36:58.710 --> 00:37:00.450
+And then so we're
+going to explore
+
+00:37:00.450 --> 00:37:04.630
+different type of techniques,
+like data parallelism and tensor
+
+00:37:04.630 --> 00:37:06.590
+parallelism, and so on.
+
+00:37:06.590 --> 00:37:11.080
+So that's all I'll
+say about that.
+
+00:37:11.080 --> 00:37:14.410
+And finally,
+inference is something
+
+00:37:14.410 --> 00:37:18.940
+that we didn't actually
+do last year in the class.
+
+00:37:18.940 --> 00:37:20.710
+Although we had a guest lecture.
+
+00:37:20.710 --> 00:37:26.410
+But this is important, because
+inference is how you actually
+
+00:37:26.410 --> 00:37:27.350
+use a model.
+
+00:37:27.350 --> 00:37:30.280
+Right, it's basically the
+task of generating tokens
+
+00:37:30.280 --> 00:37:32.870
+given a prompt, given
+a trained model.
+
+00:37:32.870 --> 00:37:35.410
+And it also turns
+out to be really
+
+00:37:35.410 --> 00:37:37.690
+useful for a bunch
+of other things
+
+00:37:37.690 --> 00:37:42.320
+besides just chatting
+with your favorite model.
+
+00:37:42.320 --> 00:37:45.140
+You need it for reinforcement
+learning, test time compute,
+
+00:37:45.140 --> 00:37:48.050
+which has been very
+popular lately.
+
+00:37:48.050 --> 00:37:51.590
+And even evaluating models,
+you need to do inference.
+
+00:37:51.590 --> 00:37:54.940
+So we're going to spend some
+time talking about inference.
+
+00:37:54.940 --> 00:37:57.590
+Actually, if you
+think about globally,
+
+00:37:57.590 --> 00:38:02.640
+the cost that's
+spent on inference,
+
+00:38:02.640 --> 00:38:07.730
+it's eclipsing the cost that
+it's used to train models.
+
+00:38:07.730 --> 00:38:10.950
+Because training, despite
+it being very intensive,
+
+00:38:10.950 --> 00:38:12.630
+is ultimately a one-time cost.
+
+00:38:12.630 --> 00:38:16.740
+And inference is-- cost
+scales with every use.
+
+00:38:16.740 --> 00:38:19.830
+And the more people
+use your model,
+
+00:38:19.830 --> 00:38:23.300
+the more you'll need
+inference to be efficient.
+
+00:38:23.300 --> 00:38:29.340
+OK, so in inference,
+there's two phases.
+
+00:38:29.340 --> 00:38:30.740
+There's a pre-fill and a decode.
+
+00:38:30.740 --> 00:38:33.140
+Pre-fill is you take
+the prompt and you
+
+00:38:33.140 --> 00:38:36.780
+can run it through the model
+and get some activations.
+
+00:38:36.780 --> 00:38:40.190
+And then decode is you go
+autoregressively one by one
+
+00:38:40.190 --> 00:38:41.990
+and generate tokens.
+
+00:38:41.990 --> 00:38:45.740
+So pre-fill, all the
+tokens are given, so you
+
+00:38:45.740 --> 00:38:47.220
+can process everything at once.
+
+00:38:47.220 --> 00:38:50.310
+So this is exactly what
+you see at training time.
+
+00:38:50.310 --> 00:38:52.430
+And generally, this
+is a good setting
+
+00:38:52.430 --> 00:38:55.070
+to be in, because
+you can parallel--
+
+00:38:55.070 --> 00:38:58.230
+it's naturally parallel and
+you're mostly compute bound.
+
+00:38:58.230 --> 00:38:59.970
+What makes inference,
+I think, it's
+
+00:38:59.970 --> 00:39:03.460
+special and difficult is that
+this autoregressive decoding,
+
+00:39:03.460 --> 00:39:05.320
+you need to generate
+one token at a time.
+
+00:39:05.320 --> 00:39:08.070
+And it's hard to actually
+saturate all your GPUs,
+
+00:39:08.070 --> 00:39:10.920
+and it becomes memory bound
+because you're constantly
+
+00:39:10.920 --> 00:39:12.640
+moving data around.
+
+00:39:12.640 --> 00:39:16.920
+And we'll talk about a few
+ways to speed the models up,
+
+00:39:16.920 --> 00:39:18.640
+to speed inference up.
+
+00:39:18.640 --> 00:39:20.640
+You can use a cheaper model.
+
+00:39:20.640 --> 00:39:22.613
+You can use this
+really cool technique
+
+00:39:22.613 --> 00:39:24.030
+called speculative
+decoding, where
+
+00:39:24.030 --> 00:39:28.800
+you use a cheaper model to
+scout ahead and generate
+
+00:39:28.800 --> 00:39:30.010
+multiple tokens.
+
+00:39:30.010 --> 00:39:34.530
+And then if these tokens happen
+to be good for some definition
+
+00:39:34.530 --> 00:39:38.850
+good, you can have the
+full model just score
+
+00:39:38.850 --> 00:39:42.630
+and accept them all in parallel.
+
+00:39:42.630 --> 00:39:44.790
+And then there's a bunch
+of systems optimizations
+
+00:39:44.790 --> 00:39:46.980
+that you can do as well.
+
+00:39:46.980 --> 00:39:49.750
+OK, so after the systems--
+
+00:39:49.750 --> 00:39:51.100
+oh, OK, Assignment 2.
+
+00:39:51.100 --> 00:39:54.970
+So you're going to
+implement a kernel.
+
+00:39:54.970 --> 00:39:58.300
+You're going to implement
+some parallelism.
+
+00:39:58.300 --> 00:40:06.820
+So data parallel is very
+natural, and so we'll do that.
+
+00:40:06.820 --> 00:40:09.820
+Some of the model
+parallelism, like FSDP,
+
+00:40:09.820 --> 00:40:14.600
+turns out to be a bit
+complicated to do from scratch.
+
+00:40:14.600 --> 00:40:18.100
+So we'll do a baby
+version of that.
+
+00:40:18.100 --> 00:40:22.510
+But I encourage you to learn
+and know about the full version.
+
+00:40:22.510 --> 00:40:24.440
+We'll go over the
+full version in class,
+
+00:40:24.440 --> 00:40:29.920
+but implementing from scratch
+might be a bit too much.
+
+00:40:29.920 --> 00:40:31.600
+And then I think
+an important thing
+
+00:40:31.600 --> 00:40:34.610
+is getting in the habit of
+always benchmarking and profile.
+
+00:40:34.610 --> 00:40:38.440
+I think that's actually probably
+the most important thing, is
+
+00:40:38.440 --> 00:40:39.920
+that you can implement things.
+
+00:40:39.920 --> 00:40:44.590
+But unless you have feedback on
+how well your implementation is
+
+00:40:44.590 --> 00:40:46.160
+going and where the
+bottlenecks are,
+
+00:40:46.160 --> 00:40:50.170
+you're just going
+to be flying blind.
+
+00:40:50.170 --> 00:40:56.470
+OK, so Unit 3 is scaling laws.
+
+00:40:56.470 --> 00:41:00.560
+And here, the goal is you want
+to do experiments at small scale
+
+00:41:00.560 --> 00:41:04.610
+and figure things out, and then
+predict the hyperparameters
+
+00:41:04.610 --> 00:41:07.130
+and loss at large scale.
+
+00:41:07.130 --> 00:41:11.280
+So here's a
+fundamental question.
+
+00:41:11.280 --> 00:41:17.348
+So if I give you a FLOPs budget,
+what model size should you use?
+
+00:41:17.348 --> 00:41:18.890
+If you use a larger
+model, that means
+
+00:41:18.890 --> 00:41:20.280
+you can train on less data.
+
+00:41:20.280 --> 00:41:22.738
+And if you use a smaller model,
+you can train on more data.
+
+00:41:22.738 --> 00:41:24.300
+So what's the
+right balance here?
+
+00:41:24.300 --> 00:41:27.890
+And this has been
+studied quite extensively
+
+00:41:27.890 --> 00:41:31.800
+and figured out by a series of
+papers from OpenAI and DeepMind.
+
+00:41:31.800 --> 00:41:34.710
+So if you hear the term
+Chinchilla optimal,
+
+00:41:34.710 --> 00:41:36.570
+this is what this
+is referring to.
+
+00:41:36.570 --> 00:41:41.630
+And the basic idea is that
+for every compute budget
+
+00:41:41.630 --> 00:41:45.620
+number of FLOPSs, you can
+vary the number of parameters
+
+00:41:45.620 --> 00:41:47.190
+of your model.
+
+00:41:47.190 --> 00:41:50.490
+OK, and then you measure
+how good that model is.
+
+00:41:50.490 --> 00:41:52.580
+So for every level
+of compute, you
+
+00:41:52.580 --> 00:41:57.300
+can get the optimal
+parameter count.
+
+00:41:57.300 --> 00:42:04.110
+And then what you do is you
+can fit a curve to extrapolate
+
+00:42:04.110 --> 00:42:08.940
+and see if you had,
+let's say, 1e22 FLOPs,
+
+00:42:08.940 --> 00:42:10.750
+what would there be
+the parameter size?
+
+00:42:10.750 --> 00:42:13.330
+And it turns out these
+minima, when you plot them,
+
+00:42:13.330 --> 00:42:17.430
+it's actually remarkably linear.
+
+00:42:17.430 --> 00:42:23.520
+Which leads to this very
+actually simple but useful rule
+
+00:42:23.520 --> 00:42:31.410
+of thumb, which is that if you
+have a particular model of size
+
+00:42:31.410 --> 00:42:34.800
+n, if you multiply by 20,
+that's the number of tokens
+
+00:42:34.800 --> 00:42:37.090
+you should train
+on, essentially.
+
+00:42:37.090 --> 00:42:41.490
+So that means if I say 1.4
+billion parameter model should
+
+00:42:41.490 --> 00:42:44.820
+be trained on 28 billion tokens.
+
+00:42:44.820 --> 00:42:45.710
+OK.
+
+00:42:45.710 --> 00:42:48.310
+But this doesn't take into
+account inference cost.
+
+00:42:48.310 --> 00:42:52.500
+This is literally, how can you
+train the best model, regardless
+
+00:42:52.500 --> 00:42:54.020
+of how big that model is?
+
+00:42:54.020 --> 00:42:55.430
+So there's some
+limitations here,
+
+00:42:55.430 --> 00:42:57.640
+but it's nonetheless
+been extremely useful
+
+00:42:57.640 --> 00:42:59.410
+for model development.
+
+00:42:59.410 --> 00:43:05.380
+So in this assignment, this is
+fun, because we define a, quote,
+
+00:43:05.380 --> 00:43:09.490
+unquote, "training API," which
+you can query with a particular
+
+00:43:09.490 --> 00:43:10.580
+set of hyperparameters.
+
+00:43:10.580 --> 00:43:15.050
+You specify the architecture
+and batch size and so on.
+
+00:43:15.050 --> 00:43:20.830
+And we return you a loss that
+your decisions will get you.
+
+00:43:20.830 --> 00:43:24.790
+OK, so your job is you
+have a FLOPs budget.
+
+00:43:24.790 --> 00:43:26.830
+And you're going to
+try to figure out
+
+00:43:26.830 --> 00:43:31.130
+how to train a bunch of models
+and then gather the data.
+
+00:43:31.130 --> 00:43:34.310
+You're going to fit a scaling
+law to the gathered data.
+
+00:43:34.310 --> 00:43:37.240
+And then you're going to
+submit your prediction
+
+00:43:37.240 --> 00:43:41.240
+on what you would choose
+to be the hyperparameters.
+
+00:43:41.240 --> 00:43:46.715
+What model size and so
+on at a larger scale.
+
+00:43:46.715 --> 00:43:47.215
+OK.
+
+00:43:47.215 --> 00:43:49.630
+So this is a case where
+you have to be really--
+
+00:43:49.630 --> 00:43:51.760
+we want to put you
+in this position
+
+00:43:51.760 --> 00:43:53.910
+where there's some stakes.
+
+00:43:53.910 --> 00:43:56.520
+I mean, this is not like
+burning real compute.
+
+00:43:56.520 --> 00:44:00.380
+But once you run out of your
+FLOPs budget, that's it.
+
+00:44:00.380 --> 00:44:05.060
+So you have to be very careful
+in terms of how you prioritize
+
+00:44:05.060 --> 00:44:07.012
+what experiments to run.
+
+00:44:07.012 --> 00:44:08.720
+Which is something
+that the frontier labs
+
+00:44:08.720 --> 00:44:10.620
+have to do all the time.
+
+00:44:10.620 --> 00:44:12.660
+And there will be a
+leaderboard for this,
+
+00:44:12.660 --> 00:44:18.500
+which is, minimize loss
+given the FLOPs budget.
+
+00:44:18.500 --> 00:44:20.108
+Question?
+
+00:44:20.108 --> 00:44:23.820
+So those are things from 2024.
+
+00:44:23.820 --> 00:44:26.150
+Yeah, so if we're
+working ahead, should
+
+00:44:26.150 --> 00:44:29.060
+we expect assignments
+to change over time,
+
+00:44:29.060 --> 00:44:31.230
+or are these going
+to be the final--
+
+00:44:31.230 --> 00:44:35.510
+Yeah, so the question is that
+these links are from 2024.
+
+00:44:35.510 --> 00:44:38.330
+The rough assignments,
+the rough structure
+
+00:44:38.330 --> 00:44:40.500
+will be the same for 2025.
+
+00:44:40.500 --> 00:44:41.940
+There will be some
+modifications.
+
+00:44:41.940 --> 00:44:43.970
+But if you look at these, you
+should have a pretty good idea
+
+00:44:43.970 --> 00:44:44.740
+of what to expect.
+
+00:44:48.740 --> 00:44:53.070
+OK, so let's go into data now.
+
+00:44:53.070 --> 00:44:58.030
+OK, so up until now, you have
+scaling laws, you have systems.
+
+00:44:58.030 --> 00:45:01.600
+You have your transformer
+implementation and everything.
+
+00:45:01.600 --> 00:45:03.670
+You're really good to go.
+
+00:45:03.670 --> 00:45:07.980
+But data, I would say, is
+a really key ingredient
+
+00:45:07.980 --> 00:45:11.350
+that I think differentiates
+in some sense.
+
+00:45:11.350 --> 00:45:16.290
+And the question to ask here is,
+what do I want this model to do?
+
+00:45:16.290 --> 00:45:20.820
+Right, because what the model
+does is completely determine--
+
+00:45:20.820 --> 00:45:24.150
+I mean, mostly
+determined by the data.
+
+00:45:24.150 --> 00:45:25.870
+If I train a
+multilingual data, it
+
+00:45:25.870 --> 00:45:27.370
+will have multilingual
+capabilities.
+
+00:45:27.370 --> 00:45:29.640
+If I trained on code, it
+will have code capabilities.
+
+00:45:29.640 --> 00:45:32.380
+And it's very natural.
+
+00:45:32.380 --> 00:45:35.640
+And usually data sets
+are a conglomeration
+
+00:45:35.640 --> 00:45:37.480
+of a lot of different pieces.
+
+00:45:37.480 --> 00:45:41.710
+This is from a pile,
+which is four years ago.
+
+00:45:41.710 --> 00:45:44.160
+But the same idea,
+I think, holds.
+
+00:45:44.160 --> 00:45:46.510
+You have data from the web.
+
+00:45:46.510 --> 00:45:48.420
+This is Common Crawl.
+
+00:45:48.420 --> 00:45:51.190
+You have StackExchange,
+Wikipedia, GitHub,
+
+00:45:51.190 --> 00:45:54.640
+and different sources,
+which are curated.
+
+00:45:54.640 --> 00:45:57.580
+And so in the data
+section, we're
+
+00:45:57.580 --> 00:45:59.870
+going to start talking
+about evaluation,
+
+00:45:59.870 --> 00:46:01.960
+which is given a
+model, how do you
+
+00:46:01.960 --> 00:46:03.650
+evaluate whether it's any good?
+
+00:46:03.650 --> 00:46:08.710
+So we're going to talk
+about perplexity measures,
+
+00:46:08.710 --> 00:46:11.800
+standardized testing, like MMLU.
+
+00:46:11.800 --> 00:46:15.280
+If you have models that
+generate utterances
+
+00:46:15.280 --> 00:46:18.310
+for instruction following,
+how do you evaluate that?
+
+00:46:18.310 --> 00:46:23.500
+There's also decisions about,
+if you can ensemble or do
+
+00:46:23.500 --> 00:46:26.530
+train of thought at
+test time, how does that
+
+00:46:26.530 --> 00:46:28.450
+affect your evaluation?
+
+00:46:28.450 --> 00:46:34.270
+And then you can talk about
+entire systems, evaluation
+
+00:46:34.270 --> 00:46:36.220
+of entire system, not
+just the language model,
+
+00:46:36.220 --> 00:46:38.080
+because language
+models often get
+
+00:46:38.080 --> 00:46:43.480
+these days plugged into some
+agentic system or something.
+
+00:46:43.480 --> 00:46:48.060
+OK, so now after
+establishing evaluation,
+
+00:46:48.060 --> 00:46:50.170
+let's look at data curation.
+
+00:46:50.170 --> 00:46:52.680
+So this is, I think,
+an important point
+
+00:46:52.680 --> 00:46:53.950
+that people don't realize.
+
+00:46:53.950 --> 00:46:57.360
+I often hear people
+say, oh, we're training
+
+00:46:57.360 --> 00:46:59.710
+the model on the internet.
+
+00:46:59.710 --> 00:47:01.815
+This just doesn't make sense.
+
+00:47:01.815 --> 00:47:06.070
+Right, data doesn't
+just fall from the sky
+
+00:47:06.070 --> 00:47:11.400
+and there's the internet that
+you can pipe into your model.
+
+00:47:11.400 --> 00:47:16.710
+Data has to always be
+actively acquired somehow.
+
+00:47:16.710 --> 00:47:22.260
+So even just as an example of--
+
+00:47:22.260 --> 00:47:25.830
+I always tell people,
+look at the data.
+
+00:47:25.830 --> 00:47:27.520
+And so let's look at some data.
+
+00:47:27.520 --> 00:47:32.800
+So this is some
+Common Crawl data.
+
+00:47:32.800 --> 00:47:34.690
+I'm going to take 10 documents.
+
+00:47:34.690 --> 00:47:37.440
+And I think
+hopefully, this works.
+
+00:47:37.440 --> 00:47:37.960
+OK.
+
+00:47:37.960 --> 00:47:41.340
+I think the rendering
+is off, but you
+
+00:47:41.340 --> 00:47:50.770
+can see this is a random
+sample of Common Crawl.
+
+00:47:50.770 --> 00:48:00.020
+And you can see that this is
+maybe not exactly the data.
+
+00:48:00.020 --> 00:48:01.850
+Oh, here's some
+actually real text here.
+
+00:48:01.850 --> 00:48:03.100
+OK, that's cool.
+
+00:48:03.100 --> 00:48:05.832
+But if you look at most
+of Common Crawl, aside--
+
+00:48:05.832 --> 00:48:07.040
+this is a different language.
+
+00:48:07.040 --> 00:48:09.950
+But you can also see this
+is very spammy sites.
+
+00:48:09.950 --> 00:48:15.650
+And you'll quickly realize that
+a lot of the web is just trash.
+
+00:48:15.650 --> 00:48:19.940
+And so-- well, OK, maybe
+that's not that's surprising,
+
+00:48:19.940 --> 00:48:22.490
+but it's more trash than
+you would actually expect,
+
+00:48:22.490 --> 00:48:23.770
+I promise.
+
+00:48:23.770 --> 00:48:27.760
+So what I'm saying is
+that there's a lot of work
+
+00:48:27.760 --> 00:48:29.690
+that needs to happen in data.
+
+00:48:29.690 --> 00:48:31.550
+So you can crawl the internet.
+
+00:48:31.550 --> 00:48:36.550
+You can take books,
+archives of papers, GitHub.
+
+00:48:36.550 --> 00:48:40.330
+And there's actually a lot of
+processing that needs to happen.
+
+00:48:40.330 --> 00:48:43.870
+There's also legal questions
+about what data you can
+
+00:48:43.870 --> 00:48:46.190
+train on, which we'll touch on.
+
+00:48:46.190 --> 00:48:48.710
+Nowadays, a lot
+of frontier models
+
+00:48:48.710 --> 00:48:50.900
+have to actually buy data.
+
+00:48:50.900 --> 00:48:55.220
+Because the data on the internet
+that's publicly accessible
+
+00:48:55.220 --> 00:49:02.120
+actually turns out to be a bit
+limited for the really frontier
+
+00:49:02.120 --> 00:49:03.240
+performance.
+
+00:49:03.240 --> 00:49:05.420
+And also, I think it's
+important to remember
+
+00:49:05.420 --> 00:49:09.190
+that this data that's scraped,
+it's not actually text, right.
+
+00:49:09.190 --> 00:49:11.910
+First of all, it's
+HTML or it's PDFs.
+
+00:49:11.910 --> 00:49:14.220
+Or in the case of code,
+it's just directories.
+
+00:49:14.220 --> 00:49:17.960
+So there has to be an explicit
+process that takes this data
+
+00:49:17.960 --> 00:49:20.310
+and turns it into text.
+
+00:49:20.310 --> 00:49:24.770
+OK, so we're going to talk about
+the transformation from HTML
+
+00:49:24.770 --> 00:49:27.260
+to text.
+
+00:49:27.260 --> 00:49:30.890
+And this is going to
+be a lossy process.
+
+00:49:30.890 --> 00:49:35.780
+So the trick is, how can you
+preserve the content and some
+
+00:49:35.780 --> 00:49:43.500
+of the structure without
+basically just having an HTML?
+
+00:49:43.500 --> 00:49:46.770
+Filtering, as you
+could surmise, is
+
+00:49:46.770 --> 00:49:49.650
+going to be very important, both
+for getting high quality data
+
+00:49:49.650 --> 00:49:52.080
+but also removing
+harmful content.
+
+00:49:52.080 --> 00:49:55.060
+Generally, people train
+classifiers to do this.
+
+00:49:55.060 --> 00:49:58.870
+Deduplication is also
+an important step,
+
+00:49:58.870 --> 00:50:00.100
+which we'll talk about.
+
+00:50:00.100 --> 00:50:02.860
+OK, so Assignment 4
+is all about data.
+
+00:50:02.860 --> 00:50:07.560
+We're going to give you the
+raw Common Crawl dump so you
+
+00:50:07.560 --> 00:50:10.060
+can see just how bad it is.
+
+00:50:10.060 --> 00:50:13.600
+And you're going to train
+classifiers, dedupe.
+
+00:50:13.600 --> 00:50:15.600
+And then there's going
+to be a leaderboard where
+
+00:50:15.600 --> 00:50:19.110
+you're going to try to
+minimize perplexity given
+
+00:50:19.110 --> 00:50:20.820
+your token budget.
+
+00:50:20.820 --> 00:50:24.370
+So now you have the data.
+
+00:50:24.370 --> 00:50:28.090
+You've done this-- build
+all your fancy kernels.
+
+00:50:28.090 --> 00:50:29.890
+Now you can really train models.
+
+00:50:29.890 --> 00:50:32.010
+But at this point,
+what you'll get
+
+00:50:32.010 --> 00:50:36.960
+is a model that can
+complete the next token.
+
+00:50:36.960 --> 00:50:37.900
+Right.
+
+00:50:37.900 --> 00:50:40.990
+And this is called
+essentially a base model.
+
+00:50:40.990 --> 00:50:43.910
+And I think about it as a model
+that has a lot of raw potential.
+
+00:50:43.910 --> 00:50:47.750
+But it needs to be aligned
+or modified in some way.
+
+00:50:47.750 --> 00:50:50.060
+And alignment is a process
+of making it useful.
+
+00:50:50.060 --> 00:50:55.250
+So alignment captures a
+lot of different things.
+
+00:50:55.250 --> 00:50:58.120
+But three things I
+think it captures
+
+00:50:58.120 --> 00:50:59.740
+is that you want
+to get the language
+
+00:50:59.740 --> 00:51:01.660
+model to follow instructions.
+
+00:51:01.660 --> 00:51:04.120
+Right, complete the next
+token is not necessarily
+
+00:51:04.120 --> 00:51:05.540
+following the instruction.
+
+00:51:05.540 --> 00:51:07.360
+It will just complete
+the instruction
+
+00:51:07.360 --> 00:51:11.020
+or whatever it thinks will
+follow the instruction.
+
+00:51:11.020 --> 00:51:16.250
+You get to here, specify
+the style of the generation.
+
+00:51:16.250 --> 00:51:18.470
+Whether you want it
+to be long or short,
+
+00:51:18.470 --> 00:51:19.700
+whether you want bullets.
+
+00:51:19.700 --> 00:51:24.550
+Whether you want it to be
+witty or have SaaS or not.
+
+00:51:24.550 --> 00:51:29.210
+And when you play with
+ChatGPT versus Grok,
+
+00:51:29.210 --> 00:51:32.170
+you'll see that there's
+different alignment that
+
+00:51:32.170 --> 00:51:33.560
+has happened.
+
+00:51:33.560 --> 00:51:35.710
+And then also safety.
+
+00:51:35.710 --> 00:51:37.630
+One important thing
+is for these models
+
+00:51:37.630 --> 00:51:41.430
+to be able to refuse
+answers that can be harmful.
+
+00:51:41.430 --> 00:51:43.740
+So that's where
+alignment also kicks in.
+
+00:51:43.740 --> 00:51:47.520
+So there's generally
+two phases of alignment.
+
+00:51:47.520 --> 00:51:49.410
+There's supervised fine tuning.
+
+00:51:49.410 --> 00:51:51.620
+And here, the goal is--
+
+00:51:51.620 --> 00:51:53.160
+I mean, it's very simple.
+
+00:51:53.160 --> 00:51:59.960
+You basically gather a set
+of user assistant pairs.
+
+00:51:59.960 --> 00:52:01.760
+So prompt response pairs.
+
+00:52:01.760 --> 00:52:05.840
+And then you do
+supervised learning.
+
+00:52:05.840 --> 00:52:06.740
+OK.
+
+00:52:06.740 --> 00:52:09.950
+And the idea here is that
+the base model already
+
+00:52:09.950 --> 00:52:12.600
+has the raw potential.
+
+00:52:12.600 --> 00:52:18.120
+So just fine tuning it on a
+few examples is sufficient.
+
+00:52:18.120 --> 00:52:21.150
+Of course, the more examples you
+have, the better the results.
+
+00:52:21.150 --> 00:52:23.300
+But there's papers
+like this one that
+
+00:52:23.300 --> 00:52:26.420
+shows even a thousand
+examples suffices
+
+00:52:26.420 --> 00:52:29.090
+to give you instruction
+following capabilities
+
+00:52:29.090 --> 00:52:31.280
+from the good base model.
+
+00:52:31.280 --> 00:52:34.260
+OK, so this part is
+actually very simple.
+
+00:52:34.260 --> 00:52:37.310
+And it's not that different
+from pre-training,
+
+00:52:37.310 --> 00:52:39.150
+because it's just
+you're given text
+
+00:52:39.150 --> 00:52:43.890
+and you just maximize the
+probability of the text.
+
+00:52:43.890 --> 00:52:46.380
+So the second part is
+a bit more interesting
+
+00:52:46.380 --> 00:52:48.670
+from an algorithmic perspective.
+
+00:52:48.670 --> 00:52:52.300
+So the idea here is that
+even with an SFT phase,
+
+00:52:52.300 --> 00:52:55.780
+you will have a decent model.
+
+00:52:55.780 --> 00:52:57.460
+And now, how do you improve it?
+
+00:52:57.460 --> 00:52:59.060
+Well, you can gather
+more SFT data,
+
+00:52:59.060 --> 00:53:00.810
+but that can be very
+expensive because you
+
+00:53:00.810 --> 00:53:04.540
+have to have someone sit
+down and annotate data.
+
+00:53:04.540 --> 00:53:09.120
+So the goal of
+learning from feedback
+
+00:53:09.120 --> 00:53:13.650
+is that you can leverage
+lighter forms of annotation
+
+00:53:13.650 --> 00:53:16.720
+and have the algorithms
+do a bit more work.
+
+00:53:16.720 --> 00:53:20.590
+OK, so one type of data you can
+learn from is preference data.
+
+00:53:20.590 --> 00:53:24.450
+So this is where you
+generate multiple responses
+
+00:53:24.450 --> 00:53:26.890
+from a model to a given
+prompt, like A or B.
+
+00:53:26.890 --> 00:53:30.370
+And the user rates
+whether A or B is better.
+
+00:53:30.370 --> 00:53:34.710
+And so the data might
+look like it generates--
+
+00:53:34.710 --> 00:53:36.850
+what's the best way to
+train a language model?
+
+00:53:36.850 --> 00:53:39.200
+Use a large data set or
+use a small data set.
+
+00:53:39.200 --> 00:53:41.980
+And of course, the
+answer should be A. So
+
+00:53:41.980 --> 00:53:46.340
+that is a unit of
+expressing preferences.
+
+00:53:46.340 --> 00:53:50.420
+Another type of supervision you
+could have is using verifiers.
+
+00:53:50.420 --> 00:53:52.300
+So for some domains,
+you're lucky enough
+
+00:53:52.300 --> 00:53:56.030
+to have a formal verifier,
+like for math or code.
+
+00:53:56.030 --> 00:53:59.020
+Or you can use learned
+verifiers where
+
+00:53:59.020 --> 00:54:07.070
+you train an actual language
+model to rate the response.
+
+00:54:07.070 --> 00:54:10.750
+And of course, this relates
+to evaluation again.
+
+00:54:10.750 --> 00:54:13.210
+Algorithms.
+
+00:54:13.210 --> 00:54:15.440
+We're in the realm of
+reinforcement learning.
+
+00:54:15.440 --> 00:54:18.830
+So one of the
+earliest algorithms
+
+00:54:18.830 --> 00:54:23.320
+that was developed that was
+applied to instruction tuning
+
+00:54:23.320 --> 00:54:29.740
+models was PPO, Proximal
+Policy Optimization.
+
+00:54:29.740 --> 00:54:32.140
+It turns out that if you
+just have preference data,
+
+00:54:32.140 --> 00:54:34.550
+there's a much simpler
+algorithm called
+
+00:54:34.550 --> 00:54:37.340
+DPO that works really well.
+
+00:54:37.340 --> 00:54:41.310
+But in general, if you wanted
+to learn from verifier's data,
+
+00:54:41.310 --> 00:54:43.050
+you have to-- it's
+not preference data,
+
+00:54:43.050 --> 00:54:45.360
+so you have to embrace RL fully.
+
+00:54:45.360 --> 00:54:50.480
+And there's this
+method, which we'll
+
+00:54:50.480 --> 00:54:54.290
+do in this class, which is
+called group relative preference
+
+00:54:54.290 --> 00:54:57.410
+optimization, which simplifies
+PPO and makes it more efficient
+
+00:54:57.410 --> 00:55:00.800
+by removing the value function
+developed by DeepSeek, which
+
+00:55:00.800 --> 00:55:03.950
+seems to work pretty well.
+
+00:55:03.950 --> 00:55:09.870
+OK, so Assignment 5 implements
+supervised tuning, DPO and GRPO.
+
+00:55:09.870 --> 00:55:12.980
+And of course, evaluate.
+
+00:55:12.980 --> 00:55:13.480
+Question.
+
+00:55:16.190 --> 00:55:19.850
+I think a quote from the course
+[INAUDIBLE] about Assignment 1--
+
+00:55:19.850 --> 00:55:22.280
+did people have similar things
+to say about Assignments 2
+
+00:55:22.280 --> 00:55:23.550
+through 5?
+
+00:55:23.550 --> 00:55:27.660
+Yeah, the question is Assignment
+1 seems a bit daunting.
+
+00:55:27.660 --> 00:55:28.890
+What about the other ones?
+
+00:55:28.890 --> 00:55:32.150
+I would say that Assignment
+1 and 2 are definitely
+
+00:55:32.150 --> 00:55:35.100
+the most heavy and hardest.
+
+00:55:35.100 --> 00:55:39.580
+Assignment 3 is a bit
+more of a breather.
+
+00:55:39.580 --> 00:55:42.390
+And Assignment 4 and
+5, at least last year,
+
+00:55:42.390 --> 00:55:47.250
+were, I would say, a notch
+below Assignment 1 or 2.
+
+00:55:47.250 --> 00:55:49.080
+Although, I don't
+know, it depends on--
+
+00:55:49.080 --> 00:55:52.180
+we haven't fully worked out
+the details for this year.
+
+00:55:55.650 --> 00:55:58.530
+Yeah, it does get better.
+
+00:55:58.530 --> 00:56:05.160
+OK, so just to recap of
+the different pieces here.
+
+00:56:05.160 --> 00:56:08.220
+Remember, efficiency is
+this driving principle.
+
+00:56:08.220 --> 00:56:12.930
+And there's a bunch of
+different design decisions.
+
+00:56:12.930 --> 00:56:16.518
+I think if you view
+efficiency, everything
+
+00:56:16.518 --> 00:56:18.810
+through the lens of efficiency,
+I think a lot of things
+
+00:56:18.810 --> 00:56:21.330
+make sense.
+
+00:56:21.330 --> 00:56:25.050
+And importantly,
+I think we are--
+
+00:56:25.050 --> 00:56:26.790
+it's worth pointing
+out there, we
+
+00:56:26.790 --> 00:56:30.370
+are currently in this
+compute constrained regime,
+
+00:56:30.370 --> 00:56:32.070
+at least this class
+and most people who
+
+00:56:32.070 --> 00:56:33.920
+are somewhat GPU poor.
+
+00:56:33.920 --> 00:56:37.160
+So we have a lot of data, but
+we don't have that much compute.
+
+00:56:37.160 --> 00:56:40.480
+And so these design decisions
+will reflect squeezing the most
+
+00:56:40.480 --> 00:56:41.390
+out of the hardware.
+
+00:56:41.390 --> 00:56:43.190
+So for example, data processing.
+
+00:56:43.190 --> 00:56:45.122
+We're filtering
+fairly aggressively
+
+00:56:45.122 --> 00:56:47.080
+because we don't want to
+waste precious compute
+
+00:56:47.080 --> 00:56:49.600
+on bad or irrelevant data.
+
+00:56:49.600 --> 00:56:51.370
+Tokenization.
+
+00:56:51.370 --> 00:56:54.807
+It's nice to have
+a model over bytes.
+
+00:56:54.807 --> 00:56:55.640
+That's very elegant.
+
+00:56:55.640 --> 00:56:58.660
+But it's very compute
+inefficient with today's model
+
+00:56:58.660 --> 00:56:59.540
+architectures.
+
+00:56:59.540 --> 00:57:03.490
+So we have to do tokenization
+as an efficiency gain.
+
+00:57:03.490 --> 00:57:06.880
+Model architecture, there are
+a lot of design decisions there
+
+00:57:06.880 --> 00:57:11.630
+that are essentially motivated
+by efficiency training.
+
+00:57:11.630 --> 00:57:14.410
+I think the fact that most
+of what we're going to do
+
+00:57:14.410 --> 00:57:16.130
+is just a single epoch.
+
+00:57:16.130 --> 00:57:18.590
+This is clearly
+we're in a hurry.
+
+00:57:18.590 --> 00:57:22.090
+We just need to see more data as
+opposed to spend a lot of time
+
+00:57:22.090 --> 00:57:23.870
+on any given data point.
+
+00:57:23.870 --> 00:57:26.510
+Scaling laws is completely
+about efficiency.
+
+00:57:26.510 --> 00:57:30.010
+We use less compute to figure
+out the hyperparameters.
+
+00:57:30.010 --> 00:57:35.850
+And alignment is maybe
+a little bit different.
+
+00:57:35.850 --> 00:57:41.900
+But the connection to efficiency
+is that if you can put resources
+
+00:57:41.900 --> 00:57:44.150
+into alignment,
+then you actually
+
+00:57:44.150 --> 00:57:49.130
+require smaller base models.
+
+00:57:49.130 --> 00:57:50.534
+OK.
+
+00:57:50.534 --> 00:57:52.620
+So there's two paths.
+
+00:57:52.620 --> 00:57:55.470
+If your use case
+is fairly narrow,
+
+00:57:55.470 --> 00:57:57.060
+you can probably
+use a smaller model.
+
+00:57:57.060 --> 00:58:00.450
+You align it or fine tune
+it, and you can do well.
+
+00:58:00.450 --> 00:58:03.000
+But if your use
+cases are very broad,
+
+00:58:03.000 --> 00:58:04.970
+then there might
+not be a substitute
+
+00:58:04.970 --> 00:58:07.520
+for training a big model.
+
+00:58:07.520 --> 00:58:09.210
+So that's today.
+
+00:58:09.210 --> 00:58:13.970
+So increasingly now, at
+least for Frontier Labs,
+
+00:58:13.970 --> 00:58:16.110
+they're becoming
+data constrained.
+
+00:58:16.110 --> 00:58:18.260
+Which is interesting
+because I think
+
+00:58:18.260 --> 00:58:22.890
+that the design decisions will
+presumably completely change.
+
+00:58:22.890 --> 00:58:25.470
+Well, I mean, compute
+will always be important,
+
+00:58:25.470 --> 00:58:27.540
+but I think the design
+decisions will change.
+
+00:58:27.540 --> 00:58:33.060
+For example, taking one
+epoch of your data, I think,
+
+00:58:33.060 --> 00:58:34.760
+doesn't really make sense.
+
+00:58:34.760 --> 00:58:36.510
+If you have more
+compute, why wouldn't you
+
+00:58:36.510 --> 00:58:39.670
+take more epochs at least,
+or do something smarter?
+
+00:58:39.670 --> 00:58:44.370
+Or maybe there will be different
+architectures, for example.
+
+00:58:44.370 --> 00:58:47.640
+Because the transformer
+was really motivated by
+
+00:58:47.640 --> 00:58:50.160
+compute efficiency.
+
+00:58:50.160 --> 00:58:52.360
+So that's something to ponder.
+
+00:58:52.360 --> 00:58:53.830
+Still, it's about efficiency.
+
+00:58:53.830 --> 00:58:56.750
+But the design decisions
+reflect what regime you're in.
+
+00:58:59.790 --> 00:59:00.738
+OK.
+
+00:59:00.738 --> 00:59:08.010
+So now I'm going to dive
+into the first unit.
+
+00:59:08.010 --> 00:59:09.976
+Before that, any questions?
+
+00:59:15.330 --> 00:59:18.350
+Do you have a Slack or Ed?
+
+00:59:18.350 --> 00:59:20.100
+The question is, do
+we have a Slack or Ed?
+
+00:59:20.100 --> 00:59:21.520
+We will have a Slack.
+
+00:59:21.520 --> 00:59:25.560
+We'll send out details
+after this class.
+
+00:59:25.560 --> 00:59:26.167
+Yeah.
+
+00:59:26.167 --> 00:59:28.250
+Will students auditing the
+course also have access
+
+00:59:28.250 --> 00:59:30.350
+to the same material?
+
+00:59:30.350 --> 00:59:32.000
+The question is,
+students auditing
+
+00:59:32.000 --> 00:59:38.940
+the class will have access
+to all the online materials,
+
+00:59:38.940 --> 00:59:39.750
+assignments.
+
+00:59:39.750 --> 00:59:43.340
+And we'll give you
+access to Canvas
+
+00:59:43.340 --> 00:59:48.590
+so you can watch
+the lecture videos.
+
+00:59:48.590 --> 00:59:49.130
+Yeah.
+
+00:59:49.130 --> 00:59:51.770
+What's the grading
+of the assignments?
+
+00:59:51.770 --> 00:59:54.680
+What's the grading
+of the assignments?
+
+00:59:54.680 --> 00:59:55.800
+Good question.
+
+00:59:55.800 --> 00:59:58.550
+So there will be a
+set of unit tests
+
+00:59:58.550 --> 01:00:00.495
+that you will have to pass.
+
+01:00:00.495 --> 01:00:02.120
+So part of the grading
+is just, did you
+
+01:00:02.120 --> 01:00:03.980
+implement this correctly?
+
+01:00:03.980 --> 01:00:07.080
+There will be also parts
+of the grade which will--
+
+01:00:07.080 --> 01:00:10.730
+did you implement a model that
+achieved a certain level of loss
+
+01:00:10.730 --> 01:00:12.650
+or is efficient enough?
+
+01:00:12.650 --> 01:00:16.550
+In the assignment,
+every problem part
+
+01:00:16.550 --> 01:00:18.930
+has a number of points
+associated with it.
+
+01:00:18.930 --> 01:00:22.280
+And so that gives you
+a fairly granular level
+
+01:00:22.280 --> 01:00:24.385
+of what grading looks like.
+
+01:00:28.560 --> 01:00:31.960
+OK, let's jump
+into tokenization.
+
+01:00:31.960 --> 01:00:35.520
+OK, so Andrej Karpathy
+has this really nice video
+
+01:00:35.520 --> 01:00:36.670
+on tokenization.
+
+01:00:36.670 --> 01:00:41.730
+And in general, he makes a lot
+of these videos on that actually
+
+01:00:41.730 --> 01:00:43.000
+inspired a lot of this class.
+
+01:00:43.000 --> 01:00:45.660
+How you can build
+things from scratch.
+
+01:00:45.660 --> 01:00:49.590
+So you should go check
+out some of his videos.
+
+01:00:49.590 --> 01:00:53.670
+So tokenization, as
+we talked about it,
+
+01:00:53.670 --> 01:00:56.580
+is the process of taking
+raw text, which is generally
+
+01:00:56.580 --> 01:01:00.780
+represented as Unicode
+strings, and turning it
+
+01:01:00.780 --> 01:01:04.600
+into a set of
+integers essentially.
+
+01:01:04.600 --> 01:01:09.090
+And where each integer
+represents a token.
+
+01:01:09.090 --> 01:01:12.270
+OK, so we need a procedure
+that encodes strings to tokens
+
+01:01:12.270 --> 01:01:16.350
+and decodes them
+back into strings.
+
+01:01:16.350 --> 01:01:19.680
+And the vocabulary size is
+just the number of values
+
+01:01:19.680 --> 01:01:24.570
+that a token take on the number
+of the range of the integers.
+
+01:01:24.570 --> 01:01:29.150
+So just to give you an example
+of how tokenizers work,
+
+01:01:29.150 --> 01:01:32.390
+let's play around with
+this really nice website,
+
+01:01:32.390 --> 01:01:35.350
+which allows you to look at
+different tokenizers and just
+
+01:01:35.350 --> 01:01:39.640
+type in something like hello.
+
+01:01:39.640 --> 01:01:43.660
+Hello, or whatever.
+
+01:01:43.660 --> 01:01:48.310
+Maybe I'll do this.
+
+01:01:48.310 --> 01:01:52.940
+And one thing it does is it
+shows you the list of integers.
+
+01:01:52.940 --> 01:01:54.320
+This is the output of tokenizer.
+
+01:01:54.320 --> 01:01:58.090
+It also nicely maps
+out the decomposition
+
+01:01:58.090 --> 01:02:02.260
+of the original string
+into a bunch of segments.
+
+01:02:02.260 --> 01:02:04.670
+And a few things to note.
+
+01:02:04.670 --> 01:02:08.690
+First of all, the space
+is part of a token.
+
+01:02:08.690 --> 01:02:12.530
+So unlike classical NLP where
+the space just disappears,
+
+01:02:12.530 --> 01:02:14.780
+everything is accounted for.
+
+01:02:14.780 --> 01:02:19.540
+These are meant to be reversible
+operations, tokenization.
+
+01:02:19.540 --> 01:02:23.630
+And by convention,
+for whatever reason,
+
+01:02:23.630 --> 01:02:27.890
+the space is usually
+preceding the token.
+
+01:02:27.890 --> 01:02:32.480
+Also notice that hello is a
+completely different token
+
+01:02:32.480 --> 01:02:40.100
+than space hello, which might
+make you a little bit squeamish.
+
+01:02:40.100 --> 01:02:44.160
+And it can cause problems,
+but that's just how it is.
+
+01:02:44.160 --> 01:02:44.810
+Question?
+
+01:02:44.810 --> 01:02:47.870
+Can I ask, is the space being
+leading instead of trailing
+
+01:02:47.870 --> 01:02:51.800
+intentional, or is it just an
+artifact of the BPE process?
+
+01:02:51.800 --> 01:02:54.590
+So the question
+is, is the spacing
+
+01:02:54.590 --> 01:02:57.620
+before intentional or not?
+
+01:02:57.620 --> 01:03:02.330
+So in the BPE process
+that we'll talk about,
+
+01:03:02.330 --> 01:03:09.060
+you're actually pre-tokenized,
+and then you tokenize each part.
+
+01:03:09.060 --> 01:03:12.330
+And I think the pre-tokenizer
+does put the space in the front.
+
+01:03:12.330 --> 01:03:14.520
+So it is built
+into the algorithm.
+
+01:03:14.520 --> 01:03:15.720
+You could put it at the end.
+
+01:03:15.720 --> 01:03:18.230
+But I think it probably
+makes more sense
+
+01:03:18.230 --> 01:03:20.970
+to put it in the beginning.
+
+01:03:20.970 --> 01:03:23.950
+But I actually don't--
+
+01:03:23.950 --> 01:03:27.180
+well, I guess it
+could go either way.
+
+01:03:27.180 --> 01:03:29.100
+If it makes sense.
+
+01:03:29.100 --> 01:03:32.550
+OK, so then if you
+look at numbers,
+
+01:03:32.550 --> 01:03:35.310
+you see that the
+numbers are chopped down
+
+01:03:35.310 --> 01:03:39.480
+into different pieces.
+
+01:03:39.480 --> 01:03:43.297
+It's a little bit interesting
+that it's left to right.
+
+01:03:43.297 --> 01:03:45.630
+So it's definitely not grouping
+by thousands or anything
+
+01:03:45.630 --> 01:03:47.100
+semantic.
+
+01:03:47.100 --> 01:03:49.290
+But anyway, I encourage
+you to play with it
+
+01:03:49.290 --> 01:03:54.220
+and get a sense of what these
+existing tokenizers look like.
+
+01:03:54.220 --> 01:03:59.700
+So this is the tokenizer
+for GPT 4.0, for example.
+
+01:03:59.700 --> 01:04:03.720
+So there are some
+observations that we made.
+
+01:04:03.720 --> 01:04:06.900
+So if you look at
+the GPT-2 tokenizer,
+
+01:04:06.900 --> 01:04:10.890
+which will use this
+as a reference--
+
+01:04:10.890 --> 01:04:12.995
+OK, let me see if I can--
+
+01:04:16.020 --> 01:04:17.940
+hopefully this is--
+let me know if this is
+
+01:04:17.940 --> 01:04:19.740
+getting too small in the back.
+
+01:04:19.740 --> 01:04:22.390
+You can take a string.
+
+01:04:22.390 --> 01:04:27.350
+If you apply the GPT-2
+tokenizer, you get your indices.
+
+01:04:27.350 --> 01:04:29.420
+So it maps strings to indices.
+
+01:04:29.420 --> 01:04:33.560
+And then you can decode
+to get back the string.
+
+01:04:33.560 --> 01:04:36.190
+And this is just a
+sanity check to make sure
+
+01:04:36.190 --> 01:04:40.300
+that you actually round trips.
+
+01:04:40.300 --> 01:04:42.820
+Another thing that I guess
+interesting to look at
+
+01:04:42.820 --> 01:04:44.950
+is this compression
+ratio, which is
+
+01:04:44.950 --> 01:04:48.280
+if you look at the
+number of bytes divided
+
+01:04:48.280 --> 01:04:49.550
+by the number of tokens.
+
+01:04:49.550 --> 01:04:53.240
+So how many bytes are
+represented by a token?
+
+01:04:53.240 --> 01:04:56.835
+And the answer here is 1.6.
+
+01:04:56.835 --> 01:05:02.050
+OK, so every token
+represents 1.6 bytes of data.
+
+01:05:02.050 --> 01:05:06.610
+OK, so that's just a GPT
+tokenizer that OpenAI trained.
+
+01:05:06.610 --> 01:05:12.020
+To motivate BPE, I want to go
+through a sequence of attempts.
+
+01:05:12.020 --> 01:05:14.030
+So suppose you wanted
+to do tokenization.
+
+01:05:14.030 --> 01:05:17.380
+What would be the
+simplest thing?
+
+01:05:17.380 --> 01:05:20.250
+The simplest thing is probably
+character-based tokenization.
+
+01:05:20.250 --> 01:05:24.180
+A Unicode string is a sequence
+of Unicode characters.
+
+01:05:24.180 --> 01:05:27.410
+And each character can be
+converted into an integer
+
+01:05:27.410 --> 01:05:29.240
+and called a code point.
+
+01:05:29.240 --> 01:05:32.390
+OK, so A maps to 97.
+
+01:05:32.390 --> 01:05:37.140
+The world emoji maps to 127,757.
+
+01:05:37.140 --> 01:05:39.570
+And you can see that
+it converts back.
+
+01:05:39.570 --> 01:05:41.660
+OK, so you can
+define a tokenizer,
+
+01:05:41.660 --> 01:05:51.200
+which simply maps each
+character into a code point.
+
+01:05:51.200 --> 01:05:53.200
+OK.
+
+01:05:53.200 --> 01:05:58.130
+So what's one problem with this?
+
+01:05:58.130 --> 01:05:59.000
+Yeah?
+
+01:05:59.000 --> 01:06:00.620
+Compression ratio is one.
+
+01:06:00.620 --> 01:06:03.110
+The compression ratio is one.
+
+01:06:03.110 --> 01:06:06.800
+So that's-- well, actually, the
+compression ratio is not quite
+
+01:06:06.800 --> 01:06:09.680
+one because a character
+is not a byte.
+
+01:06:09.680 --> 01:06:12.710
+But it's maybe not
+as good as you want.
+
+01:06:12.710 --> 01:06:16.220
+One problem with that, if
+you look at some code points,
+
+01:06:16.220 --> 01:06:19.170
+they're actually
+really large, right.
+
+01:06:19.170 --> 01:06:25.440
+So you're basically allocating
+each one slot in your vocabulary
+
+01:06:25.440 --> 01:06:27.670
+for every character uniformly.
+
+01:06:27.670 --> 01:06:30.850
+And some characters appear way
+more frequently than others.
+
+01:06:30.850 --> 01:06:36.870
+So this is not a very
+effective use of your budget.
+
+01:06:36.870 --> 01:06:37.830
+OK.
+
+01:06:37.830 --> 01:06:41.050
+So the vocabulary size is huge.
+
+01:06:41.050 --> 01:06:43.530
+I mean, the vocabulary
+size being 127
+
+01:06:43.530 --> 01:06:45.190
+is actually a big deal.
+
+01:06:45.190 --> 01:06:49.570
+But the bigger problem is
+that some characters are rare,
+
+01:06:49.570 --> 01:06:53.731
+and this is inefficient
+use of the vocab.
+
+01:06:53.731 --> 01:06:59.700
+OK, so the compression
+ratio is 1.5 in this case,
+
+01:06:59.700 --> 01:07:02.310
+because it's the tokens--
+
+01:07:02.310 --> 01:07:04.470
+sorry, the number
+of bytes per token.
+
+01:07:04.470 --> 01:07:09.270
+And a character can
+be multiple bytes.
+
+01:07:09.270 --> 01:07:13.800
+OK, so that was a
+very naive approach.
+
+01:07:13.800 --> 01:07:16.930
+On the other hand, you can
+do byte-based tokenization.
+
+01:07:16.930 --> 01:07:19.870
+OK, so Unicode strings
+can be represented
+
+01:07:19.870 --> 01:07:22.000
+as a sequence of bytes.
+
+01:07:22.000 --> 01:07:30.500
+Because every string can just
+be converted into bytes OK,
+
+01:07:30.500 --> 01:07:35.000
+so A is already just one byte.
+
+01:07:35.000 --> 01:07:39.950
+But some characters take
+up as many as four bytes.
+
+01:07:39.950 --> 01:07:43.700
+And this is using the
+UTF-8 encoding of Unicode.
+
+01:07:43.700 --> 01:07:46.240
+There's other encodings, but
+this is the most common one
+
+01:07:46.240 --> 01:07:48.910
+that's dynamic.
+
+01:07:48.910 --> 01:07:56.080
+So let's just convert everything
+into bytes and see what happens.
+
+01:07:56.080 --> 01:07:59.440
+So if you do it into
+bytes, now all the indices
+
+01:07:59.440 --> 01:08:01.810
+are between 0 and 256,
+because there are only
+
+01:08:01.810 --> 01:08:06.310
+256 possible values for
+a byte by definition.
+
+01:08:06.310 --> 01:08:09.130
+So your vocabulary
+is very small.
+
+01:08:09.130 --> 01:08:10.610
+And each byte is--
+
+01:08:10.610 --> 01:08:14.940
+I guess not all bytes are
+equally used, but it's not--
+
+01:08:14.940 --> 01:08:18.274
+you don't have that
+many sparsity problems.
+
+01:08:18.274 --> 01:08:20.274
+But what's the problem
+with byte-based encoding?
+
+01:08:23.844 --> 01:08:25.250
+Long sequences.
+
+01:08:25.250 --> 01:08:28.010
+Yeah, long sequences.
+
+01:08:28.010 --> 01:08:30.899
+I mean, in some ways, I really
+wish byte coding would work.
+
+01:08:30.899 --> 01:08:33.060
+It's the most elegant thing.
+
+01:08:33.060 --> 01:08:36.300
+But you have long sequences.
+
+01:08:36.300 --> 01:08:40.220
+Your compression ratio
+is 1, one byte per token.
+
+01:08:40.220 --> 01:08:42.458
+And this is just terrible.
+
+01:08:42.458 --> 01:08:44.000
+A compression ratio
+of 1 is terrible,
+
+01:08:44.000 --> 01:08:47.040
+because your sequences
+will be really long.
+
+01:08:47.040 --> 01:08:50.040
+Attention is quadratic naively
+in the sequence length.
+
+01:08:50.040 --> 01:08:54.929
+So you're just going to have a
+bad time in terms of efficiency.
+
+01:08:54.929 --> 01:08:55.429
+OK.
+
+01:08:55.429 --> 01:08:59.479
+So that wasn't really good.
+
+01:08:59.479 --> 01:09:03.470
+So now the thing that
+you might think about
+
+01:09:03.470 --> 01:09:07.580
+is, well, maybe we have
+to be adaptive here.
+
+01:09:07.580 --> 01:09:11.460
+Right, we can't allocate a
+character or a byte per token.
+
+01:09:11.460 --> 01:09:14.160
+But maybe some tokens can
+represent lots of bytes
+
+01:09:14.160 --> 01:09:16.390
+and some tokens can
+represent few bytes.
+
+01:09:16.390 --> 01:09:19.510
+So one way to do this is
+word-based tokenization.
+
+01:09:19.510 --> 01:09:23.590
+And this is something that was
+actually very classic in NLP.
+
+01:09:23.590 --> 01:09:25.180
+OK, so here's a string.
+
+01:09:25.180 --> 01:09:33.060
+And you can just split it
+into a sequence of segments.
+
+01:09:33.060 --> 01:09:33.640
+OK.
+
+01:09:33.640 --> 01:09:35.880
+And you can call
+each of these tokens.
+
+01:09:35.880 --> 01:09:38.700
+So you just use a
+regular expression.
+
+01:09:38.700 --> 01:09:40.740
+Here's a different
+regular expression
+
+01:09:40.740 --> 01:09:44.100
+that GPT-2 uses to pre-tokenize.
+
+01:09:44.100 --> 01:09:53.040
+And it just splits your string
+into a sequence of strings.
+
+01:09:53.040 --> 01:09:56.610
+So and then what you
+do with each segment
+
+01:09:56.610 --> 01:09:58.710
+is you assign each of
+these to an integer,
+
+01:09:58.710 --> 01:10:01.200
+and then you're done.
+
+01:10:01.200 --> 01:10:02.436
+OK.
+
+01:10:02.436 --> 01:10:04.250
+So what's the problem with this?
+
+01:10:07.582 --> 01:10:08.970
+Vocabulary size.
+
+01:10:08.970 --> 01:10:11.590
+Yeah, so the problem is
+that your vocabulary size
+
+01:10:11.590 --> 01:10:13.450
+is unbounded.
+
+01:10:13.450 --> 01:10:14.150
+Or not.
+
+01:10:14.150 --> 01:10:18.175
+Maybe not quite unbounded, but
+you don't know how big it is.
+
+01:10:18.175 --> 01:10:20.660
+Right, because on
+a given new input,
+
+01:10:20.660 --> 01:10:25.970
+you might get a segment that
+just you've never seen before.
+
+01:10:25.970 --> 01:10:28.510
+And that's actually
+a big problem.
+
+01:10:28.510 --> 01:10:31.210
+Word base is a really
+big pain in the butt,
+
+01:10:31.210 --> 01:10:34.850
+because some real
+words are rare.
+
+01:10:34.850 --> 01:10:39.550
+And actually, it's
+really annoying
+
+01:10:39.550 --> 01:10:43.750
+because new words have to
+receive this UNC token.
+
+01:10:43.750 --> 01:10:48.340
+And if you're not careful about
+how you compute the perplexity,
+
+01:10:48.340 --> 01:10:51.490
+then you just mess up.
+
+01:10:51.490 --> 01:10:55.060
+So word based isn't--
+
+01:10:55.060 --> 01:10:58.840
+I think it captures the right
+intuition of adaptivity.
+
+01:10:58.840 --> 01:11:02.320
+But it's not exactly
+what we want here.
+
+01:11:02.320 --> 01:11:06.460
+So here, we're finally
+going to talk about the BPE
+
+01:11:06.460 --> 01:11:08.770
+encoding or Byte Pair Encoding.
+
+01:11:08.770 --> 01:11:11.850
+So this was actually
+a very old algorithm
+
+01:11:11.850 --> 01:11:16.710
+developed by Phillip Gage
+in '94 for data compression.
+
+01:11:16.710 --> 01:11:19.650
+And it was first
+introduced into NLP
+
+01:11:19.650 --> 01:11:22.390
+for neural machine translation.
+
+01:11:22.390 --> 01:11:25.950
+So before, papers that
+did machine translation
+
+01:11:25.950 --> 01:11:30.300
+or any-- basically, all NLP
+used word based tokenization.
+
+01:11:30.300 --> 01:11:33.820
+And again, word
+base with a pain.
+
+01:11:33.820 --> 01:11:37.950
+So this paper pioneered
+this idea, well, we
+
+01:11:37.950 --> 01:11:40.990
+can use this nice
+algorithm form 94,
+
+01:11:40.990 --> 01:11:45.040
+and we can just make the
+tokenization round trip.
+
+01:11:45.040 --> 01:11:48.780
+And we don't have to deal with
+UNCs or any of that stuff.
+
+01:11:48.780 --> 01:11:53.310
+And then finally, this entered
+the language modeling era
+
+01:11:53.310 --> 01:12:01.452
+through GPT-2, which was trained
+on using the BPE tokenizer.
+
+01:12:01.452 --> 01:12:04.650
+OK, so the basic idea
+is instead of defining
+
+01:12:04.650 --> 01:12:09.130
+some preconceived notion
+of how to split it up,
+
+01:12:09.130 --> 01:12:11.860
+we're going to train the
+tokenizer on raw text.
+
+01:12:11.860 --> 01:12:14.740
+That's the basic
+insight, if you will.
+
+01:12:14.740 --> 01:12:18.840
+And so organically,
+common sequences
+
+01:12:18.840 --> 01:12:21.390
+that span multiple
+characters, we're
+
+01:12:21.390 --> 01:12:23.430
+going to try to
+represent as one token.
+
+01:12:23.430 --> 01:12:25.530
+And rare sequences
+are going to be
+
+01:12:25.530 --> 01:12:29.010
+represented by multiple tokens.
+
+01:12:29.010 --> 01:12:33.070
+There's a slight detail,
+which is for efficiency,
+
+01:12:33.070 --> 01:12:37.320
+the GPT-2 paper uses word based
+tokenizer as a pre-processing
+
+01:12:37.320 --> 01:12:39.270
+to break it up into
+segments, and then runs BP
+
+01:12:39.270 --> 01:12:41.395
+on each of the segments,
+which is what you're going
+
+01:12:41.395 --> 01:12:43.950
+to do in this class as well.
+
+01:12:43.950 --> 01:12:46.450
+The algorithm BP is
+actually very simple.
+
+01:12:46.450 --> 01:12:49.320
+So we first convert the
+string into a sequence
+
+01:12:49.320 --> 01:12:51.420
+of bytes, which we
+already did when we talked
+
+01:12:51.420 --> 01:12:52.870
+about byte-based tokenization.
+
+01:12:52.870 --> 01:12:54.450
+And now we're going
+to successively
+
+01:12:54.450 --> 01:12:58.880
+merge the most common pair of
+adjacent tokens over and over
+
+01:12:58.880 --> 01:12:59.380
+again.
+
+01:12:59.380 --> 01:13:02.530
+So the intuition is that if a
+pair of tokens shows up a lot,
+
+01:13:02.530 --> 01:13:05.110
+then we're going to
+compress it into one token.
+
+01:13:05.110 --> 01:13:07.670
+We're just going to
+dedicate space for that.
+
+01:13:07.670 --> 01:13:10.530
+OK, so let's walk through what
+this algorithm looks like.
+
+01:13:10.530 --> 01:13:13.640
+So we're going to use this
+cat and hat as an example.
+
+01:13:13.640 --> 01:13:20.970
+And we're going to convert this
+into a sequence of integers.
+
+01:13:20.970 --> 01:13:23.450
+These are the bytes.
+
+01:13:23.450 --> 01:13:27.330
+And then we're going to keep
+track of what we've merged.
+
+01:13:27.330 --> 01:13:32.630
+So remember, merges is a
+map from two integers which
+
+01:13:32.630 --> 01:13:36.510
+can represent bytes or
+other pre-existing tokens.
+
+01:13:36.510 --> 01:13:39.050
+And we're going to
+create a new token.
+
+01:13:39.050 --> 01:13:43.850
+And the vocab is just
+going to be a handy way
+
+01:13:43.850 --> 01:13:46.205
+to represent the index to bytes.
+
+01:13:49.190 --> 01:13:51.390
+The BPE algorithm, I
+mean, it's very simple,
+
+01:13:51.390 --> 01:13:53.515
+so I'm just actually going
+to run through the code.
+
+01:13:53.515 --> 01:13:56.130
+You're going to do this
+num merges of times.
+
+01:13:56.130 --> 01:13:58.230
+So num merges is
+3, in this case.
+
+01:13:58.230 --> 01:14:02.480
+We're going to first count
+up the number of occurrences
+
+01:14:02.480 --> 01:14:03.600
+of pairs of bytes.
+
+01:14:03.600 --> 01:14:06.340
+So hopefully, this
+doesn't become too small.
+
+01:14:06.340 --> 01:14:10.980
+So we're going to just
+step through this sequence,
+
+01:14:10.980 --> 01:14:12.640
+and we're going to see that--
+
+01:14:12.640 --> 01:14:15.720
+OK, so what's 116, 104?
+
+01:14:15.720 --> 01:14:17.220
+We're going to
+increment that count.
+
+01:14:17.220 --> 01:14:18.490
+104, 101.
+
+01:14:18.490 --> 01:14:19.570
+Increment that count.
+
+01:14:19.570 --> 01:14:21.195
+We're going to go
+through the sequence,
+
+01:14:21.195 --> 01:14:24.635
+and we're going to
+count up the bytes.
+
+01:14:24.635 --> 01:14:25.890
+OK.
+
+01:14:25.890 --> 01:14:29.070
+So now after we
+have these counts,
+
+01:14:29.070 --> 01:14:34.380
+we're going to find
+the pair that occurs
+
+01:14:34.380 --> 01:14:36.570
+the most number of times.
+
+01:14:36.570 --> 01:14:38.590
+So I guess there's
+multiple ones,
+
+01:14:38.590 --> 01:14:42.380
+but we're just going to break
+ties and say 116 and 104.
+
+01:14:42.380 --> 01:14:45.540
+OK, so that occurs twice.
+
+01:14:45.540 --> 01:14:47.530
+So now we're going
+to merge that pair.
+
+01:14:47.530 --> 01:14:52.200
+So we're going to create a
+new slot in our vocab, which
+
+01:14:52.200 --> 01:14:54.930
+is going to be 256.
+
+01:14:54.930 --> 01:14:57.490
+So so far, it's 0 through 255.
+
+01:14:57.490 --> 01:15:00.430
+And now we're expanding
+the vocab to 256.
+
+01:15:00.430 --> 01:15:04.090
+And we're going to say every
+time we see 116 and 104,
+
+01:15:04.090 --> 01:15:08.830
+we're going to
+replace it with 256.
+
+01:15:08.830 --> 01:15:11.155
+OK.
+
+01:15:11.155 --> 01:15:15.280
+And then we're
+going to just apply
+
+01:15:15.280 --> 01:15:18.170
+that merge to our training set.
+
+01:15:18.170 --> 01:15:24.770
+So after we do that, the
+116 and 104 became 256.
+
+01:15:24.770 --> 01:15:28.580
+And this 256, remember,
+occurred twice.
+
+01:15:28.580 --> 01:15:29.080
+OK.
+
+01:15:29.080 --> 01:15:32.860
+So now we're just going to loop
+through this algorithm one more
+
+01:15:32.860 --> 01:15:33.650
+time.
+
+01:15:33.650 --> 01:15:39.850
+The second time, it decided
+to merge 256 and 101.
+
+01:15:39.850 --> 01:15:44.740
+And now I'm going to
+replace that in indices.
+
+01:15:44.740 --> 01:15:46.930
+And notice that the
+indices is going to shrink.
+
+01:15:46.930 --> 01:15:49.000
+Right, because our
+compression ratio
+
+01:15:49.000 --> 01:15:53.360
+is getting better as we make
+room for more vocabulary items
+
+01:15:53.360 --> 01:15:56.990
+and we have a greater vocabulary
+to represent everything.
+
+01:15:56.990 --> 01:16:00.610
+OK, so let me do
+this one more time.
+
+01:16:00.610 --> 01:16:04.230
+And then the next
+merge is 257, 3.
+
+01:16:04.230 --> 01:16:07.310
+And this is shrinking
+one more time.
+
+01:16:07.310 --> 01:16:08.290
+OK.
+
+01:16:08.290 --> 01:16:10.570
+And then now we're done.
+
+01:16:10.570 --> 01:16:13.920
+OK, so let's try
+out this tokenizer.
+
+01:16:13.920 --> 01:16:18.890
+So we have the string,
+the quick brown fox.
+
+01:16:18.890 --> 01:16:23.730
+We're going to encode into
+a sequence of indices.
+
+01:16:23.730 --> 01:16:27.900
+And then we're going to use
+our BPE tokenizer to decode.
+
+01:16:27.900 --> 01:16:31.510
+Let's actually step through
+what that looks like.
+
+01:16:35.540 --> 01:16:38.700
+Well, actually maybe decoding
+isn't actually interesting.
+
+01:16:38.700 --> 01:16:40.910
+Sorry, I should have
+gone through the encode.
+
+01:16:40.910 --> 01:16:44.570
+Let's go back to encode.
+
+01:16:44.570 --> 01:16:47.190
+So encode, you take a string.
+
+01:16:47.190 --> 01:16:48.360
+You convert it to indices.
+
+01:16:48.360 --> 01:16:51.950
+And you just replay the merges.
+
+01:16:51.950 --> 01:16:53.820
+Importantly in the
+order that it occurred.
+
+01:16:53.820 --> 01:16:57.245
+So I'm going to
+replay these merges.
+
+01:17:01.890 --> 01:17:04.576
+And then I'm going
+to get my indices.
+
+01:17:04.576 --> 01:17:08.836
+OK, and then verify
+that this works.
+
+01:17:08.836 --> 01:17:11.310
+OK, so that was--
+
+01:17:11.310 --> 01:17:12.425
+it's pretty simple.
+
+01:17:15.000 --> 01:17:17.800
+Because it's simple, it
+was also very inefficient.
+
+01:17:17.800 --> 01:17:19.960
+For example, encode
+loops over the merges.
+
+01:17:19.960 --> 01:17:23.160
+You should only loop over
+the merges that matter.
+
+01:17:23.160 --> 01:17:26.100
+And there's some other
+bells and whistles.
+
+01:17:26.100 --> 01:17:28.600
+There's special tokens,
+pre-tokenization.
+
+01:17:28.600 --> 01:17:30.840
+And so in your
+assignment, you're
+
+01:17:30.840 --> 01:17:34.625
+going to essentially take
+this as a starting point.
+
+01:17:34.625 --> 01:17:37.800
+Or I mean I guess you should
+implement your own from scratch.
+
+01:17:37.800 --> 01:17:42.000
+But your goal is to make
+the implementation fast.
+
+01:17:42.000 --> 01:17:44.110
+And you can parallelize
+it if you want.
+
+01:17:44.110 --> 01:17:46.920
+You can go have fun.
+
+01:17:46.920 --> 01:17:49.420
+OK, so a summary
+of tokenization.
+
+01:17:49.420 --> 01:17:53.220
+So tokenizer maps between
+strings and sequences
+
+01:17:53.220 --> 01:17:54.990
+of integers.
+
+01:17:54.990 --> 01:17:58.780
+We looked at character
+base by base, word base.
+
+01:17:58.780 --> 01:18:02.300
+They're highly suboptimal
+for various reasons.
+
+01:18:02.300 --> 01:18:06.220
+BPE is a very old
+algorithm from '94
+
+01:18:06.220 --> 01:18:08.673
+that still proves to be
+an effective heuristic.
+
+01:18:08.673 --> 01:18:10.090
+And the important
+thing is that it
+
+01:18:10.090 --> 01:18:13.510
+looks at your corpus statistics
+to make sensible decisions
+
+01:18:13.510 --> 01:18:18.250
+about how to best adaptively
+allocate vocabulary to represent
+
+01:18:18.250 --> 01:18:21.010
+sequences of characters.
+
+01:18:21.010 --> 01:18:25.930
+And I hope that one day, I
+won't have to give this lecture,
+
+01:18:25.930 --> 01:18:27.490
+because we'll just
+have architectures
+
+01:18:27.490 --> 01:18:30.080
+that map from bytes.
+
+01:18:30.080 --> 01:18:34.450
+But until then, we'll have
+to deal with tokenization.
+
+01:18:34.450 --> 01:18:36.290
+OK, so that's it for today.
+
+01:18:36.290 --> 01:18:40.270
+Next time, we're going to dive
+into the details of PyTorch
+
+01:18:40.270 --> 01:18:42.580
+and give you the building
+blocks and pay attention
+
+01:18:42.580 --> 01:18:44.600
+to resource accounting.
+
+01:18:44.600 --> 01:18:48.080
+All of you have presumably
+implemented PyTorch programs,
+
+01:18:48.080 --> 01:18:49.930
+but we're going to
+really look at where
+
+01:18:49.930 --> 01:18:51.260
+all the FLOPs are going.
+
+01:18:51.260 --> 01:18:53.970
+OK, see you next time.
